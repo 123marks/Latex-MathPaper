@@ -1,0 +1,116 @@
+{
+  "stages": {
+    "intake": {
+      "goal": "Read the contest problem and rules, then produce a judge-facing problem map and modeling plan.",
+      "skills": ["math-modeling-paper", "math-modeling-paper-excellence", "web-search"],
+      "mcp": ["filesystem", "fetch"],
+      "context_files": [
+        "contest-rules.md",
+        "problem/problem.md",
+        "state/problem-map.md",
+        "state/modeling-plan.md",
+        "state/source-ledger.csv"
+      ],
+      "instructions": [
+        "Extract every subquestion and required output.",
+        "Identify data dependencies, constraints, metrics, and direct-answer targets.",
+        "Propose model families and rejected alternatives.",
+        "Do not solve the problem before the direct-answer targets are clear."
+      ],
+      "expected_outputs": [
+        "Updated state/problem-map.md content.",
+        "Updated state/modeling-plan.md content.",
+        "Source-ledger updates for official rules and references."
+      ]
+    },
+    "modeling": {
+      "goal": "Create a reproducible modeling plan, scripts, and result ledger entries.",
+      "skills": ["math-modeling-paper-excellence"],
+      "mcp": ["filesystem", "command"],
+      "context_files": [
+        "state/problem-map.md",
+        "state/modeling-plan.md",
+        "state/result-ledger.csv"
+      ],
+      "instructions": [
+        "Map each question to a baseline and proposed model.",
+        "Specify scripts, run artifacts, expected metrics, and validation checks.",
+        "Prefer relative paths and reproducible outputs.",
+        "Do not invent result values."
+      ],
+      "expected_outputs": [
+        "Concrete src/ script plan or code content.",
+        "Result-ledger row updates.",
+        "Validation plan updates."
+      ]
+    },
+    "figure": {
+      "goal": "Design evidence-focused paper figures from verified result artifacts.",
+      "skills": ["nature-figure"],
+      "mcp": ["filesystem", "command"],
+      "context_files": [
+        "state/modeling-plan.md",
+        "state/result-ledger.csv",
+        "state/figure-ledger.csv"
+      ],
+      "instructions": [
+        "Assign one evidence purpose to each figure.",
+        "Use restrained publication-style matplotlib defaults.",
+        "Link each figure to source data and scripts.",
+        "Do not create decorative charts."
+      ],
+      "expected_outputs": [
+        "Figure script content or edits.",
+        "Figure-ledger row updates.",
+        "Caption claims tied to evidence."
+      ]
+    },
+    "writing": {
+      "goal": "Draft or revise LaTeX sections using only verified evidence.",
+      "skills": ["math-modeling-paper", "math-modeling-paper-excellence", "nature-polishing"],
+      "mcp": ["filesystem"],
+      "context_files": [
+        "state/problem-map.md",
+        "state/modeling-plan.md",
+        "state/result-ledger.csv",
+        "state/figure-ledger.csv",
+        "state/claim-ledger.csv",
+        "paper/sections/06-model-q1.tex",
+        "paper/sections/07-model-q2.tex",
+        "paper/sections/08-model-q3.tex"
+      ],
+      "instructions": [
+        "Use motivation-formula-interpretation for formulas.",
+        "Add direct-answer paragraphs for subquestions.",
+        "Add or update claim-ledger rows for important claims.",
+        "Mark unknown values as TODO instead of inventing them."
+      ],
+      "expected_outputs": [
+        "LaTeX section edits.",
+        "Claim-ledger updates.",
+        "Any result/figure/source dependencies needed before final writing."
+      ]
+    },
+    "verification": {
+      "goal": "Review the paper package and identify gaps before submission.",
+      "skills": ["math-modeling-paper-excellence"],
+      "mcp": ["filesystem", "command"],
+      "context_files": [
+        "state/verification-report.md",
+        "state/result-ledger.csv",
+        "state/figure-ledger.csv",
+        "state/claim-ledger.csv"
+      ],
+      "instructions": [
+        "Identify missing direct answers, weak evidence, inconsistent values, and LaTeX risks.",
+        "Prioritize concrete fixes with file paths.",
+        "Do not declare completion unless verification evidence proves it."
+      ],
+      "expected_outputs": [
+        "Verification findings.",
+        "Specific file-level fix plan.",
+        "Remaining risks."
+      ]
+    }
+  }
+}

@@ -1,0 +1,24 @@
+name: modeling
+goal: Produce reproducible model outputs from raw data and documented assumptions.
+primary_skills:
+  - math-modeling-paper-excellence
+inputs:
+  - state/problem-map.md
+  - state/modeling-plan.md
+  - data/raw/
+outputs:
+  - data/processed/
+  - src/
+  - runs/
+  - state/result-ledger.csv
+steps:
+  - Audit raw data quality, missingness, units, and time or spatial consistency.
+  - Create preprocessing scripts with relative paths.
+  - Build baseline model before advanced model when possible.
+  - Generate model outputs, metrics, and validation artifacts under runs/.
+  - Add every paper-worthy value to state/result-ledger.csv.
+  - Record solver settings, random seeds, and execution notes.
+acceptance:
+  - Result ledger has source, metric, value, unit, script, and run_id for each important value.
+  - Modeling scripts can run from the contest root.
+  - Baseline and proposed method are comparable when the problem allows it.

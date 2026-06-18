@@ -1,0 +1,58 @@
+product:
+  name: math-modeling-paper-os
+  version: 0.1.0
+  default_template: templates/contest
+  workspace_root: contests
+
+paper:
+  build_driver: latexmk
+  main_file: paper/main.tex
+  required_sections:
+    - paper/sections/00-abstract.tex
+    - paper/sections/01-restatement.tex
+    - paper/sections/02-analysis.tex
+    - paper/sections/03-assumptions.tex
+    - paper/sections/04-symbols.tex
+    - paper/sections/05-data.tex
+    - paper/sections/06-model-q1.tex
+    - paper/sections/07-model-q2.tex
+    - paper/sections/08-model-q3.tex
+    - paper/sections/09-validation.tex
+    - paper/sections/10-evaluation.tex
+
+ledgers:
+  result: state/result-ledger.csv
+  figure: state/figure-ledger.csv
+  source: state/source-ledger.csv
+  claim: state/claim-ledger.csv
+
+skills:
+  core:
+    - math-modeling-paper
+    - math-modeling-paper-excellence
+    - nature-figure
+    - nature-polishing
+  optional:
+    - nature-data
+    - web-search
+    - playwright-master
+
+mcp:
+  required:
+    - filesystem
+  recommended:
+    - fetch
+    - command
+  optional:
+    - browser
+    - sqlite
+
+quality_gates:
+  - problem-direct-answer
+  - evidence-traceability
+  - claim-ledger
+  - figure-purpose
+  - latex-build
+  - consistency
+  - sensitivity-validation
+  - anti-slop

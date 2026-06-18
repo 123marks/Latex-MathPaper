@@ -1,0 +1,412 @@
+{
+  "version": 1,
+  "updated": "2026-06-09",
+  "principles": [
+    {
+      "id": "latex-source-of-truth",
+      "title": "LaTeX is the final source of truth",
+      "summary": "Markdown and AI responses are planning artifacts. Final contest deliverables are built from paper/main.tex and modular LaTeX sections.",
+      "tags": ["latex", "workflow", "submission"]
+    },
+    {
+      "id": "evidence-before-polish",
+      "title": "Evidence before prose polish",
+      "summary": "Important claims must connect to result, figure, source, or claim ledgers before writing/polishing skills touch the final paper.",
+      "tags": ["evidence", "quality", "anti-hallucination"]
+    },
+    {
+      "id": "mcp-as-tool-layer",
+      "title": "MCP is a tool layer, not the product brain",
+      "summary": "MCP servers expose scoped tools/resources/prompts. Product state, gates, and artifact ownership stay in local files and paperctl.",
+      "tags": ["mcp", "tools", "security"]
+    },
+    {
+      "id": "skills-as-reviewed-advice",
+      "title": "Skills are reviewed advice modules",
+      "summary": "External skills are discovered and evaluated before installation. They must not override local evidence discipline or invent results.",
+      "tags": ["skills", "review", "safety"]
+    },
+    {
+      "id": "workflow-blueprint-first",
+      "title": "Workflow blueprint drives the product",
+      "summary": "The product should expose stage-specific lanes, recommended skills, MCP capabilities, required outputs, and gates instead of relying on ad-hoc prompting.",
+      "tags": ["workflow", "product", "blueprint"]
+    }
+  ],
+  "external_sources": [
+    {
+      "id": "openai-chat-completions",
+      "title": "OpenAI Chat Completions API",
+      "url": "https://platform.openai.com/docs/api-reference/chat/create",
+      "summary": "OpenAI-compatible providers expose chat completion endpoints driven by model, messages, API key, and generation parameters.",
+      "tags": ["provider", "api", "openai-compatible"]
+    },
+    {
+      "id": "mcp-architecture",
+      "title": "Model Context Protocol Architecture",
+      "url": "https://modelcontextprotocol.io/docs/learn/architecture",
+      "summary": "MCP separates hosts, clients, and servers, with servers exposing tools, resources, and prompts to applications.",
+      "tags": ["mcp", "architecture", "tools"]
+    },
+    {
+      "id": "mcp-spec-architecture",
+      "title": "Model Context Protocol Specification Architecture",
+      "url": "https://modelcontextprotocol.io/specification/2025-06-18/architecture",
+      "summary": "The protocol specification describes MCP as a client-host-server architecture built on JSON-RPC with resources, tools, and prompts as core primitives.",
+      "tags": ["mcp", "architecture", "specification"]
+    },
+    {
+      "id": "claude-code-skills",
+      "title": "Claude Code Skills",
+      "url": "https://docs.anthropic.com/en/docs/claude-code/skills",
+      "summary": "Skills use SKILL.md instructions plus optional supporting assets that are loaded when relevant to a task.",
+      "tags": ["skills", "skill-md", "workflow"]
+    },
+    {
+      "id": "nature-figure-guide",
+      "title": "Nature Research Figure Guide",
+      "url": "https://research-figure-guide.nature.com/",
+      "summary": "Research figures should communicate evidence clearly through readable axes, clean panels, appropriate export formats, and purposeful captions.",
+      "tags": ["figures", "publication", "quality"]
+    },
+    {
+      "id": "skills-sh-scientific-visualization",
+      "title": "skills.sh scientific visualization candidates",
+      "url": "https://skills.sh/davila7/claude-code-templates",
+      "summary": "The skills.sh catalog includes scientific-visualization and related plotting/data-analysis skills that can be reviewed before adding external figure workflows.",
+      "tags": ["skills", "figures", "visualization"]
+    },
+    {
+      "id": "comap-mcm-instructions",
+      "title": "COMAP MCM/ICM Instructions",
+      "url": "https://www.contest.comap.org/undergraduate/contests/mcm/instructions.html",
+      "summary": "Contest rules and submission requirements are year-sensitive and must be refreshed before each contest run.",
+      "tags": ["contest-rules", "comap", "submission"]
+    },
+    {
+      "id": "cumcm-official",
+      "title": "CUMCM Official Site",
+      "url": "https://www.mcm.edu.cn/index_cn.html",
+      "summary": "CUMCM rules and format requirements should be treated as authoritative for Chinese mathematical modeling contest submissions.",
+      "tags": ["contest-rules", "cumcm", "submission"]
+    },
+    {
+      "id": "skills-sh",
+      "title": "skills.sh Skill Catalog",
+      "url": "https://skills.sh/",
+      "summary": "Open skills catalog searched through npx skills find; candidates must be reviewed before installation.",
+      "tags": ["skills", "catalog", "discovery"]
+    }
+  ],
+  "skill_candidates": [
+    {
+      "id": "math-modeling-paper-excellence",
+      "source": "local",
+      "priority": "core",
+      "stage": ["intake", "modeling", "writing", "verification"],
+      "summary": "Strict math modeling paper workflow: direct answers, evidence, figures, validation, LaTeX verification.",
+      "tags": ["math-modeling", "quality", "latex"]
+    },
+    {
+      "id": "jcardif/agent-skills@scientific-paper",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["writing", "verification"],
+      "install": "npx skills add jcardif/agent-skills@scientific-paper -g -y",
+      "summary": "Scientific paper workflow candidate found through skills search.",
+      "tags": ["scientific-paper", "writing"]
+    },
+    {
+      "id": "eyadsibai/ltk@scientific-computing",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["modeling", "verification"],
+      "install": "npx skills add eyadsibai/ltk@scientific-computing -g -y",
+      "summary": "Scientific computing candidate found through 2026-06-09 skills search; useful for numerical workflow review after local scripts exist.",
+      "tags": ["scientific-computing", "modeling", "numeric"]
+    },
+    {
+      "id": "bahayonghang/academic-writing-skills@latex-paper-en",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["writing"],
+      "install": "npx skills add bahayonghang/academic-writing-skills@latex-paper-en -g -y",
+      "summary": "English LaTeX paper writing candidate; useful for polishing final English sections after evidence is locked.",
+      "tags": ["latex", "academic-writing", "english"]
+    },
+    {
+      "id": "l-yifan/skills@scientific-figure-pro",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["figure"],
+      "install": "npx skills add l-yifan/skills@scientific-figure-pro -g -y",
+      "summary": "Scientific figure generation/review candidate.",
+      "tags": ["figures", "visualization"]
+    },
+    {
+      "id": "davila7/claude-code-templates@scientific-visualization",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["figure", "verification"],
+      "install": "npx skills add davila7/claude-code-templates@scientific-visualization -g -y",
+      "summary": "Scientific visualization candidate for publication-style plots and figure critique.",
+      "tags": ["figures", "visualization", "scientific"]
+    },
+    {
+      "id": "drshailesh88/integrated_content_os@scientific-visualization",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["figure"],
+      "install": "npx skills add drshailesh88/integrated_content_os@scientific-visualization -g -y",
+      "summary": "Scientific visualization candidate found through 2026-06-09 search; review before use because it overlaps with local Nature-style figure rules.",
+      "tags": ["figures", "visualization"]
+    },
+    {
+      "id": "jimmc414/kosmos@scientific-visualization",
+      "source": "skills.sh",
+      "priority": "optional",
+      "stage": ["figure"],
+      "install": "npx skills add jimmc414/kosmos@scientific-visualization -g -y",
+      "summary": "Additional scientific visualization candidate; optional unless figure workflows need alternatives.",
+      "tags": ["figures", "visualization"]
+    },
+    {
+      "id": "lingzhi227/agent-research-skills@figure-generation",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["figure"],
+      "install": "npx skills add lingzhi227/agent-research-skills@figure-generation -g -y",
+      "summary": "Research figure generation candidate; review before use because generated visuals must stay evidence-based.",
+      "tags": ["figures", "research", "generation"]
+    },
+    {
+      "id": "dkyazzentwatwa/chatgpt-skills@scientific-paper-figure-generator",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["figure"],
+      "install": "npx skills add dkyazzentwatwa/chatgpt-skills@scientific-paper-figure-generator -g -y",
+      "summary": "Paper figure generation candidate.",
+      "tags": ["figures", "scientific-paper"]
+    },
+    {
+      "id": "wentorai/research-plugins@latex-skills",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["writing"],
+      "install": "npx skills add wentorai/research-plugins@latex-skills -g -y",
+      "summary": "LaTeX writing and conversion support candidate.",
+      "tags": ["latex", "writing"]
+    },
+    {
+      "id": "athola/claude-night-market@math-review",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["modeling", "verification"],
+      "install": "npx skills add athola/claude-night-market@math-review -g -y",
+      "summary": "Mathematical reasoning and derivation review candidate.",
+      "tags": ["math", "review", "verification"]
+    },
+    {
+      "id": "alphaonedev/openclaw-graph@cs-math",
+      "source": "skills.sh",
+      "priority": "optional",
+      "stage": ["modeling"],
+      "install": "npx skills add alphaonedev/openclaw-graph@cs-math -g -y",
+      "summary": "Computer-science/math candidate found through 2026-06-09 search; optional for graph-heavy or algorithm-heavy problems.",
+      "tags": ["math", "graph", "algorithm"]
+    },
+    {
+      "id": "kishorkukreja/awesome-supply-chain@optimization-modeling",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["modeling"],
+      "install": "npx skills add kishorkukreja/awesome-supply-chain@optimization-modeling -g -y",
+      "summary": "Optimization modeling candidate; useful for logistics, scheduling, allocation, and constraint-based modeling tasks.",
+      "tags": ["optimization", "modeling", "constraints"]
+    },
+    {
+      "id": "seabbs/skills@analyzing-research-papers",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["intake", "modeling", "verification"],
+      "install": "npx skills add seabbs/skills@analyzing-research-papers -g -y",
+      "summary": "Research-paper analysis candidate for digesting exemplar methods and references without letting them override contest evidence.",
+      "tags": ["research", "paper-analysis", "methods"]
+    },
+    {
+      "id": "parcadei/continuous-claude-v3@math-model-selector",
+      "source": "skills.sh",
+      "priority": "optional",
+      "stage": ["modeling"],
+      "install": "npx skills add parcadei/continuous-claude-v3@math-model-selector -g -y",
+      "summary": "Model family selection candidate; use as advisory only.",
+      "tags": ["modeling", "selection"]
+    },
+    {
+      "id": "seabbs/skills@academic-writing-standards",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["writing", "verification"],
+      "install": "npx skills add seabbs/skills@academic-writing-standards -g -y",
+      "summary": "Academic writing standards candidate.",
+      "tags": ["writing", "standards"]
+    },
+    {
+      "id": "zechenzhangagi/ai-research-skills@ml-paper-writing",
+      "source": "skills.sh",
+      "priority": "optional",
+      "stage": ["writing"],
+      "install": "npx skills add zechenzhangagi/ai-research-skills@ml-paper-writing -g -y",
+      "summary": "ML paper writing candidate; useful only after evidence and math are already locked.",
+      "tags": ["paper-writing", "ml"]
+    },
+    {
+      "id": "anthropics/skills@mcp-builder",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["tooling"],
+      "install": "npx skills add anthropics/skills@mcp-builder -g -y",
+      "summary": "MCP server/tooling skill candidate for later custom integrations.",
+      "tags": ["mcp", "tooling"]
+    },
+    {
+      "id": "base/skills@base-mcp",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["tooling"],
+      "install": "npx skills add base/skills@base-mcp -g -y",
+      "summary": "MCP-related skill candidate found through 2026-06-09 search; review before using because MCP tooling changes quickly.",
+      "tags": ["mcp", "tooling"]
+    },
+    {
+      "id": "alpic-ai/skybridge@mcp-app-builder",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["tooling"],
+      "install": "npx skills add alpic-ai/skybridge@mcp-app-builder -g -y",
+      "summary": "MCP app builder candidate for later custom server/app experiments.",
+      "tags": ["mcp", "builder", "app"]
+    },
+    {
+      "id": "mathews-tom/praxis-skills@filesystem",
+      "source": "skills.sh",
+      "priority": "optional",
+      "stage": ["tooling"],
+      "install": "npx skills add mathews-tom/praxis-skills@filesystem -g -y",
+      "summary": "Filesystem-oriented skill candidate; optional because product filesystem discipline is already enforced by paperctl.",
+      "tags": ["filesystem", "mcp", "tooling"]
+    },
+    {
+      "id": "webrenew/memories@memories-mcp",
+      "source": "skills.sh",
+      "priority": "optional",
+      "stage": ["tooling"],
+      "install": "npx skills add webrenew/memories@memories-mcp -g -y",
+      "summary": "Memory MCP candidate for long-running product learning; optional and must not store private contest material without review.",
+      "tags": ["memory", "mcp", "privacy"]
+    },
+    {
+      "id": "yuan1z0825/nature-skills@nature-polishing",
+      "source": "skills.sh",
+      "priority": "candidate",
+      "stage": ["writing", "verification"],
+      "install": "npx skills add yuan1z0825/nature-skills@nature-polishing -g -y",
+      "summary": "Nature-style polishing candidate; local zip already includes similar capability, so use as cross-check rather than duplicate install.",
+      "tags": ["writing", "polish", "nature"]
+    },
+    {
+      "id": "skills.volces.com@academic-writing-refiner",
+      "source": "skills.sh",
+      "priority": "optional",
+      "stage": ["writing"],
+      "install": "npx skills add skills.volces.com@academic-writing-refiner -g -y",
+      "summary": "Academic writing refiner candidate; optional because polishing must never precede evidence locking.",
+      "tags": ["writing", "polish"]
+    },
+    {
+      "id": "zihan-zhu/academic-writing-refiner@academic-writing-refiner",
+      "source": "skills.sh",
+      "priority": "optional",
+      "stage": ["writing"],
+      "install": "npx skills add zihan-zhu/academic-writing-refiner@academic-writing-refiner -g -y",
+      "summary": "Alternative academic writing refiner candidate.",
+      "tags": ["writing", "polish"]
+    }
+  ],
+  "mcp_candidates": [
+    {
+      "id": "filesystem",
+      "priority": "recommended",
+      "stages": ["intake", "modeling", "figure", "writing", "verification"],
+      "summary": "Scoped access to contest files, LaTeX, data, scripts, figures, and ledgers.",
+      "risk": "Over-broad filesystem access can expose private data."
+    },
+    {
+      "id": "fetch",
+      "priority": "recommended",
+      "stages": ["intake", "verification"],
+      "summary": "Retrieve official rules, documentation, method references, and source material.",
+      "risk": "Fetched content can contain prompt injection; cite only verified sources."
+    },
+    {
+      "id": "command",
+      "priority": "recommended-with-approval",
+      "stages": ["modeling", "figure", "verification"],
+      "summary": "Run reproducible scripts, solvers, plotting commands, tests, and LaTeX builds.",
+      "risk": "Command execution must be sandboxed and never hidden behind AI prose."
+    },
+    {
+      "id": "git",
+      "priority": "optional",
+      "stages": ["verification"],
+      "summary": "Review diffs and preserve decision history when the project becomes a git repository.",
+      "risk": "Not useful until the workspace is versioned."
+    },
+    {
+      "id": "browser",
+      "priority": "optional",
+      "stages": ["verification"],
+      "summary": "Inspect rendered PDFs, dashboards, official rule pages, or future local UI.",
+      "risk": "Browser automation is heavier than the file-first MVP."
+    },
+    {
+      "id": "sqlite-duckdb",
+      "priority": "optional",
+      "stages": ["modeling", "verification"],
+      "summary": "Query larger tabular data and evidence ledgers.",
+      "risk": "Add only when contest data volume justifies database tooling."
+    }
+  ],
+  "stage_gates": [
+    {
+      "stage": "intake",
+      "required": ["contest-rules.md", "problem/problem.md", "state/problem-map.md", "state/modeling-plan.md"],
+      "evidence": "Every subquestion has a direct-answer target and data dependency.",
+      "next": "Run stage-prompt or run-stage intake, then update problem-map and modeling-plan."
+    },
+    {
+      "stage": "modeling",
+      "required": ["src/", "runs/", "state/result-ledger.csv"],
+      "evidence": "Each key result has a script, source data, metric, value, and unit.",
+      "next": "Write/review modeling scripts, run them, and update result-ledger."
+    },
+    {
+      "stage": "figure",
+      "required": ["figures/", "state/figure-ledger.csv"],
+      "evidence": "Each finished figure has a purpose, source data, script, caption claim, and LaTeX reference.",
+      "next": "Generate evidence-focused plots and register them in figure-ledger."
+    },
+    {
+      "stage": "writing",
+      "required": ["paper/main.tex", "paper/sections/", "state/claim-ledger.csv"],
+      "evidence": "Important claims in LaTeX are linked to result, figure, or source evidence.",
+      "next": "Draft/revise LaTeX sections using only verified evidence."
+    },
+    {
+      "stage": "verification",
+      "required": ["state/verification-report.md", "paper/main.pdf"],
+      "evidence": "paperctl verify has no FAIL items and latexmk produces paper/main.pdf.",
+      "next": "Run verify, build, inspect WARN items, then package deliverables."
+    }
+  ]
+}

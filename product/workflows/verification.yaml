@@ -1,0 +1,25 @@
+name: verification
+goal: Prove the contest paper package is complete enough to submit or identify concrete remaining gaps.
+primary_skills:
+  - math-modeling-paper-excellence
+inputs:
+  - paper/
+  - figures/
+  - tables/
+  - src/
+  - state/
+outputs:
+  - state/verification-report.md
+steps:
+  - Check required files and section files.
+  - Check ledgers have required columns and non-empty evidence rows.
+  - Check supported claims have result, figure, or source evidence.
+  - Check every figure path in the figure ledger exists.
+  - Check LaTeX source for unresolved placeholder markers.
+  - Run latexmk if available.
+  - Scan LaTeX log for errors, unresolved references, and missing files.
+  - Record all pass/fail findings with concrete file paths.
+acceptance:
+  - Verification report has no critical failures.
+  - Build succeeds when LaTeX is installed.
+  - Missing optional tooling is reported but does not hide paper-quality failures.

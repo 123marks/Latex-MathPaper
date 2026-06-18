@@ -1,0 +1,2 @@
+run_id,question,metric,value,unit,baseline,delta,script,source_data,notes
+template,Q1,example_metric,0.0,unit,,,src/model_template.py,data/raw,replace with real result

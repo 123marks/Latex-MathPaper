@@ -1,0 +1,2 @@
+figure_id,path,purpose,caption_claim,script,source_data,question,status
+FigTemplate,figures/template-comparison.pdf,Demonstrate figure pipeline,Replace with a real evidence claim,src/plot_template.py,runs/template-result.txt,Q1,draft

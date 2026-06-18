@@ -1,0 +1,7 @@
+run_id,stage,provider,model,prompt_path,response_path,status,created_at,notes
+20260608-214539-intake,intake,manual,,ai-runs/20260608-214539-intake/prompt.md,,prompt-created,2026-06-08T21:45:39,
+20260608-214600-intake,intake,default,gpt-5.4,ai-runs/20260608-214600-intake/prompt.md,,dry-run,2026-06-08T21:46:00,
+20260609-003928-writing,writing,manual,,ai-runs/20260609-003928-writing/prompt.md,,prompt-created,2026-06-09T00:39:28,
+20260609-003942-verification,verification,default,gpt-5.4,ai-runs/20260609-003942-verification/prompt.md,,dry-run,2026-06-09T00:39:42,
+20260609-005636-writing,writing,default,gpt-5.4,ai-runs/20260609-005636-writing/prompt.md,,dry-run,2026-06-09T00:56:36,
+20260609-011049-writing,writing,default,gpt-5.4,ai-runs/20260609-011049-writing/prompt.md,,dry-run,2026-06-09T01:10:49,

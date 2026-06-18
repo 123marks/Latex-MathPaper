@@ -1,0 +1,20 @@
+{
+  "providers": {
+    "default": {
+      "kind": "openai-compatible",
+      "base_url": "https://api.openai.com/v1",
+      "api_key_env": "OPENAI_API_KEY",
+      "model": "gpt-5.4",
+      "temperature": 0.2,
+      "timeout": 120
+    },
+    "local-openai-compatible": {
+      "kind": "openai-compatible",
+      "base_url": "http://localhost:8000/v1",
+      "api_key_env": "LOCAL_LLM_API_KEY",
+      "model": "local-model-name",
+      "temperature": 0.2,
+      "timeout": 120
+    }
+  }
+}

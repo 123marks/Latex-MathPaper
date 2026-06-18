@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Math Modeling Paper OS</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-view="home">
+    <div class="motion-backplane" aria-hidden="true">
+      <div class="paper-noise"></div>
+      <div class="map-grid"></div>
+      <div class="ambient-orb orb-amber"></div>
+      <div class="ambient-orb orb-green"></div>
+      <div class="traffic-lane lane-a"></div>
+      <div class="traffic-lane lane-b"></div>
+      <div class="traffic-lane lane-c"></div>
+      <div class="particle-field">
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <header class="site-header">
+      <a class="brand" href="#home" aria-label="Math Modeling Paper OS home">
+        <span class="brand-mark">MM</span>
+        <span class="brand-copy">
+          <strong>Math Modeling Paper OS</strong>
+          <small>AI relay / LaTeX paper engine</small>
+        </span>
+      </a>
+      <nav class="nav" aria-label="Product navigation">
+        <a href="#home">Official Site</a>
+        <a href="#relay">Provider relay</a>
+        <a href="#runtime">Local Runtime</a>
+        <a href="#studio">Application Workbench</a>
+        <a href="#intelligence">Workflow Intelligence</a>
+      </nav>
+      <div class="header-actions">
+        <span class="header-signal"><i></i> local live</span>
+        <button class="launch-pill" id="viewToggle" type="button" aria-pressed="false">Enter App</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="home" class="official-site hero">
+        <div class="hero-copy reveal" style="--i: 0">
+          <div class="release-masthead" aria-label="Product release status">
+            <span>Local-first release</span>
+            <span>OpenAI-compatible relay</span>
+            <span>LaTeX source of truth</span>
+          </div>
+          <p class="eyebrow">Official Site / Research OS</p>
+          <h1>Model Gateway for Competition Papers</h1>
+          <p class="lede">
+            A desktop product for math modeling contests: upload the official problem,
+            configure any compatible AI gateway, route work through Skills and MCP-style tools,
+            then produce an evidence-backed LaTeX paper package.
+          </p>
+          <div class="hero-actions">
+            <button class="primary-action" id="enterAppBtn" type="button">Enter App</button>
+            <a class="secondary-action" href="#relay">Watch Signal Flow</a>
+            <a class="secondary-action" href="#runtime">Executable Runtime</a>
+          </div>
+          <div class="proof-strip" aria-label="Core workflow">
+            <span>Problem intake</span>
+            <span>Provider relay</span>
+            <span>Skill/MCP routing</span>
+            <span>Evidence gates</span>
+            <span>LaTeX compile</span>
+          </div>
+          <div class="signal-ledger" aria-label="Live relay ledger">
+            <div>
+              <span>Latency lane</span>
+              <strong>2.8s</strong>
+              <i></i>
+            </div>
+            <div>
+              <span>Provider pool</span>
+              <strong>OpenAI compatible</strong>
+              <i></i>
+            </div>
+            <div>
+              <span>Paper guard</span>
+              <strong>Claim ledger active</strong>
+              <i></i>
+            </div>
+          </div>
+        </div>
+
+        <aside class="gateway-console reveal" style="--i: 1" aria-label="Live model gateway preview">
+          <div class="gateway-topline">
+            <span class="live-pulse"></span>
+            <strong>Signal relay</strong>
+            <small>127.0.0.1 / OpenAI-compatible / live route</small>
+          </div>
+
+          <div class="gateway-map">
+            <div class="model-orbit" aria-hidden="true">
+              <span class="orbit-core">AI</span>
+              <span class="orbit-ring ring-one"></span>
+              <span class="orbit-ring ring-two"></span>
+              <span class="orbit-dot dot-a"></span>
+              <span class="orbit-dot dot-b"></span>
+              <span class="orbit-dot dot-c"></span>
+            </div>
+            <i class="route-beam beam-a"></i>
+            <i class="route-beam beam-b"></i>
+            <i class="route-beam beam-c"></i>
+            <i class="route-beam beam-d"></i>
+
+            <div class="gateway-node node-problem">
+              <span>01</span>
+              <strong>Official Problem</strong>
+              <small>PDF / data / rules</small>
+            </div>
+            <div class="gateway-node node-router">
+              <span>02</span>
+              <strong>Provider relay</strong>
+              <small>base_url + API key</small>
+            </div>
+            <div class="gateway-node node-skill">
+              <span>03</span>
+              <strong>Skills + MCP</strong>
+              <small>method / compute / search</small>
+            </div>
+            <div class="gateway-node node-paper">
+              <span>04</span>
+              <strong>LaTeX Paper</strong>
+              <small>verified PDF package</small>
+            </div>
+          </div>
+
+          <div class="throughput-board" aria-label="Live gateway throughput">
+            <div>
+              <span>Route</span>
+              <strong>5-stage paper pipeline</strong>
+            </div>
+            <div>
+              <span>Guard</span>
+              <strong>Evidence before prose</strong>
+            </div>
+            <div>
+              <span>Output</span>
+              <strong>LaTeX + submission pack</strong>
+            </div>
+          </div>
+
+          <div class="request-stream" aria-hidden="true">
+            <span>route:intake -> problem-map.md</span>
+            <span>route:modeling -> result-ledger.csv</span>
+            <span>route:figure -> scientific plots</span>
+            <span>route:writing -> main.tex</span>
+            <span>route:verification -> portable package</span>
+          </div>
+        </aside>
+      </section>
+
+      <section id="relay" class="official-site relay-section">
+        <div class="section-kicker reveal" style="--i: 0">
+          <p class="eyebrow">Relay Architecture</p>
+          <h2>API middle station on the outside. Paper factory on the inside.</h2>
+          <p class="lede compact">
+            The public surface behaves like a live model relay: provider lanes pulse,
+            evidence locks advance, and the route from official material to paper output remains visible while idle.
+          </p>
+        </div>
+
+        <div class="relay-board">
+          <article class="relay-feature relay-primary reveal" style="--i: 1">
+            <span>Provider relay</span>
+            <h3>Base URL and API key stay configurable.</h3>
+            <p>
+              The same competition pipeline can point to different OpenAI-compatible gateways,
+              models, timeouts, and key environments without rewriting the workflow.
+            </p>
+            <div class="endpoint-stack">
+              <code>POST /v1/chat/completions</code>
+              <code>provider: default</code>
+              <code>guard: BEGIN_FILE preview</code>
+            </div>
+          </article>
+
+          <article class="relay-matrix reveal" style="--i: 2" aria-label="Live relay matrix">
+            <div class="matrix-row"><span>Problem PDF</span><b></b><em>intake</em></div>
+            <div class="matrix-row"><span>Skills</span><b></b><em>method</em></div>
+            <div class="matrix-row"><span>MCP tools</span><b></b><em>compute</em></div>
+            <div class="matrix-row"><span>Ledgers</span><b></b><em>verify</em></div>
+            <div class="matrix-row"><span>LaTeX</span><b></b><em>compile</em></div>
+          </article>
+
+          <article class="relay-feature reveal" style="--i: 3">
+            <span>Evidence</span>
+            <h3>Polish is blocked until proof exists.</h3>
+            <p>Result, figure, source, and claim ledgers keep SCI-style prose tied to reproducible artifacts.</p>
+          </article>
+
+          <article class="relay-feature reveal" style="--i: 4">
+            <span>Contest flow</span>
+            <h3>Official problem to final handoff.</h3>
+            <p>Onboard files, create prompts, run deterministic checks, build PDF, then package every artifact.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="runtime" class="official-site runtime-section">
+        <div class="section-kicker reveal" style="--i: 0">
+          <p class="eyebrow">Local Runtime</p>
+          <h2>Executable entry, browser UI, file-first engine.</h2>
+          <p class="lede compact">
+            Start with <code>MathModelingPaperOS.exe</code>. The launcher checks the local runtime,
+            starts the Node app, opens the workbench, and keeps Python/LaTeX as deterministic engines.
+          </p>
+        </div>
+
+        <div class="runtime-shell reveal" style="--i: 1">
+          <div class="runtime-orbit" aria-hidden="true"><span></span></div>
+          <div class="runtime-command">
+            <span>Windows executable</span>
+            <strong>.\MathModelingPaperOS.exe</strong>
+            <p>Launcher -> local API -> browser workbench -> paperctl.py -> LaTeX.</p>
+          </div>
+          <div class="runtime-status" aria-label="Runtime status">
+            <div>
+              <span>Local URL</span>
+              <strong id="runtimeUrl">checking...</strong>
+            </div>
+            <div>
+              <span>Node</span>
+              <strong id="runtimeNode">checking...</strong>
+            </div>
+            <div>
+              <span>Python</span>
+              <strong id="runtimePython">checking...</strong>
+            </div>
+            <div>
+              <span>LaTeX</span>
+              <strong id="runtimeLatex">checking...</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="studio" class="app-shell">
+        <div class="app-topline">
+          <button class="back-home" id="backHomeBtn" type="button">Back to Official Site</button>
+          <span>Local application mode</span>
+        </div>
+
+        <div class="studio-banner reveal" style="--i: 0">
+          <div>
+            <p class="eyebrow">Application Workbench</p>
+            <h2>Contest Command Center</h2>
+          </div>
+          <div class="active-chip">
+            <span>Active contest</span>
+            <strong id="activeContest">awaiting workspace</strong>
+          </div>
+        </div>
+
+        <div class="ops-ribbon reveal" style="--i: 1" aria-label="Workbench operating model">
+          <div>
+            <span>01</span>
+            <strong>Upload official problem</strong>
+            <small>PDF, data, rules, user skills</small>
+          </div>
+          <div>
+            <span>02</span>
+            <strong>Route through provider</strong>
+            <small>Base URL, API key env, model</small>
+          </div>
+          <div>
+            <span>03</span>
+            <strong>Lock evidence</strong>
+            <small>results, figures, claims, sources</small>
+          </div>
+          <div>
+            <span>04</span>
+            <strong>Build and package</strong>
+            <small>LaTeX PDF plus handoff folder</small>
+          </div>
+        </div>
+
+        <div class="paper-health reveal" style="--i: 2" aria-label="Paper health telemetry">
+          <div>
+            <span>Source lock</span>
+            <strong>Problem / data / rules</strong>
+            <i></i>
+          </div>
+          <div>
+            <span>Model route</span>
+            <strong>base_url + API key</strong>
+            <i></i>
+          </div>
+          <div>
+            <span>Figure quality</span>
+            <strong>Scientific plots required</strong>
+            <i></i>
+          </div>
+          <div>
+            <span>Submission</span>
+            <strong>LaTeX PDF package</strong>
+            <i></i>
+          </div>
+        </div>
+
+        <div class="workbench-layout">
+          <aside class="mission-panel reveal" style="--i: 2">
+            <section class="panel-block onboard-block">
+              <div class="block-title">
+                <span>Fast Start</span>
+                <h3>Contest Onboard</h3>
+              </div>
+              <p>Use the official problem first. Data, rules, and user skills can be added as scoped artifacts.</p>
+              <label>
+                Contest ID
+                <input id="contestIdInput" placeholder="2026-cert-b" />
+              </label>
+              <button id="createContestBtn" class="solid">Create Workspace</button>
+              <label>
+                Problem File
+                <input id="onboardProblem" placeholder="C:\path\to\problem.pdf" />
+              </label>
+              <label>
+                Data Files
+                <input id="onboardData" placeholder="C:\path\a.csv; C:\path\b.xlsx" />
+              </label>
+              <label>
+                Reference Files
+                <input id="onboardReferences" placeholder="C:\path\rules.pdf" />
+              </label>
+              <button id="onboardBtn">Onboard Contest</button>
+            </section>
+
+            <section class="panel-block compact">
+              <div class="block-title">
+                <span>Workspace</span>
+                <h3>Run lane</h3>
+              </div>
+              <select id="contestSelect"></select>
+              <div class="command-grid">
+                <button data-command="status">Read Status</button>
+                <button data-command="pipeline">Pipeline Report</button>
+                <button data-command="advance">Advance Dry-run</button>
+              </div>
+            </section>
+          </aside>
+
+          <section class="stage-runway reveal" style="--i: 3">
+            <div class="runway-head">
+              <div>
+                <p class="eyebrow">Live Stage Gates</p>
+                <h3>Paper production runway</h3>
+              </div>
+              <p id="nextStage">Waiting for status</p>
+            </div>
+            <div class="pipeline-track" aria-hidden="true"><span></span></div>
+            <div id="stages" class="stages" aria-live="polite">
+              <article class="stage stage-skeleton" aria-hidden="true">
+                <span class="state">Pending</span>
+                <small class="stage-index">01</small>
+                <h3>intake</h3>
+                <p>Waiting for contest status</p>
+                <code>paperctl:intake</code>
+              </article>
+              <article class="stage stage-skeleton" aria-hidden="true">
+                <span class="state">Pending</span>
+                <small class="stage-index">02</small>
+                <h3>modeling</h3>
+                <p>Waiting for contest status</p>
+                <code>paperctl:modeling</code>
+              </article>
+              <article class="stage stage-skeleton" aria-hidden="true">
+                <span class="state">Pending</span>
+                <small class="stage-index">03</small>
+                <h3>figure</h3>
+                <p>Waiting for contest status</p>
+                <code>paperctl:figure</code>
+              </article>
+              <article class="stage stage-skeleton" aria-hidden="true">
+                <span class="state">Pending</span>
+                <small class="stage-index">04</small>
+                <h3>writing</h3>
+                <p>Waiting for contest status</p>
+                <code>paperctl:writing</code>
+              </article>
+              <article class="stage stage-skeleton" aria-hidden="true">
+                <span class="state">Pending</span>
+                <small class="stage-index">05</small>
+                <h3>verification</h3>
+                <p>Waiting for contest status</p>
+                <code>paperctl:verification</code>
+              </article>
+            </div>
+            <div class="submission-actions">
+              <button data-command="verify">Verify Chain</button>
+              <button data-command="build">Build PDF</button>
+              <button data-command="package-submission" class="solid">Package Submission</button>
+            </div>
+          </section>
+
+          <aside class="gateway-settings tool-drawer reveal" style="--i: 4">
+            <div class="drawer-status" aria-label="Gateway drawer status">
+              <span></span>
+              <strong>Gateway drawer armed</strong>
+              <small>Provider, materials, audits</small>
+            </div>
+            <div class="drawer-tabs" role="tablist" aria-label="Gateway drawer tabs">
+              <button type="button" class="drawer-tab is-active" data-drawer-tab="provider" aria-selected="true">Provider</button>
+              <button type="button" class="drawer-tab" data-drawer-tab="materials" aria-selected="false">Materials</button>
+              <button type="button" class="drawer-tab" data-drawer-tab="audits" aria-selected="false">Audits</button>
+            </div>
+
+            <section class="panel-block provider drawer-panel is-active" data-drawer-panel="provider">
+              <div class="block-title">
+                <span>Model Gateway</span>
+                <h3>AI Provider</h3>
+              </div>
+              <label>
+                Provider
+                <input id="providerName" value="default" />
+              </label>
+              <label>
+                Base URL
+                <input id="baseUrl" placeholder="https://api.openai.com/v1" />
+              </label>
+              <label>
+                API Key Env
+                <input id="apiKeyEnv" placeholder="OPENAI_API_KEY" />
+              </label>
+              <label>
+                Model
+                <input id="model" placeholder="gpt-5.4" />
+              </label>
+              <div class="two">
+                <label>
+                  Temp
+                  <input id="temperature" type="number" step="0.1" value="0.2" />
+                </label>
+                <label>
+                  Timeout
+                  <input id="timeout" type="number" value="120" />
+                </label>
+              </div>
+              <button id="saveProviderBtn" class="solid">Save Provider</button>
+            </section>
+
+            <section class="panel-block compact drawer-panel" data-drawer-panel="materials" hidden>
+              <div class="block-title">
+                <span>Import</span>
+                <h3>Materials</h3>
+              </div>
+              <label>
+                File Path
+                <input id="sourcePath" placeholder="C:\path\to\source.pdf" />
+              </label>
+              <select id="targetArea">
+                <option value="problem">Problem</option>
+                <option value="data">Raw Data</option>
+                <option value="reference">Reference</option>
+                <option value="skill">User Skill</option>
+              </select>
+              <button id="uploadBtn">Import File</button>
+            </section>
+
+            <section class="panel-block compact drawer-panel" data-drawer-panel="audits" hidden>
+              <div class="block-title">
+                <span>Audits</span>
+                <h3>Tooling checks</h3>
+              </div>
+              <div class="command-grid">
+                <button data-command="skill-audit">Skill Audit</button>
+                <button data-command="mcp-audit">MCP Audit</button>
+                <button data-command="provider-check">Provider Check</button>
+                <button data-command="blueprint">Blueprint</button>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </section>
+
+      <section id="intelligence" class="intelligence">
+        <div class="intel-head reveal" style="--i: 0">
+          <div>
+            <p class="eyebrow">Workflow Intelligence</p>
+            <h2>Blueprint, Skills, MCP</h2>
+          </div>
+          <select id="intelStage" aria-label="Intelligence stage">
+            <option value="intake">intake</option>
+            <option value="modeling">modeling</option>
+            <option value="figure">figure</option>
+            <option value="writing" selected>writing</option>
+            <option value="verification">verification</option>
+          </select>
+        </div>
+        <div id="blueprintLanes" class="lane-strip"></div>
+        <div class="intel-grid">
+          <section class="panel-block">
+            <div class="block-title">
+              <span>Skills</span>
+              <h3>Recommended Skills</h3>
+            </div>
+            <div id="skillList" class="recommend-list"></div>
+          </section>
+          <section class="panel-block">
+            <div class="block-title">
+              <span>MCP</span>
+              <h3>Recommended Tools</h3>
+            </div>
+            <div id="mcpList" class="recommend-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="console-wrap reveal" style="--i: 1">
+        <div class="console-head">
+          <div>
+            <p class="eyebrow">Run Log</p>
+            <h2>Execution Trace</h2>
+          </div>
+          <div class="console-actions">
+            <button id="refreshBtn">Refresh</button>
+            <button id="clearLogBtn">Clear</button>
+          </div>
+        </div>
+        <pre id="log">Starting...</pre>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

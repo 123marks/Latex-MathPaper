@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "name": "math-modeling-paper-pipeline",
+  "description": "Contest paper workflow from official problem intake to verified LaTeX/PDF delivery.",
+  "stages": [
+    {
+      "id": "intake",
+      "owner": "intake-analyst",
+      "entry_commands": [
+        "python paperctl.py stage-prompt <contest-id> intake",
+        "python paperctl.py run-stage <contest-id> intake --dry-run"
+      ],
+      "review_commands": [
+        "python paperctl.py apply-response <contest-id> ai-runs/<run>/response.md",
+        "python paperctl.py recommend-skills intake",
+        "python paperctl.py recommend-mcp intake"
+      ],
+      "exit_gate": "problem-map and modeling-plan identify every subquestion, direct-answer target, data dependency, and rule/source dependency."
+    },
+    {
+      "id": "modeling",
+      "owner": "modeling-engineer",
+      "entry_commands": [
+        "python paperctl.py stage-prompt <contest-id> modeling"
+      ],
+      "review_commands": [
+        "python paperctl.py verify <contest-id>",
+        "python paperctl.py recommend-skills modeling",
+        "python paperctl.py recommend-mcp modeling"
+      ],
+      "exit_gate": "result-ledger rows resolve to scripts, source data, exact values, metrics, and units."
+    },
+    {
+      "id": "figure",
+      "owner": "figure-engineer",
+      "entry_commands": [
+        "python paperctl.py stage-prompt <contest-id> figure"
+      ],
+      "review_commands": [
+        "python paperctl.py verify <contest-id>",
+        "python paperctl.py recommend-skills figure",
+        "python paperctl.py recommend-mcp figure"
+      ],
+      "exit_gate": "figure-ledger rows resolve to generated figures, source data, scripts, purpose, and caption claims."
+    },
+    {
+      "id": "writing",
+      "owner": "latex-writer",
+      "entry_commands": [
+        "python paperctl.py stage-prompt <contest-id> writing"
+      ],
+      "review_commands": [
+        "python paperctl.py apply-response <contest-id> ai-runs/<run>/response.md",
+        "python paperctl.py verify <contest-id>",
+        "python paperctl.py build <contest-id>"
+      ],
+      "exit_gate": "LaTeX sections contain no TODO markers, direct answers are explicit, and claim-ledger references cover important claims."
+    },
+    {
+      "id": "verification",
+      "owner": "verifier",
+      "entry_commands": [
+        "python paperctl.py verify <contest-id>",
+        "python paperctl.py build <contest-id>"
+      ],
+      "review_commands": [
+        "python paperctl.py status <contest-id>",
+        "python paperctl.py kb-search submission"
+      ],
+      "exit_gate": "verification report has zero FAIL, intentional WARN items are documented, PDF exists, and submission rules are current."
+    }
+  ],
+  "non_negotiable_gates": [
+    "No invented contest facts, result values, references, or constraints.",
+    "No important result claim without claim-ledger evidence.",
+    "No absolute local paths in LaTeX or scripts.",
+    "No broad MCP filesystem or command access without explicit scoping.",
+    "No final submission while paperctl status reports blocked/todo/in_progress stages."
+  ]
+}

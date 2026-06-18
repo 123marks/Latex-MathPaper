@@ -1,0 +1,29 @@
+name: writing
+goal: Convert verified models, results, and figures into a coherent LaTeX contest paper.
+primary_skills:
+  - math-modeling-paper
+  - math-modeling-paper-excellence
+  - nature-polishing
+inputs:
+  - state/problem-map.md
+  - state/modeling-plan.md
+  - state/result-ledger.csv
+  - state/figure-ledger.csv
+  - state/claim-ledger.csv
+  - paper/sections/
+outputs:
+  - paper/main.tex
+  - paper/sections/*.tex
+  - paper/refs.bib
+steps:
+  - Draft model sections after result evidence exists.
+  - Use motivation-formula-interpretation for every important equation.
+  - Add direct-answer paragraphs for every contest subquestion.
+  - Add important abstract and direct-answer claims to state/claim-ledger.csv.
+  - Write the abstract after the model sections and validation are stable.
+  - Polish language only after claim consistency has been checked.
+acceptance:
+  - Every figure included in LaTeX appears in the figure ledger.
+  - Every important result claim appears in the claim ledger.
+  - Abstract values match the result ledger.
+  - No claim depends on invented or unverified data.

@@ -1,0 +1,28 @@
+name: real-contest-onboarding
+goal: Bring a new official contest problem into the product without losing rule, data, or evidence traceability.
+primary_skills:
+  - math-modeling-paper
+  - math-modeling-paper-excellence
+  - web-search
+inputs:
+  - official problem PDF
+  - official data package
+  - official rules and format documents
+outputs:
+  - contests/<contest-id>/
+  - contest-rules.md
+  - state/problem-map.md
+  - state/modeling-plan.md
+  - state/source-ledger.csv
+steps:
+  - Initialize the contest folder with `paperctl.py init <contest-id>`.
+  - Copy official problem files into `problem/`.
+  - Copy raw data into `data/raw/` without modification.
+  - Refresh official rules and record sources in `contest-rules.md`.
+  - Fill `state/source-ledger.csv` for every official rule and external method source.
+  - Run intake workflow and create judge-facing question map.
+  - Run modeling workflow only after direct-answer targets are clear.
+acceptance:
+  - Official sources are recorded with URLs and retrieval dates.
+  - Every raw data file remains untouched under `data/raw/`.
+  - Every subquestion has a direct-answer target before modeling begins.

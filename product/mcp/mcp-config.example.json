@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "filesystem-workspace": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:\\Users\\whw\\Desktop\\latex-paper-codex"
+      ],
+      "notes": "Scope to the project root only. For real contests, prefer scoping to contests/<contest-id>."
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-fetch"
+      ],
+      "notes": "Use for official contest rules, package docs, and source retrieval."
+    },
+    "git": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-git"
+      ],
+      "notes": "Enable only after this workspace is initialized as a git repository."
+    },
+    "time": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-time"
+      ],
+      "notes": "Useful for timestamping source-ledger retrieval dates."
+    }
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "updated": "2026-06-09",
+  "name": "competition-paper-product-blueprint",
+  "summary": "End-to-end operating workflow for turning official math modeling materials into a verified LaTeX/PDF paper using AI providers, reviewed skills, MCP-style tools, and deterministic evidence gates.",
+  "lanes": [
+    {
+      "id": "contest-intake",
+      "title": "Contest Intake",
+      "goal": "Collect the official problem, rules, data, and source constraints before any model writing begins.",
+      "entry_command": "python paperctl.py ingest <contest-id> <problem-file> --kind problem",
+      "recommended_skills": ["math-modeling-paper-excellence", "web-search"],
+      "recommended_mcp": ["filesystem", "fetch"],
+      "outputs": ["problem/problem.md", "contest-rules.md", "state/problem-map.md", "state/source-ledger.csv"],
+      "gate": "Every subquestion has a direct-answer target, data dependency, and rule/source dependency."
+    },
+    {
+      "id": "method-selection",
+      "title": "Method Selection",
+      "goal": "Choose model families, rejected alternatives, variables, objectives, and constraints with judge-facing logic.",
+      "entry_command": "python paperctl.py stage-prompt <contest-id> modeling",
+      "recommended_skills": ["math-modeling-paper-excellence", "athola/claude-night-market@math-review", "kishorkukreja/awesome-supply-chain@optimization-modeling"],
+      "recommended_mcp": ["filesystem", "command"],
+      "outputs": ["state/modeling-plan.md", "src/", "state/result-ledger.csv"],
+      "gate": "Every selected method has a reason, a baseline, expected metric, and reproducible script path."
+    },
+    {
+      "id": "compute-and-ledger",
+      "title": "Compute And Ledger",
+      "goal": "Run deterministic scripts and store exact values before writing final claims.",
+      "entry_command": "python paperctl.py verify <contest-id>",
+      "recommended_skills": ["eyadsibai/ltk@scientific-computing", "math-modeling-paper-excellence"],
+      "recommended_mcp": ["filesystem", "command", "sqlite-duckdb"],
+      "outputs": ["runs/", "state/result-ledger.csv", "state/claim-ledger.csv"],
+      "gate": "No result enters the paper unless it is present in result-ledger with metric, value, unit, script, and source data."
+    },
+    {
+      "id": "scientific-figures",
+      "title": "Scientific Figures",
+      "goal": "Create evidence-carrying publication-style figures with traceable scripts and caption claims.",
+      "entry_command": "python paperctl.py stage-prompt <contest-id> figure",
+      "recommended_skills": ["nature-figure", "davila7/claude-code-templates@scientific-visualization", "l-yifan/skills@scientific-figure-pro"],
+      "recommended_mcp": ["filesystem", "command"],
+      "outputs": ["figures/", "state/figure-ledger.csv"],
+      "gate": "Every figure has a purpose, source data, script, caption claim, and LaTeX reference."
+    },
+    {
+      "id": "latex-writing",
+      "title": "LaTeX Writing",
+      "goal": "Write modular LaTeX sections from verified evidence, keeping unknown values explicit as TODO.",
+      "entry_command": "python paperctl.py stage-prompt <contest-id> writing",
+      "recommended_skills": ["math-modeling-paper-excellence", "bahayonghang/academic-writing-skills@latex-paper-en", "nature-polishing"],
+      "recommended_mcp": ["filesystem"],
+      "outputs": ["paper/main.tex", "paper/sections/", "paper/refs.bib", "state/claim-ledger.csv"],
+      "gate": "Important claims are linked to evidence and direct-answer paragraphs exist for every problem item."
+    },
+    {
+      "id": "submission-verification",
+      "title": "Submission Verification",
+      "goal": "Compile, verify, inspect warnings, and package final deliverables without silent AI edits.",
+      "entry_command": "python paperctl.py verify <contest-id> && python paperctl.py build <contest-id>",
+      "recommended_skills": ["math-modeling-paper-excellence", "scientific-paper", "math-review"],
+      "recommended_mcp": ["filesystem", "command", "browser"],
+      "outputs": ["state/verification-report.md", "paper/main.pdf"],
+      "gate": "Verification has zero FAIL, intentional WARN items are documented, and paper/main.pdf exists."
+    }
+  ],
+  "operating_rules": [
+    "Do not let AI output write final files without BEGIN_FILE preview and explicit apply.",
+    "Do not install or invoke external skills until their SKILL.md has been reviewed.",
+    "Do not enable broad MCP filesystem or command access for a contest workspace.",
+    "Do not polish prose before result, figure, and claim ledgers support the claims.",
+    "Do not submit while status reports todo, blocked, or in_progress stages."
+  ],
+  "packaging_strategy": [
+    {
+      "id": "mvp-local-web",
+      "status": "current",
+      "summary": "Windows .cmd launcher starts Node local API and browser UI. Best for fast iteration and contest debugging."
+    },
+    {
+      "id": "tauri-shell",
+      "status": "next",
+      "summary": "Wrap the local UI as a smaller Windows desktop app after one real contest pilot."
+    },
+    {
+      "id": "electron-shell",
+      "status": "fallback",
+      "summary": "Use if fastest packaging and consistent Chromium rendering matter more than binary size."
+    }
+  ]
+}

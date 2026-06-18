@@ -1,0 +1,53 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ---- Node ----
+node_modules/
+npm-debug.log*
+
+# ---- .NET launcher build output ----
+launcher/bin/
+launcher/obj/
+
+# Launcher binaries at repo root (rebuild with build-launcher.ps1)
+/MathModelingPaperOS.exe
+/MathModelingPaperOS.dll
+/MathModelingPaperOS.deps.json
+/MathModelingPaperOS.runtimeconfig.json
+
+# .NET CLI home / telemetry captured during local builds
+.dotnet/
+
+# ---- Packaging / distribution output ----
+dist/
+**/submission-package/
+
+# ---- Local, environment-specific config (may hold private settings) ----
+product/runtime/providers.local.json
+
+# ---- External skill package archives (reference material, not product source) ----
+*.zip
+
+# ---- LaTeX build artifacts (keep .tex sources and final .pdf) ----
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.synctex.gz
+
+# ---- OS / editor cruft ----
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

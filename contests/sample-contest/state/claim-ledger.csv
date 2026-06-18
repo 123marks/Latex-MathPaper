@@ -1,0 +1,2 @@
+claim_id,question,section,claim_text,result_ids,figure_ids,source_ids,expected_values,status,notes
+C-Q1-001,Q1,paper/sections/06-model-q1.tex,问题一示例指标为0.0 unit,example_metric,FigTemplate,,example_metric=0.0,draft,replace after real modeling

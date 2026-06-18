@@ -1,0 +1,25 @@
+name: intake
+goal: Convert a contest statement and data package into judge-facing tasks, outputs, and evidence requirements.
+primary_skills:
+  - math-modeling-paper
+  - math-modeling-paper-excellence
+inputs:
+  - problem/problem.pdf
+  - problem/problem.md
+  - data/raw/
+  - contest-rules.md
+outputs:
+  - state/problem-map.md
+  - state/modeling-plan.md
+  - state/source-ledger.csv
+steps:
+  - Read official rules, problem statement, data descriptions, and any templates.
+  - Extract every subquestion and required deliverable.
+  - Identify input data, output variables, metrics, constraints, and expected answer format.
+  - Classify each subproblem as optimization, prediction, simulation, classification, inference, or evaluation.
+  - Record initial model candidates and rejected alternatives.
+  - Define planned evidence artifacts for every important claim.
+acceptance:
+  - Every subquestion has a direct-answer target.
+  - Every planned result has a data or computation source.
+  - Every important assumption has a validation route.
