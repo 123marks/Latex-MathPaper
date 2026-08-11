@@ -116,8 +116,8 @@ npm run package:win         # 出开发预览 zip + sha；不证明 self-contain
 - **T3.1 App 外壳** — `pages/app/AppLayout.jsx`：图标化侧栏 + 工作区/团队切换 + 通知 + 图标菜单（`04`§0）。
 - **T3.2 Workbench 布局与状态** — `pages/app/Workbench.jsx`：布局契约、真实状态模型、tab dirty/关闭、命令面板/QuickOpen/搜索（`04`§1）。
 - **T3.3 AI 面板（已完成，2026-08-11）** — AI Assistant 已接真实 `/api/provider` 与 `/api/chat` runtime metadata，configured provider 和 response runtime 分离；`ActionTimeline` 由真实生命周期 `buildExecutionPlan` 生成；BEGIN_FILE 提案经 apply-blocks Preview、bounded diff、显式 Reject/Apply、exact path/mtime baseline、409 refresh 和 rollback/error 状态闭环。移动端为文件树 → 编辑器 → AI 的垂直工作流。证据：Node 164/164、Python 25/25、Web 2316 modules、IDE build、13/52 visual smoke、strict Edge pass；ai-qa 77→197 bytes，Apply HTTP 200 写入 paper/main.tex，1440×1200/390×844 均无根级横向溢出，reduced-motion 为 none / 0.001ms / 1。
-- **T3.4 放大镜通用化** — `pages/app/Magnifier.jsx`：去 `sample-contest` 硬编码，上下文带入；镜片浮层 + 证据抽屉（Claim/Result/Script/Dataset/Source）+ `EvidenceFlow` 连线；`evidence` 能力门控（`04`§3）。
-- **T3.5 团队/市场/社区/总览** — `TeamSpace/Market/CommunityBoard/Dashboard`：看板+活动热力、详情抽屉(权限/MCP)、信息流+榜、速览卡（`04`§4–7）。
+- **T3.4 放大镜通用化（已完成，2026-08-11）** — `pages/app/Magnifier.jsx`：已去 `sample-contest` 硬编码，改为 `/api/editor/projects` 工作区驱动 + `?workspace=` + `evidence` 能力门控；证据抽屉覆盖 Claim/Result/Script/Dataset/Source 并用 `EvidenceFlow` 连线（`04`§3）。commit e745f7f。
+- **T3.5 团队/市场/社区/总览（已完成，2026-08-11）** — TeamSpace 看板 + 7 天真实活动热力；Market 详情抽屉（权限按真实 `execute` 模式推导 + 诚实 MCP 说明）；CommunityBoard 最新/热门流 + 真实贡献榜；Dashboard 速览卡（`04`§4–7）。全部仅用真实数据，无伪造；commits 3855ea9/7454918/e1762c9。
 - **T3.6 Hero 真实截图（下一严格任务）** — 用 CDP 冒烟脚本拍已验证的真实 Workbench AI 状态 → `web/public/hero-ide.png`，替 T1.1 `HeroIdeMock` 临时示意（`03`§1.2）。T3.3 的浏览器证据是截图输入条件，不自动完成 Hero 资产替换和产品截图审查。
   验收：`web:build`/`ide:build` 绿；1440/1100 实拍；深链 200；能力门控无泄漏。
 

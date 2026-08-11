@@ -51,7 +51,7 @@ product_version: 0.5.0
 | AI provider 与 Web AI 审查流 | Partial | OpenAI-compatible provider path、账户密钥加密、`/api/chat` runtime metadata、真实 `ActionTimeline`、BEGIN_FILE preview/diff、显式 Reject/Apply | provider 失败会回退并明确标识 `mock-local`；仍不是本机模型推理，也没有通用 undo/hunk 编辑器 |
 | Team/community/admin API | Partial | server routes 与部分测试 | 不是生产级实时协作、队列或多代理编排 |
 | Ed25519 发布清单 | Implemented | `app/lib/signer.mjs`、release endpoints、signer/admin tests | 不替代 Authenticode/notarization；launcher 尚未验证更新链 |
-| 企业级视觉重设计 | Active implementation | docs/redesign、tokens/motion/Horizon、五个 motif、十四个 UI primitives、两端统一 Icon registry、T1.1–T1.5 与 T3.3 Web AI 面板；Home/公共页/认证页/Workbench 的响应式、键盘、reduced-motion 和浏览器证据已完成 | `HeroIdeMock` 仍是临时界面示意；T3.6 Workbench 实拍、实体 GPU、移动真机、像素基准、桌面壳与 P0-P6 整体仍未完成 |
+| 企业级视觉重设计 | Active implementation | docs/redesign、tokens/motion/Horizon、五个 motif、十四个 UI primitives、两端统一 Icon registry、T1.1–T1.5、T3.3 Web AI 面板、T3.4 放大镜通用化、T3.5 团队/市场/社区/总览；Home/公共页/认证页/Workbench 的响应式、键盘、reduced-motion 和浏览器证据已完成 | `HeroIdeMock` 仍是临时界面示意；T3.6 Workbench 实拍、实体 GPU、移动真机、像素基准、桌面壳与 P0-P6 整体仍未完成 |
 
 更细的能力状态见 [`CAPABILITY_MAP.md`](CAPABILITY_MAP.md)。
 
@@ -311,7 +311,7 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 | P0 | 修正版本和发布资产一致性 | 单一版本源；清单不声明缺失资产；签名边界明确 |
 | P1 | 完成 T3.6 真实 Workbench 产品截图 | 以真实 AI 面板和 Workspace/file 状态拍摄 web/public/hero-ide.png，并通过桌面/移动截图审查 |
 | P1 | 桌面信任与部署加固 | CSP、内嵌 runtime、日志、退出/崩溃恢复、签名更新链 |
-| P1 | 完成重设计 P0-P1 | T0.3、T0.4、T0.5、T0.6、T1.1–T1.5、T3.3 已完成；下一严格顺序为 T3.6；项目整体仍为 Active |
+| P1 | 完成重设计 P0-P1 | T0.3、T0.4、T0.5、T0.6、T1.1–T1.5、T3.3、T3.4、T3.5 已完成；下一严格顺序为 T3.6；项目整体仍为 Active |
 | P1 | 模块化 server/IDE | 小步搬运、每步测试护栏，不改变安全语义 |
 | P2 | 泛化 EditTransaction/BuildJob | 有版本、冲突、撤销、作业生命周期和 typed artifacts |
 | P2 | Workspace ACL/native picker | 外部目录授权可解释、最小权限、可撤销 |

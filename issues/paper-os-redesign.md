@@ -56,6 +56,8 @@ Paper OS 是本地优先的通用文档 IDE（Workspace Kernel + Packs），含�
 - [x] T1.4 Features/Pricing/Enterprise（2026-08-10）：五段深挖、Segmented/Table/FAQ/BYOK、六项企业范围与安全边界完成；独立复审 1 Important + 2 Minor 均经 RED→GREEN 关闭；Node 147/147、Web 2310 modules、12 视口 public Edge、112.6s strict Edge、视觉 92/pass
 - [x] T1.5 Login/Register（2026-08-10）：共享 AuthPanel、AuthAside code/PDF/trace、中性文案、Segmented、开发 OAuth、离线入口和密码确认完成；Node 155/155、Web 2312 modules、8 视口 auth Edge、88.8s strict Edge、stable SHA 81651dc0… 通过
 - [x] T3.3 Web Workbench 真实 AI 面板（2026-08-11）：provider/runtime truth、真实 ActionTimeline、BEGIN_FILE preview/diff、Reject/Apply、409/rollback、workspace 深链与 390px 垂直工作流完成；Node 164/164、Web 2316 modules、strict Edge、ai-qa 77→197 bytes 写入证据通过
+- [x] T3.4 放大镜通用化（2026-08-11）：去 sample-contest 硬编码，改为 /api/editor/projects 工作区驱动 + `?workspace=` + `evidence` 能力门控 + Claim/Result/Script/Dataset/Source 五类 + EvidenceFlow 连线；commit e745f7f
+- [x] T3.5 团队/市场/社区/总览（2026-08-11）：CommunityBoard 最新/热门流 + 真实贡献榜、Dashboard 速览卡、Market 详情抽屉（权限按真实 execute 推导 + 诚实 MCP 说明）、TeamSpace 7 天活动热力（真实 createdAt）；同时移除 Dashboard/Download/Docs/TeamSpace 的本机模型推理与伪造数据并加回归护栏；commits 3855ea9/7454918/e1762c9/da19471/8c3d2c0
 - [ ] T3.6 Workbench Hero 真实产品截图：基于已验证的 T3.3 状态拍摄 web/public/hero-ide.png，替换 HeroIdeMock，并完成截图审查
   - 2026-08-11 尝试：CDP 采集管线与 ≤300KB 尺寸已验证，但无头 Edge 下 Monaco 编辑器不合成（黑屏）、有头 Edge 调试端口未连上、本机无 Tectonic（占位 PDF + 安装横幅）。已回滚实验、保留示意图；完成路径见 docs/plans/2026-08-11-t3-6-hero-capture.md
 - [ ] P0–P6 实施与阶段验收

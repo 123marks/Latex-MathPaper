@@ -188,8 +188,8 @@ Error Assist（编译错误 → 解释 + 建议修复，接 PROBLEMS）、**Cita
 ## 10. 落地清单
 
 - [ ] `AppLayout` 图标化 + 工作区/团队切换 + 通知 + 图标菜单。
-- [ ] Workbench 落布局契约、状态模型、AI 时间线、diff Apply；Magnifier 通用化 + 镜片浮层 + 证据抽屉 + 连线。
-- [ ] TeamSpace 看板+活动热力；Market 详情抽屉(权限/MCP)；CommunityBoard 流+榜；Dashboard 速览卡。
+- [ ] Workbench 落布局契约、状态模型、AI 时间线、diff Apply（AI 时间线/diff Apply 已由 T3.3 完成；布局契约/状态模型仍待办）；Magnifier 通用化 + 证据抽屉 + 连线（2026-08-11 完成，`evidence` 能力门控）。
+- [x] TeamSpace 看板+活动热力；Market 详情抽屉(权限/MCP)；CommunityBoard 流+榜；Dashboard 速览卡（2026-08-11 完成，均用真实数据、无伪造）。
 - [ ] Usage/ApiKeys 接 `07` 图表；admin 加 RBAC 门控 + 健康面。
 - [ ] 全部能力门控：evidence/stages/math-modeling 只在有能力时出现。
 - 验证：`web:build`/`ide:build` 绿；1440/1100 实拍；深链 200；`node --test` 相关用例不回归。
