@@ -18,6 +18,14 @@ launcher/obj/
 /MathModelingPaperOS.dll
 /MathModelingPaperOS.deps.json
 /MathModelingPaperOS.runtimeconfig.json
+/PaperOS.exe
+/PaperOS.dll
+/PaperOS.deps.json
+/PaperOS.runtimeconfig.json
+
+# WebView2 assemblies and native loaders restored during the launcher build
+/Microsoft.Web.WebView2.*.dll
+/runtimes/
 
 # .NET CLI home / telemetry captured during local builds
 .dotnet/
@@ -28,6 +36,9 @@ dist/
 
 # ---- Local, environment-specific config (may hold private settings) ----
 product/runtime/providers.local.json
+
+# ---- Local runtime data (accounts, sessions, community posts) ----
+app/data/
 
 # ---- External skill package archives (reference material, not product source) ----
 *.zip
@@ -44,6 +55,17 @@ product/runtime/providers.local.json
 *.lof
 *.lot
 *.synctex.gz
+
+# ---- Web / desktop bundles (regenerate with npm run build) ----
+app/public/
+app/ide/
+
+# ---- Tauri / Rust build and generated output ----
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+
+# ---- Agent / tool session state ----
+.omx/
 
 # ---- OS / editor cruft ----
 .DS_Store
