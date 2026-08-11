@@ -97,10 +97,29 @@ test("annotations CRUD is workspace-scoped, validated, and persisted", async (t)
   await json("/api/editor/annotations", { method: "POST", ...jsonBody({
     workspace: workspaceId, target: { kind: "editor-range", path: "paper/main.tex", startLine: 1, endLine: 1 }, note: "",
   }) }, 400);
-  // pdf-region is not accepted yet (Epic 1a).
+  // pdf-region (Epic 1d): rect is required — no rect / zero area / bad page -> 400.
   await json("/api/editor/annotations", { method: "POST", ...jsonBody({
-    workspace: workspaceId, target: { kind: "pdf-region", path: "paper/main.pdf", page: 1 }, note: "later",
+    workspace: workspaceId, target: { kind: "pdf-region", path: "paper/main.tex", page: 1 }, note: "later",
   }) }, 400);
+  await json("/api/editor/annotations", { method: "POST", ...jsonBody({
+    workspace: workspaceId, target: { kind: "pdf-region", path: "paper/main.tex", page: 1, rect: { x: 0.2, y: 0.2, w: 0, h: 0.1 } }, note: "zero width",
+  }) }, 400);
+  await json("/api/editor/annotations", { method: "POST", ...jsonBody({
+    workspace: workspaceId, target: { kind: "pdf-region", path: "paper/main.tex", page: 0, rect: { x: 0.1, y: 0.1, w: 0.2, h: 0.2 } }, note: "bad page",
+  }) }, 400);
+
+  // pdf-region happy path: coordinates are clamped to 0..1 and rounded.
+  const pdfAnno = await json("/api/editor/annotations", { method: "POST", ...jsonBody({
+    workspace: workspaceId,
+    target: { kind: "pdf-region", path: "paper/main.tex", page: 2, rect: { x: 0.25, y: 0.5, w: 0.9, h: 0.12345 } },
+    note: "图太挤",
+    intent: "fix",
+  }) });
+  assert.equal(pdfAnno.annotation.target.kind, "pdf-region");
+  assert.equal(pdfAnno.annotation.target.page, 2);
+  assert.equal(pdfAnno.annotation.target.rect.w, 0.75); // clamped to fit inside the page
+  assert.equal(pdfAnno.annotation.target.rect.h, 0.1235); // rounded to 4 decimals
+  await json(`/api/editor/annotations/${pdfAnno.annotation.id}${ws}`, { method: "DELETE" });
 
   // Patch status open -> resolved.
   const id = created.annotation.id;

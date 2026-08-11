@@ -3312,6 +3312,85 @@
 .tree-create { display: flex; gap: 4px; padding: 0 6px 8px; align-items: center; }
 .tree-toolbar .btn { font-size: 10px; padding: 2px 6px; }
 
+/* pdf.js 渲染层（09-integrations 3c/1d） */
+.pdfv { display: flex; flex-direction: column; gap: 8px; width: 100%; min-width: 0; }
+.pdfv-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.pdfv-btn {
+  background: var(--bg-2);
+  border: 1px solid var(--ink-line-2);
+  border-radius: 5px;
+  color: var(--text-soft);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.pdfv-btn:hover { border-color: var(--amber); color: var(--amber); }
+.pdfv-btn.on { border-color: var(--amber); color: var(--amber); background: var(--amber-soft); }
+.pdfv-zoom { min-width: 38px; text-align: center; }
+.pdfv-loading, .pdfv-error {
+  padding: 24px;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.pdfv-error { color: #e26d5a; }
+.pdfv-pages-scroll {
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  max-height: 640px;
+  overflow: auto;
+  padding: 4px;
+}
+.pdfv-page {
+  position: relative;
+  background: #fff;
+  box-shadow: 0 12px 40px -16px rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.pdfv-page.region-mode { cursor: crosshair; }
+.pdfv-page canvas { display: block; }
+.pdfv-pageno {
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+.pdfv-marquee {
+  position: absolute;
+  border: 1.5px dashed var(--amber);
+  background: rgba(212, 163, 65, 0.16);
+  pointer-events: none;
+}
+.pdfjs-text-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  line-height: 1;
+}
+.pdfjs-text-layer span {
+  position: absolute;
+  white-space: pre;
+  color: transparent;
+  transform-origin: 0 0;
+  cursor: text;
+}
+.pdfjs-text-layer ::selection { background: rgba(212, 163, 65, 0.35); color: transparent; }
+.pdfv-page.region-mode .pdfjs-text-layer { pointer-events: none; }
+
 .editor-area {
   display: flex;
   flex-direction: column;

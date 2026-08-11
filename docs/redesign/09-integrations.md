@@ -99,7 +99,9 @@ owner: redesign
 - [x] 1a 标注数据模型 + 服务端 CRUD + 存储 + 测试（2026-08-11，`/api/editor/annotations`，`tests/annotations-api.test.mjs`）
 - [x] 1b 编辑器行范围批注 UI + 列表面板 + 测试（2026-08-11，Workbench `AnnotationsPanel` + `LaTeXEditor` 选区回调 + `api.patch`）
 - [x] 1c 标注 → 结构化 AI 修改请求（填入 AI 输入，人工复核后走现有 Preview → Apply；标注转 proposed，解决仍人工）（2026-08-11，`composeFromAnnotations`）
-- [ ] 1d PDF 区域标注（待 SyncTeX 精确后）
+- [x] 1d PDF 区域标注：pdf.js 页面上拖框 → 归一化矩形（0–1，服务端校验/钳制/四位舍入）
+      + 备注 → 标注系统（`pdf-region` 目标），标注面板显示 `PDF p.N`、AI 组装带选区
+      位置描述 + 测试（2026-08-12）。已存区域在 PDF 上回显叠加与 SyncTeX 源码反查列后续。
 - [x] 2a AI 会话历史 API（`/api/chat/history` 列表/详情/搜索，真实 chat.json）+ 测试（2026-08-11）
 - [x] 2b `/app/sessions` 会话管理页（搜索/详情/提案文件块/复用）+ 导航 + Workbench `?prompt` 复用（2026-08-11）
 - [x] 2c Usage token 输入/输出构成（真实 promptTokens/completionTokens）+ 测试（2026-08-11）。
@@ -113,7 +115,10 @@ owner: redesign
       （引了但 `.bib` 没有）检测 + 测试（2026-08-11）
 - [x] 3b Workbench 文献面板：可折叠条（条数/缺失徽标）、条目卡（作者/发表处/被引次数）、
       引用位置点击直达源文件、missing 列表 + 测试（2026-08-11）
-- [ ] 3c PDF 高亮批注 / 划词→问（依赖 PDF viewer 层，后续）
+- [x] 3c-1 pdf.js 渲染层 + 划词→问：iframe 预览替换为 pdfjs-dist v6 canvas 渲染
+      （异步分包 gzip 143KB + 按需 worker，SSR 安全动态加载），文本层可划词、
+      「问 AI」把选中文本送入 AI 输入框，缩放/页码/多页滚动 + 测试（2026-08-12）
+- [ ] 3c-2 已存标注/高亮在 PDF 上持久回显（后续）
 - [x] 3d DOI 导入：`POST /api/editor/references/import` 接受裸 DOI / doi.org 链接，
       content negotiation 抓取 BibTeX 追加进第一个 `.bib`（无则建 `paper/references.bib`），
       按条目 key 去重（409）；离线/上游错误如实 502/404，测试用本地 mock DOI 服务

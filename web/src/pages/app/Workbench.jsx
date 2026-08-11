@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { api } from "../../lib/api.js";
 import AIAssistantPanel from "../../components/workbench/AIAssistantPanel.jsx";
+import PdfViewer from "../../components/workbench/PdfViewer.jsx";
 import LaTeXEditor from "../../components/LaTeXEditor.jsx";
 import { usePaperOSWS } from "../../lib/ws.js";
 import {
@@ -124,18 +125,23 @@ export default function Workbench() {
   }
   useEffect(() => { loadAnnotations(); }, [contest]); // eslint-disable-line
 
-  async function addAnnotation({ note, intent, priority }) {
-    if (!active || !annoSel) return;
-    try {
-      const d = await api.post("/api/editor/annotations", {
-        workspace: contest,
-        target: {
+  async function addAnnotation({ note, intent, priority, target }) {
+    // Default target: the current editor selection; callers（如 PDF 区域标注）
+    // can pass an explicit target instead.
+    const finalTarget = target || (active && annoSel
+      ? {
           kind: "editor-range",
           path: active.path,
           startLine: annoSel.startLine,
           endLine: annoSel.endLine,
           excerpt: annoSel.excerpt,
-        },
+        }
+      : null);
+    if (!finalTarget) return;
+    try {
+      const d = await api.post("/api/editor/annotations", {
+        workspace: contest,
+        target: finalTarget,
         note,
         intent,
         priority,
@@ -171,9 +177,11 @@ export default function Workbench() {
   function composeFromAnnotations(items) {
     if (!active || !items || items.length === 0) return;
     const rows = items.map((a, i) => {
-      const range = a.target.endLine !== a.target.startLine
-        ? `行 ${a.target.startLine}–${a.target.endLine}`
-        : `行 ${a.target.startLine}`;
+      const range = a.target.kind === "pdf-region"
+        ? `PDF 第 ${a.target.page} 页选区（x${Math.round(a.target.rect.x * 100)}% y${Math.round(a.target.rect.y * 100)}%，约 ${Math.round(a.target.rect.w * 100)}%×${Math.round(a.target.rect.h * 100)}%）`
+        : a.target.endLine !== a.target.startLine
+          ? `行 ${a.target.startLine}–${a.target.endLine}`
+          : `行 ${a.target.startLine}`;
       const excerpt = a.target.excerpt
         ? `\n   > ${a.target.excerpt.replace(/\s+/g, " ").trim().slice(0, 120)}`
         : "";
@@ -814,17 +822,25 @@ export default function Workbench() {
                 <span>{active ? active.path : "—"}</span>
               </div>
               {pdfUrl ? (
-                <iframe
-                  src={pdfUrl}
-                  title="PDF preview"
-                  style={{
-                    width: "100%",
-                    maxWidth: 520,
-                    height: 520,
-                    background: "#fefcf6",
-                    border: 0,
-                    borderRadius: 6,
-                    boxShadow: "0 12px 40px -16px rgba(0,0,0,0.6)",
+                <PdfViewer
+                  url={pdfUrl}
+                  onAskSelection={(text) => {
+                    setMsg(`关于编译 PDF 中选中的这段内容：\n> ${text.replace(/\n/g, "\n> ")}\n\n请检查它与源码是否一致，并给出改进建议。`);
+                  }}
+                  onRegionAnnotate={async ({ page, rect }) => {
+                    const note = window.prompt(`PDF 第 ${page} 页选中区域：这里要改什么？`);
+                    if (!note || !note.trim()) return;
+                    await addAnnotation({
+                      note: note.trim(),
+                      intent: "edit",
+                      priority: "normal",
+                      target: {
+                        kind: "pdf-region",
+                        path: active?.path || "paper/main.tex",
+                        page,
+                        rect,
+                      },
+                    });
                   }}
                 />
               ) : (
@@ -1245,7 +1261,9 @@ function AnnotationsPanel({ active, selection, annotations, onAdd, onStatus, onD
           fileAnnotations.map((a) => (
             <div key={a.id} className={`annotation-item status-${a.status}`}>
               <span className="annotation-loc">
-                L{a.target.startLine}{a.target.endLine !== a.target.startLine ? `–${a.target.endLine}` : ""}
+                {a.target.kind === "pdf-region"
+                  ? `PDF p.${a.target.page}`
+                  : `L${a.target.startLine}${a.target.endLine !== a.target.startLine ? `–${a.target.endLine}` : ""}`}
               </span>
               <span className={`chip anno-intent anno-intent-${a.intent}`}>{a.intent}</span>
               <span className={`chip anno-pri anno-pri-${a.priority}`}>{a.priority}</span>
