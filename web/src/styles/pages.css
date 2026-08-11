@@ -2272,6 +2272,19 @@
   max-width: 320px;
 }
 .provider-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* Workbench 会话级模型档案切换（09-integrations Epic 4b） */
+.ai-profile-row select {
+  width: 100%;
+  background: rgba(20, 20, 23, 0.6);
+  border: 1px solid var(--ink-line-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-soft);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  padding: 6px 8px;
+}
+.ai-profile-row select:disabled { opacity: 0.5; }
 .aside-block {
   padding: 18px;
 }

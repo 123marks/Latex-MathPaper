@@ -783,10 +783,12 @@ function readAccountProvider(userId) {
 // Resolve the effective provider for a user's AI calls: their own encrypted
 // key first, otherwise fall back to the shared file-based provider so the
 // product still works before a user configures anything.
-function resolveEffectiveProvider(userId) {
+function resolveEffectiveProvider(userId, requestedProfileId = null) {
   const own = readAccountProvider(userId);
-  // 09-integrations Epic 4a: an explicitly activated named profile wins.
-  const active = own?.profiles?.find?.((p) => p.id === own.activeProfileId);
+  // 09-integrations Epic 4a/4b: a per-request profile override wins over the
+  // activated profile; unknown ids simply fall through to the usual order.
+  const wantedId = requestedProfileId || own?.activeProfileId;
+  const active = own?.profiles?.find?.((p) => p.id === wantedId);
   if (active && active.apiKeyEnc) {
     const apiKey = secretBox.decrypt(active.apiKeyEnc);
     if (apiKey) {
@@ -3396,7 +3398,8 @@ async function api(req, res, path) {
     let providerResponseStarted = false;
     try {
       // Prefer the caller's own encrypted key; fall back to the shared config.
-      const provider = resolveEffectiveProvider(user.id);
+      // Epic 4b: the request may pin a specific provider profile for this call.
+      const provider = resolveEffectiveProvider(user.id, String(body.profileId || "") || null);
       usedModel = provider.model || "default";
       const endpoint = `${String(provider.base_url || "").replace(/\/+$/, "")}/chat/completions`;
       const apiKey = provider.apiKey || "";

@@ -115,4 +115,6 @@ owner: redesign
 - [x] 4a 多 provider 档案：`/api/account/providers` 新增/激活/删除（Key AES-256-GCM
       加密，明文与密文均不回传），生效顺序 激活档案 > 单一配置 > 共享网关，
       ApiKeys 页档案管理 UI + 测试（2026-08-11）
-- [ ] 4b 会话级模型选择 / 任务委派（chat 请求可临时指定档案，后续）
+- [x] 4b 会话级模型选择：chat 请求可带 `profileId` 临时指定档案（未知 id 优雅回退
+      激活链），Workbench AI 输入区档案下拉；端到端测试用本地 mock OpenAI 服务
+      证实按请求路由（meta `source: profile:<name>` + 定向回包）（2026-08-11）

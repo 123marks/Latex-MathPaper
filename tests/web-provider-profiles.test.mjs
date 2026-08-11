@@ -53,3 +53,17 @@ test("provider profile styles exist", () => {
   assert.match(css, /\.provider-row \{/);
   assert.match(css, /\.provider-row\.active \{/);
 });
+
+test("Workbench can pin a profile per chat request (Epic 4b)", () => {
+  const workbenchSource = readFileSync(resolve(webRoot, "src/pages/app/Workbench.jsx"), "utf8");
+  const panelSource = readFileSync(resolve(webRoot, "src/components/workbench/AIAssistantPanel.jsx"), "utf8");
+  // Workbench loads real profiles and forwards the chosen one with the request.
+  assert.match(workbenchSource, /\/api\/account\/overview/);
+  assert.match(workbenchSource, /profileId: aiProfileId/);
+  assert.match(workbenchSource, /onProfileChange=\{setAiProfileId\}/);
+  // The panel renders a select fed by real profiles only.
+  assert.match(panelSource, /workbench-ai-profile/);
+  assert.match(panelSource, /profiles\.map\(/);
+  assert.match(panelSource, /onProfileChange\?\.\(event\.target\.value\)/);
+  assert.match(css, /\.ai-profile-row select \{/);
+});

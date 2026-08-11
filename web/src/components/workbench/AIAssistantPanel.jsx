@@ -159,6 +159,9 @@ export default function AIAssistantPanel({
   busy = false,
   plan = [],
   proposal = null,
+  profiles = [],
+  profileId = "",
+  onProfileChange,
   onInput,
   onSubmit,
   onApply,
@@ -222,6 +225,24 @@ export default function AIAssistantPanel({
           onSubmit?.();
         }}
       >
+        {profiles.length > 0 ? (
+          <div className="ai-profile-row">
+            <label className="sr-only" htmlFor="workbench-ai-profile">本次对话使用的模型档案</label>
+            <select
+              id="workbench-ai-profile"
+              value={profileId}
+              disabled={busy}
+              onChange={(event) => onProfileChange?.(event.target.value)}
+            >
+              <option value="">默认档案（激活的 / 单一配置）</option>
+              {profiles.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}{p.model ? ` · ${p.model}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
         <label className="sr-only" htmlFor="workbench-ai-input">Message Paper OS Assistant</label>
         <textarea
           id="workbench-ai-input"

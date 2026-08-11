@@ -203,6 +203,16 @@ export default function Workbench() {
   }
   useEffect(() => { loadProvider(); }, []);
 
+  // Epic 4b: named provider profiles for the per-request model switch.
+  const [aiProfiles, setAiProfiles] = useState([]);
+  const [aiProfileId, setAiProfileId] = useState("");
+  useEffect(() => {
+    api
+      .get("/api/account/overview")
+      .then((d) => setAiProfiles(d.provider?.profiles || []))
+      .catch(() => setAiProfiles([]));
+  }, []);
+
   // Subscribe to live compile logs via WebSocket
   useEffect(() => {
     const off = wsSubscribe(`compile:${contest}`, (msg) => {
@@ -542,6 +552,7 @@ export default function Workbench() {
             })),
             { role: "user", content: userText },
           ],
+          ...(aiProfileId ? { profileId: aiProfileId } : {}),
         }),
       });
       if (!response.ok || !response.body) {
@@ -763,6 +774,9 @@ export default function Workbench() {
         busy={Boolean(busy)}
         plan={aiPlan}
         proposal={proposal}
+        profiles={aiProfiles}
+        profileId={aiProfileId}
+        onProfileChange={setAiProfileId}
         onInput={setMsg}
         onSubmit={sendChat}
         onApply={applyProposal}
