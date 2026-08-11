@@ -117,6 +117,7 @@ Cursor 的**信息架构与母题**，不是它的配色。
 4. 按当前任务读对应面向文档：`03`（展示站）/`04`（应用内）/`05`（桌面端）
 5. `06-architecture.md`（改结构前必读）+ `07-data-viz.md`（做图表前必读）
 6. `08-execution-plan.md`（逐条领取原子任务 + 验收 + 验证命令）
+7. `09-integrations.md`（参考项目集成：标注 / 会话管理 / 文献 / 多 agent 的分阶段设计）
 
 ---
 
@@ -131,6 +132,7 @@ Cursor 的**信息架构与母题**，不是它的配色。
 | `05` 桌面端 | `launcher/Program.cs`、`apps/desktop/**`、`scripts/package-release.mjs`、`.github/workflows/release.yml` |
 | `06` 架构 | `app/server.mjs`（拆分为 `app/routes/**`、`app/services/**`）、`web/src` 目录规范 |
 | `07` 数据可视化 | `web/src/components/charts/**`（新增）、`Usage.jsx`、`admin/AdminUsage.jsx` |
+| `09` 集成 | `state/annotations.json`、`/api/editor/annotations`、`web/src/pages/app/Workbench.jsx`、`ai-runs/`、References Pack |
 
 ---
 
