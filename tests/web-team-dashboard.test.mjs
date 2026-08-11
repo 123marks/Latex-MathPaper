@@ -45,6 +45,13 @@ test("Dashboard does not claim local AI inference or data never leaving the mach
   assert.match(dashboardMarkup, /模型请求按你配置的 provider 处理/);
 });
 
+test("Dashboard shows an at-a-glance summary strip from real runtime/workspace data", () => {
+  assert.match(dashboardSource, /const workspaceCount =/);
+  assert.match(dashboardSource, /const readyCount =/);
+  assert.match(dashboardMarkup, /运行时就绪/);
+  assert.match(dashboardMarkup, /工作区 · 当前/);
+});
+
 test("TeamSpace shows only real derived metrics, never fabricated counts or people", () => {
   assert.doesNotMatch(teamSource, /"Bob"|"Alice"|"Miro"/);
   assert.doesNotMatch(teamSource, /常用模板|已发布技能|共享引用|最近论断/);

@@ -33,6 +33,9 @@ export default function Dashboard() {
 
   const rt = summary?.runtime;
   const ok = (p) => (p?.ok ? p.detail || "可用" : "缺失");
+  const workspaceCount = summary?.workspaces?.length ?? summary?.contests?.length ?? 0;
+  const activeWs = summary?.activeWorkspace || summary?.activeContest || "无";
+  const readyCount = [rt?.python?.ok, rt?.latexmk?.ok].filter(Boolean).length;
 
   return (
     <>
@@ -41,6 +44,12 @@ export default function Dashboard() {
         <p>本地文档运行时总览：Workspace 文件与编译在你的机器上；模型请求按你配置的 provider 处理。</p>
       </div>
       {error && <div className="alert error">{error}</div>}
+      <div className="stat-grid" style={{ marginBottom: 18 }}>
+        <div className="stat"><b>{workspaceCount}</b><span>工作区 · 当前 {activeWs}</span></div>
+        <div className="stat"><b>{readyCount}/2</b><span>运行时就绪 · Python / LaTeX</span></div>
+        <div className="stat"><b style={{ fontSize: 15 }}>{rt?.node || "—"}</b><span>Node 运行时</span></div>
+        <div className="stat"><b style={{ fontSize: 13, fontFamily: "var(--font-mono)" }}>{rt?.url || "—"}</b><span>本地运行地址</span></div>
+      </div>
       <div className="grid">
         <section className="panel c8 glass">
           <div className="panel-head">
