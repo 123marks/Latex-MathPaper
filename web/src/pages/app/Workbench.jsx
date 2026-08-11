@@ -311,6 +311,91 @@ export default function Workbench() {
     }
   }
 
+  // ── 文件/文件夹管理（tree ops against the real editor API）──
+  const [collapsedDirs, setCollapsedDirs] = useState(() => new Set());
+  const [renaming, setRenaming] = useState(null); // { path, value, isDir }
+  const [creating, setCreating] = useState(null); // { kind: "file"|"folder", value }
+
+  function toggleDir(path) {
+    setCollapsedDirs((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  }
+
+  function activeDirPrefix() {
+    if (!active?.path || !active.path.includes("/")) return "";
+    return active.path.slice(0, active.path.lastIndexOf("/") + 1);
+  }
+
+  async function submitCreate() {
+    const relPath = String(creating?.value || "").trim().replace(/^\/+/, "");
+    if (!relPath) return;
+    try {
+      if (creating.kind === "folder") {
+        await api.post("/api/editor/folder", { workspace: contest, path: relPath });
+      } else {
+        await api.post("/api/editor/file", { workspace: contest, path: relPath, content: "" });
+      }
+      setCreating(null);
+      await loadTree();
+      if (creating.kind === "file") {
+        await openFile({ path: relPath, name: relPath.split("/").pop() });
+      }
+    } catch (e) {
+      setLog((l) => [`[files] ${e.message}`, ...l].slice(0, 50));
+    }
+  }
+
+  async function submitRename() {
+    const from = renaming?.path;
+    const to = String(renaming?.value || "").trim().replace(/^\/+/, "");
+    if (!from || !to || from === to) { setRenaming(null); return; }
+    try {
+      await api.patch("/api/editor/file", { workspace: contest, from, to });
+      setOpenTabs((tabs) => tabs.map((t) => {
+        if (t.path === from) return { ...t, path: to, name: to.split("/").pop() };
+        if (t.path.startsWith(`${from}/`)) {
+          const moved = to + t.path.slice(from.length);
+          return { ...t, path: moved, name: moved.split("/").pop() };
+        }
+        return t;
+      }));
+      setActive((cur) => {
+        if (!cur) return cur;
+        if (cur.path === from) return { path: to, name: to.split("/").pop() };
+        if (cur.path.startsWith(`${from}/`)) {
+          const moved = to + cur.path.slice(from.length);
+          return { path: moved, name: moved.split("/").pop() };
+        }
+        return cur;
+      });
+      setRenaming(null);
+      await loadTree();
+    } catch (e) {
+      setLog((l) => [`[files] ${e.message}`, ...l].slice(0, 50));
+    }
+  }
+
+  async function deleteEntry(path, isDir) {
+    const label = isDir ? `文件夹 ${path}（含其中所有文件）` : path;
+    if (!window.confirm(`确定删除 ${label}？此操作不可恢复。`)) return;
+    try {
+      await api.del(`/api/editor/file?workspace=${encodeURIComponent(contest)}&path=${encodeURIComponent(path)}`);
+      setOpenTabs((tabs) => tabs.filter((t) => t.path !== path && !t.path.startsWith(`${path}/`)));
+      if (active && (active.path === path || active.path.startsWith(`${path}/`))) {
+        setActive(null);
+        setEditor("");
+        setOriginal("");
+      }
+      await loadTree();
+    } catch (e) {
+      setLog((l) => [`[files] ${e.message}`, ...l].slice(0, 50));
+    }
+  }
+
   function closeTab(path) {
     setOpenTabs((tabs) => tabs.filter((t) => t.path !== path));
     if (active && active.path === path) {
@@ -612,21 +697,52 @@ export default function Workbench() {
         <div className="file-tree">
           <div className="row spread" style={{ padding: "0 6px 8px" }}>
             <h5 style={{ margin: 0 }}>{contest}</h5>
-            <button className="btn btn-quiet btn-sm" onClick={loadTree}>⟲</button>
+            <div className="row tree-toolbar" style={{ gap: 2 }}>
+              <button
+                className="btn btn-quiet btn-sm"
+                title="新建文件（支持嵌套路径）"
+                onClick={() => setCreating({ kind: "file", value: activeDirPrefix() })}
+              >
+                ＋文件
+              </button>
+              <button
+                className="btn btn-quiet btn-sm"
+                title="新建文件夹"
+                onClick={() => setCreating({ kind: "folder", value: activeDirPrefix() })}
+              >
+                ＋目录
+              </button>
+              <button className="btn btn-quiet btn-sm" title="刷新" onClick={loadTree}>⟲</button>
+            </div>
           </div>
-          {allFiles.length === 0 ? (
+          {creating && (
+            <form className="tree-create" onSubmit={(e) => { e.preventDefault(); submitCreate(); }}>
+              <input
+                autoFocus
+                placeholder={creating.kind === "folder" ? "如 paper/sections" : "如 paper/sections/intro.tex"}
+                value={creating.value}
+                onChange={(e) => setCreating((c) => (c ? { ...c, value: e.target.value } : c))}
+                onKeyDown={(e) => { if (e.key === "Escape") setCreating(null); }}
+              />
+              <button className="btn btn-quiet btn-sm">{creating.kind === "folder" ? "建目录" : "建文件"}</button>
+            </form>
+          )}
+          {tree.length === 0 ? (
             <div className="empty" style={{ padding: 10, fontSize: 11 }}>空</div>
           ) : (
-            allFiles.map((f) => (
-              <div
-                key={f.path}
-                className={`item ${active && active.path === f.path ? "active" : ""}`}
-                onClick={() => openFile(f)}
-              >
-                {f.name}
-                <span className="ext">{f.path.split(".").pop()}</span>
-              </div>
-            ))
+            <FileTreeView
+              nodes={tree}
+              activePath={active?.path || ""}
+              collapsedDirs={collapsedDirs}
+              renaming={renaming}
+              onToggle={toggleDir}
+              onOpen={openFile}
+              onRenameStart={(n) => setRenaming({ path: n.path, value: n.path, isDir: n.type === "dir" })}
+              onRenameChange={(v) => setRenaming((r) => (r ? { ...r, value: v } : r))}
+              onRenameSubmit={submitRename}
+              onRenameCancel={() => setRenaming(null)}
+              onDelete={(n) => deleteEntry(n.path, n.type === "dir")}
+            />
           )}
         </div>
 
@@ -797,6 +913,128 @@ export default function Workbench() {
 
 const ANNO_INTENTS = [["edit", "改写"], ["fix", "修复"], ["question", "疑问"], ["todo", "待办"]];
 const ANNO_PRIORITIES = [["low", "低"], ["normal", "中"], ["high", "高"]];
+
+// 文件树（真实 /api/editor/tree 层级）：折叠、打开、重命名/移动、删除。
+// Top-level component so the inline rename input keeps focus across renders.
+function FileTreeView({
+  nodes,
+  depth = 0,
+  activePath,
+  collapsedDirs,
+  renaming,
+  onToggle,
+  onOpen,
+  onRenameStart,
+  onRenameChange,
+  onRenameSubmit,
+  onRenameCancel,
+  onDelete,
+}) {
+  const childProps = {
+    activePath,
+    collapsedDirs,
+    renaming,
+    onToggle,
+    onOpen,
+    onRenameStart,
+    onRenameChange,
+    onRenameSubmit,
+    onRenameCancel,
+    onDelete,
+  };
+  return (
+    <>
+      {nodes.map((n) => {
+        const isRenaming = renaming?.path === n.path;
+        const pad = 6 + depth * 12;
+        const actions = !isRenaming && (
+          <span className="tree-actions">
+            <button
+              type="button"
+              title="重命名 / 移动（可改完整路径）"
+              onClick={(e) => { e.stopPropagation(); onRenameStart(n); }}
+            >
+              ✎
+            </button>
+            <button
+              type="button"
+              title="删除"
+              onClick={(e) => { e.stopPropagation(); onDelete(n); }}
+            >
+              ×
+            </button>
+          </span>
+        );
+        if (n.type === "dir") {
+          const closed = collapsedDirs.has(n.path);
+          return (
+            <div key={n.path}>
+              <div
+                className="item dir"
+                style={{ paddingLeft: pad }}
+                onClick={() => { if (!isRenaming) onToggle(n.path); }}
+              >
+                <span className="tree-caret">{closed ? "▸" : "▾"}</span>
+                {isRenaming ? (
+                  <TreeRenameInput
+                    value={renaming.value}
+                    onChange={onRenameChange}
+                    onSubmit={onRenameSubmit}
+                    onCancel={onRenameCancel}
+                  />
+                ) : (
+                  <span className="tree-name">{n.name}</span>
+                )}
+                {actions}
+              </div>
+              {!closed && <FileTreeView nodes={n.children || []} depth={depth + 1} {...childProps} />}
+            </div>
+          );
+        }
+        return (
+          <div
+            key={n.path}
+            className={`item ${activePath === n.path ? "active" : ""}`}
+            style={{ paddingLeft: pad + 14 }}
+            onClick={() => { if (!isRenaming) onOpen(n); }}
+          >
+            {isRenaming ? (
+              <TreeRenameInput
+                value={renaming.value}
+                onChange={onRenameChange}
+                onSubmit={onRenameSubmit}
+                onCancel={onRenameCancel}
+              />
+            ) : (
+              <span className="tree-name">{n.name}</span>
+            )}
+            {actions}
+            {!isRenaming && n.name.includes(".") && (
+              <span className="ext">{n.name.split(".").pop()}</span>
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+function TreeRenameInput({ value, onChange, onSubmit, onCancel }) {
+  return (
+    <input
+      className="tree-rename"
+      autoFocus
+      value={value}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") { e.preventDefault(); onSubmit(); }
+        if (e.key === "Escape") onCancel();
+      }}
+      onBlur={onCancel}
+    />
+  );
+}
 
 // 09-integrations Epic 3b: workspace bibliography panel. Entries and citation
 // locations come from the server's real .bib/.tex scan; nothing is fabricated.

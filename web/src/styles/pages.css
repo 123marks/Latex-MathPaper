@@ -3279,6 +3279,39 @@
   background: rgba(232, 227, 218, 0.04);
 }
 
+/* 文件树管理：层级、折叠、重命名、删除（folder management） */
+.file-tree .item.dir { color: var(--text-soft); }
+.file-tree .tree-caret { width: 12px; flex-shrink: 0; color: var(--faint); }
+.file-tree .tree-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.file-tree .item .ext { margin-left: 0; }
+.file-tree .tree-actions { display: none; gap: 2px; flex-shrink: 0; margin-left: auto; }
+.file-tree .item:hover .tree-actions { display: inline-flex; }
+.file-tree .tree-actions button {
+  background: none;
+  border: 0;
+  color: var(--faint);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+.file-tree .tree-actions button:hover { color: var(--amber); background: rgba(212, 163, 65, 0.12); }
+.file-tree .tree-rename,
+.tree-create input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-1);
+  border: 1px solid var(--amber);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 6px;
+}
+.tree-create { display: flex; gap: 4px; padding: 0 6px 8px; align-items: center; }
+.tree-toolbar .btn { font-size: 10px; padding: 2px 6px; }
+
 .editor-area {
   display: flex;
   flex-direction: column;

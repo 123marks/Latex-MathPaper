@@ -2301,6 +2301,25 @@ async function api(req, res, path) {
     return sendJson(res, 201, { ok: true, workspace: workspaceId, contest: workspaceId, path: relPath, size: Buffer.byteLength(content, "utf-8") });
   }
 
+  // ── create folder（文件夹管理）──
+  if (req.method === "POST" && path === "/api/editor/folder") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const body = await readBody(req);
+    if (!body.workspace && !body.contest) return sendJson(res, 400, { error: "workspace is required" });
+    const workspaceId = bodyWorkspaceId(body);
+    const relPath = String(body.path || "").replace(/^\/+/, "").replace(/\/+$/, "");
+    if (!relPath) return sendJson(res, 400, { error: "path is required" });
+    if (relPath.includes("..") || relPath.includes("\\")) {
+      return sendJson(res, 400, { error: "invalid path" });
+    }
+    const dirPath = workspacePath(workspaceId, relPath);
+    if (existsSync(dirPath)) return sendJson(res, 409, { error: "folder already exists" });
+    mkdirSync(dirPath, { recursive: true });
+    audit(user, "folder.create", `${workspaceId}/${relPath}`);
+    return sendJson(res, 201, { ok: true, workspace: workspaceId, path: relPath });
+  }
+
   // ── delete file or folder ──
   if (req.method === "DELETE" && path === "/api/editor/file") {
     const user = requireUser(req, res);
