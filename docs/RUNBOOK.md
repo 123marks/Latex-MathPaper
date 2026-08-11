@@ -2,14 +2,34 @@
 
 本文覆盖本地服务、当前 Windows 桌面入口、运行数据、备份恢复、密钥和发布故障。任何会删除或覆盖用户数据的动作都必须先确认绝对路径和备份。
 
-## 启动与健康检查
+## 怎么运行
 
-开发/诊断启动：
+前置：Node.js 20+（当前实测 v24.12）。LaTeX 本地编译需要 Tectonic 或 latexmk；`math-modeling` Pack 的 runtime 需要 Python 3。首次需安装 web 与桌面 IDE 依赖（根目录本身无 npm 依赖）：
 
 ```powershell
-$env:PAPER_OS_PORT = '3719'
-node app/server.mjs
+npm --prefix web install
+npm --prefix apps/desktop install
 ```
+
+方式一 · 本地完整运行（体验官网 + 应用，推荐）：
+
+```powershell
+npm run build          # 构建官网到 app/public，IDE bundle 到 app/ide
+node app/server.mjs    # 本地服务，默认端口 3719
+```
+
+浏览器打开 `http://127.0.0.1:3719` 即是官网（首页/功能/定价/企业/市场/社区/下载/文档）；注册后进入 `/app` 工作台（编辑、本地编译、AI 审查）。
+
+方式二 · 前端开发热更新：
+
+```powershell
+node app/server.mjs            # 后端 3719
+npm --prefix web run dev       # Vite 开发服务器，/api 代理到 3719
+```
+
+方式三 · Windows 桌面端：运行根目录 `PaperOS.exe`（WinForms + WebView2，内部启动本地 Node 服务）。若无 exe，先 `powershell -File .\build-launcher.ps1` 构建（需系统 .NET 8 Desktop Runtime）。
+
+打可下载的 Windows 安装包：`npm run package:win` → `dist/release/PaperOS-<ver>-windows-x64.zip`（framework-dependent，依赖系统 .NET 8 Desktop Runtime，非零依赖 self-contained）。运行中的服务也会在 `/download` 页按磁盘上真实存在的产物显示可下载项，缺失的 macOS/Linux 资产显示为“前往发布页”。
 
 健康检查：
 
