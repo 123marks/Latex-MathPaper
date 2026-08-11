@@ -3375,6 +3375,17 @@
   background: rgba(212, 163, 65, 0.16);
   pointer-events: none;
 }
+.pdfv-region {
+  position: absolute;
+  border: 1.5px solid var(--amber);
+  background: rgba(212, 163, 65, 0.12);
+  border-radius: 2px;
+  cursor: help;
+}
+.pdfv-region.resolved {
+  border-color: rgba(120, 160, 120, 0.7);
+  background: rgba(120, 160, 120, 0.08);
+}
 .pdfjs-text-layer {
   position: absolute;
   inset: 0;

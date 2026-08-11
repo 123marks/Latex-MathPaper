@@ -4,7 +4,7 @@ import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 // pdf.js 渲染层（09-integrations 3c/1d 基础）：canvas 逐页渲染 + 文本层
 // （可划词）+ 区域标注模式（拖框 → 归一化矩形回调）。SSR 安全：pdfjs-dist
 // 仅在浏览器内动态加载，服务端/加载中渲染占位。
-export default function PdfViewer({ url, onAskSelection, onRegionAnnotate }) {
+export default function PdfViewer({ url, regions = [], onAskSelection, onRegionAnnotate }) {
   const [doc, setDoc] = useState(null);
   const [pageCount, setPageCount] = useState(0);
   const [scale, setScale] = useState(1.1);
@@ -75,6 +75,7 @@ export default function PdfViewer({ url, onAskSelection, onRegionAnnotate }) {
               pageNumber={i + 1}
               scale={scale}
               regionMode={regionMode}
+              regions={regions.filter((r) => r.page === i + 1)}
               onRegion={(rect) => {
                 setRegionMode(false);
                 onRegionAnnotate?.({ page: i + 1, rect });
@@ -87,7 +88,7 @@ export default function PdfViewer({ url, onAskSelection, onRegionAnnotate }) {
   );
 }
 
-function PdfPage({ doc, pageNumber, scale, regionMode, onRegion }) {
+function PdfPage({ doc, pageNumber, scale, regionMode, regions = [], onRegion }) {
   const canvasRef = useRef(null);
   const textRef = useRef(null);
   const wrapRef = useRef(null);
@@ -184,6 +185,19 @@ function PdfPage({ doc, pageNumber, scale, regionMode, onRegion }) {
     >
       <canvas ref={canvasRef} />
       <div ref={textRef} className="pdfjs-text-layer" />
+      {regions.map((r) => (
+        <div
+          key={r.id}
+          className={`pdfv-region ${r.status === "resolved" ? "resolved" : ""}`}
+          title={`p.${r.page} · ${r.note || ""}`}
+          style={{
+            left: `${r.rect.x * 100}%`,
+            top: `${r.rect.y * 100}%`,
+            width: `${r.rect.w * 100}%`,
+            height: `${r.rect.h * 100}%`,
+          }}
+        />
+      ))}
       {marquee && <div className="pdfv-marquee" style={marquee} />}
       <span className="pdfv-pageno">{pageNumber}</span>
     </div>

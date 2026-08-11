@@ -61,3 +61,13 @@ test("pdf viewer styles exist", () => {
   assert.match(css, /\.pdfjs-text-layer \{/);
   assert.match(css, /\.pdfv-marquee \{/);
 });
+
+test("stored pdf-region annotations re-render as scale-independent overlays", () => {
+  // Percent positioning keeps overlays correct across zoom levels.
+  assert.match(viewerSource, /r\.rect\.x \* 100/);
+  assert.match(viewerSource, /pdfv-region/);
+  // Workbench feeds the viewer only this file's live pdf-region annotations.
+  assert.match(workbenchSource, /regions=\{annotations/);
+  assert.match(workbenchSource, /a\.status !== "dismissed"/);
+  assert.match(css, /\.pdfv-region \{/);
+});

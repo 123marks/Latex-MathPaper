@@ -824,6 +824,17 @@ export default function Workbench() {
               {pdfUrl ? (
                 <PdfViewer
                   url={pdfUrl}
+                  regions={annotations
+                    .filter((a) => a.target?.kind === "pdf-region"
+                      && a.target.path === active?.path
+                      && a.status !== "dismissed")
+                    .map((a) => ({
+                      id: a.id,
+                      page: a.target.page,
+                      rect: a.target.rect,
+                      note: a.note,
+                      status: a.status,
+                    }))}
                   onAskSelection={(text) => {
                     setMsg(`关于编译 PDF 中选中的这段内容：\n> ${text.replace(/\n/g, "\n> ")}\n\n请检查它与源码是否一致，并给出改进建议。`);
                   }}

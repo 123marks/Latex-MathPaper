@@ -118,7 +118,8 @@ owner: redesign
 - [x] 3c-1 pdf.js 渲染层 + 划词→问：iframe 预览替换为 pdfjs-dist v6 canvas 渲染
       （异步分包 gzip 143KB + 按需 worker，SSR 安全动态加载），文本层可划词、
       「问 AI」把选中文本送入 AI 输入框，缩放/页码/多页滚动 + 测试（2026-08-12）
-- [ ] 3c-2 已存标注/高亮在 PDF 上持久回显（后续）
+- [x] 3c-2 已存 `pdf-region` 标注在 PDF 上回显：按页过滤、百分比定位（缩放无关）、
+      悬停显示备注、resolved 变绿显示 + 测试（2026-08-12）
 - [x] 3d DOI 导入：`POST /api/editor/references/import` 接受裸 DOI / doi.org 链接，
       content negotiation 抓取 BibTeX 追加进第一个 `.bib`（无则建 `paper/references.bib`），
       按条目 key 去重（409）；离线/上游错误如实 502/404，测试用本地 mock DOI 服务
