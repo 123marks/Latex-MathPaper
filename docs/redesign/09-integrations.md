@@ -45,7 +45,7 @@ owner: redesign
 
 ## 4. Epic 路线图
 
-### Epic 1 · 可视化标注 → AI 提案（进行中，最高优先）
+### Epic 1 · 可视化标注 → AI 提案（1a–1c 已完成；1d PDF 待 SyncTeX）
 - 1a 标注数据模型 + 服务端 CRUD + 工作区 state 存储。
 - 1b Workbench 编辑器行范围圈选批注 UI + 标注列表面板。
 - 1c 多条标注聚合成结构化 AI 修改请求 → `/api/chat` + BEGIN_FILE Preview → Apply；Apply 后状态 open → proposed → resolved。
@@ -98,7 +98,8 @@ owner: redesign
 
 - [x] 1a 标注数据模型 + 服务端 CRUD + 存储 + 测试（2026-08-11，`/api/editor/annotations`，`tests/annotations-api.test.mjs`）
 - [x] 1b 编辑器行范围批注 UI + 列表面板 + 测试（2026-08-11，Workbench `AnnotationsPanel` + `LaTeXEditor` 选区回调 + `api.patch`）
-- [ ] 1c 标注 → AI 提案 → Preview → Apply + 状态流转
+- [x] 1c 标注 → 结构化 AI 修改请求（填入 AI 输入，人工复核后走现有 Preview → Apply；标注转 proposed，解决仍人工）（2026-08-11，`composeFromAnnotations`）
+- [ ] 1d PDF 区域标注（待 SyncTeX 精确后）
 - [ ] 2a–2d 会话管理 + 用量分析
 - [ ] 3a–3d References Pack
 - [ ] 4 多 provider / 委派

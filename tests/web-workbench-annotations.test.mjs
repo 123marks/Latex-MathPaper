@@ -36,3 +36,14 @@ test("AnnotationsPanel scopes to the active file and offers resolve/delete", () 
   assert.match(workbench, /onStatus\(a\.id, "resolved"\)/);
   assert.match(workbench, /onDelete\(a\.id\)/);
 });
+
+test("Workbench composes open annotations into a structured AI edit request (Epic 1c)", () => {
+  assert.match(workbench, /function composeFromAnnotations/);
+  assert.match(workbench, /BEGIN_FILE\/END_FILE/);
+  assert.match(workbench, /setMsg\(prompt\)/);
+  assert.match(workbench, /updateAnnotation\(a\.id, \{ status: "proposed" \}\)/);
+  assert.match(workbench, /onCompose=\{composeFromAnnotations\}/);
+  assert.match(workbench, /交给 AI 修改/);
+  // Human-in-the-loop: compose fills the input, it must not auto-apply.
+  assert.doesNotMatch(workbench, /composeFromAnnotations[\s\S]{0,400}applyProposal\(\)/);
+});

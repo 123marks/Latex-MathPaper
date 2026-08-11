@@ -161,6 +161,26 @@ export default function Workbench() {
     }
   }
 
+  // Epic 1c: turn a file's open annotations into a structured AI edit request.
+  // It only fills the AI input (human reviews, then sends -> existing
+  // Preview -> Apply); it never auto-applies. The annotations become "proposed";
+  // resolution stays manual so we never claim an edit the user has not verified.
+  function composeFromAnnotations(items) {
+    if (!active || !items || items.length === 0) return;
+    const rows = items.map((a, i) => {
+      const range = a.target.endLine !== a.target.startLine
+        ? `行 ${a.target.startLine}–${a.target.endLine}`
+        : `行 ${a.target.startLine}`;
+      const excerpt = a.target.excerpt
+        ? `\n   > ${a.target.excerpt.replace(/\s+/g, " ").trim().slice(0, 120)}`
+        : "";
+      return `${i + 1}. [${a.intent}·${a.priority}] ${range}：${a.note}${excerpt}`;
+    });
+    const prompt = `请按以下审阅标注修改 [file:${active.path}]，逐条处理，改完用 BEGIN_FILE/END_FILE 输出完整文件：\n\n${rows.join("\n")}`;
+    setMsg(prompt);
+    for (const a of items) updateAnnotation(a.id, { status: "proposed" });
+  }
+
   async function loadEngine() {
     try {
       const d = await api.get("/api/engine/status");
@@ -703,6 +723,7 @@ export default function Workbench() {
             onAdd={addAnnotation}
             onStatus={(id, status) => updateAnnotation(id, { status })}
             onDelete={deleteAnnotation}
+            onCompose={composeFromAnnotations}
           />
 
           <div className="statusbar">
@@ -754,13 +775,14 @@ export default function Workbench() {
 const ANNO_INTENTS = [["edit", "改写"], ["fix", "修复"], ["question", "疑问"], ["todo", "待办"]];
 const ANNO_PRIORITIES = [["low", "低"], ["normal", "中"], ["high", "高"]];
 
-function AnnotationsPanel({ active, selection, annotations, onAdd, onStatus, onDelete }) {
+function AnnotationsPanel({ active, selection, annotations, onAdd, onStatus, onDelete, onCompose }) {
   const [note, setNote] = useState("");
   const [intent, setIntent] = useState("edit");
   const [priority, setPriority] = useState("normal");
   const fileAnnotations = active
     ? annotations.filter((a) => a.target?.path === active.path)
     : [];
+  const openForFile = fileAnnotations.filter((a) => a.status === "open");
   const canAdd = Boolean(active && selection && note.trim());
 
   function submit(event) {
@@ -777,6 +799,15 @@ function AnnotationsPanel({ active, selection, annotations, onAdd, onStatus, onD
         <span className="muted">
           {active ? `${active.path} · ${fileAnnotations.length}` : "打开文件后可在编辑器选区上标注"}
         </span>
+        {active && openForFile.length > 0 && (
+          <button
+            className="btn btn-quiet btn-sm annotations-compose"
+            onClick={() => onCompose(openForFile)}
+            title="把本文件的待处理标注整理成 AI 修改请求（复核后发送）"
+          >
+            交给 AI 修改 ({openForFile.length})
+          </button>
+        )}
       </div>
       {active && (
         <form className="annotation-new" onSubmit={submit}>

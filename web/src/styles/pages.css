@@ -3227,6 +3227,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.annotations-compose { margin-left: auto; flex: 0 0 auto; }
 .annotation-new {
   display: flex;
   align-items: center;
