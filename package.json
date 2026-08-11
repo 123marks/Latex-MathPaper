@@ -16,6 +16,7 @@
     "home-hero-visual-smoke": "node app/home-hero-visual-smoke.mjs",
     "public-pages-visual-smoke": "node app/public-pages-visual-smoke.mjs",
     "auth-visual-smoke": "node app/auth-visual-smoke.mjs",
+    "hero-visual-smoke": "node app/hero-ide-visual-smoke.mjs",
     "dom-ui-smoke": "node app/dom-ui-smoke.mjs",
     "headed-visual-smoke": "node app/headed-visual-smoke.mjs",
     "browser-visual-smoke": "node app/browser-visual-smoke.mjs --strict",
