@@ -1,91 +1,96 @@
-# Task Plan
+# Task Plan: Paper OS T3.3 Real AI Timeline
 
 ## Goal
+Complete the Web Workbench AI panel with truthful provider state, real execution-plan data, explicit preview-before-apply editing, and preserved conflict/rollback semantics. Keep the verified T1.1-T1.5 baseline closed.
 
-Turn this workspace into a usable local product foundation for math modeling competitions: LaTeX-first paper generation, skill/MCP orchestration knowledge base, contest workspace templates, workflows, and verification tooling.
+## Current Phase
+Phase 3: T3.3 verified closeout complete; hand off to T3.6
 
 ## Phases
 
-| Phase | Status | Deliverable |
-| --- | --- | --- |
-| 1. Persistent planning | complete | `task_plan.md`, `findings.md`, `progress.md` |
-| 2. Research knowledge base | complete | Skill, MCP, LaTeX, and paper-quality catalogs under `docs/knowledge/` |
-| 3. Product skeleton | complete | `product/` workflows/checklists/config and `templates/contest/` |
-| 4. CLI and verification | complete | `paperctl.py` with `init`, `verify`, `build`, `clean`, and `doctor` commands |
-| 5. Evidence run | complete | Sample contest initialization and verification output |
-| 6. AI runtime product loop | complete | Stage prompts, provider calls, provider checks, and safe response application |
-| 7. Knowledge-driven operations | complete | Machine-readable knowledge base, skill/MCP recommendations, workflow status, pipeline, advance, and skill audit commands |
-| 8. Local product app | complete | Windows launcher, Node local API, browser UI, provider setup, material ingest, and command dashboard |
-| 9. Workflow intelligence | complete | Shared product blueprint, expanded skill/MCP knowledge base, CLI/UI recommendation surface |
-| 10. Skill governance and portable packaging | complete | Skill review artifacts and portable app folder generation |
-| 11. Real contest intake hardening | complete | Problem PDF/text ingest syncs `problem/problem.md` with extraction fallback |
-| 12. Real contest onboarding | complete | One command creates workspace, imports materials, writes pipeline report, and creates intake prompt |
-| 13. Submission and executable closure | complete | Final-paper submission package plus a Windows `.exe` launcher wrapper |
-| 14. Product-grade frontend shell | complete | Official-site homepage, model-gateway motion system, runtime section, and application workbench UI |
+### T3.3 Phase 0: Preserve the verified baseline
+- [x] Confirm T0.2-T0.6 and T1.1-T1.5 are complete and documented.
+- [x] Confirm /api/provider, /api/chat, /api/editor/apply-blocks, and ActionTimeline existing contracts before editing.
+- [x] Preserve the dirty main worktree; do not reset, clean, commit, merge, push, or add dependencies automatically.
+- **Status:** complete
 
-## Decisions
+### T3.3 Phase 1: Design and test-first contracts
+- [x] Write the T3.3 design record and implementation plan.
+- [x] Add focused RED contracts for provider truthfulness, execution-plan mapping, preview/apply baseline, and 409/rollback UI states.
+- **Status:** complete
 
-- Start with a file-first product, then expose it through a local web UI instead of a Python GUI.
-- LaTeX is the final source of truth. Markdown is for planning, ledgers, and reviews.
-- MCP is an integration layer for tools, not the product brain.
-- Every paper claim should be traceable to a result ledger row, figure ledger row, script, or source.
-- No new runtime dependencies in the first version; use Python standard library and external `latexmk` only when present.
-- AI responses may propose file edits, but only strict `BEGIN_FILE` blocks can be previewed/applied, and `--apply` is required for writes.
-- Desktop packaging is a shell concern. The core workflow remains `paperctl.py` + contest artifacts so Electron/Tauri/Neutralino can be swapped later.
-- The product workflow blueprint is a first-class artifact. UI/CLI should read the same lane definitions instead of duplicating workflow guidance.
-- External skills require a local review artifact before installation.
-- Portable app packaging must exclude `contests/` by default to avoid leaking private contest data.
-- Problem ingestion must create a usable `problem/problem.md`; PDF imports attempt text extraction and otherwise write a clear manual-fill placeholder.
-- Real contest pilots should start from `onboard`, not a manually remembered command chain.
-- Runtime health probes are informational and must be deadline-bounded; a broken Python/LaTeX executable cannot be allowed to block the local product UI.
-- Product UI design context lives in `.impeccable.md`; preserve the official-site-to-workbench split and persistent idle motion in future frontend changes.
-- The Windows launcher must wait for `/api/health`, not just an open TCP port, before opening the browser.
+### T3.3 Phase 2: Minimal implementation
+- [x] Add pure AI execution helpers and a focused assistant panel.
+- [x] Connect Workbench SSE metadata, real timeline, file-block preview, and explicit Apply.
+- [x] Preserve server-side path, conflict, and rollback protections.
+- **Status:** complete
 
-## Risks
+### T3.3 Phase 3: Verification and handoff
+- [x] Run focused/full Node tests and Web build.
+- [x] Run browser smoke at desktop/mobile widths with no browser errors or horizontal overflow.
+- [x] Synchronize STATUS/HANDOFF/TESTING/redesign/issues/changelog and working-memory files.
+- **Status:** complete
 
-| Risk | Mitigation |
-| --- | --- |
-| Product becomes a pile of prompts | Create deterministic folder layout, ledgers, checklists, and CLI commands. |
-| AI writing invents claims | Gate every claim through result and figure ledgers. |
-| LaTeX breaks during contest pressure | Provide a minimal modular template and build command. |
-| External skills vary in quality | Keep a curated catalog with recommended, optional, and risky items. |
-| MCP setup becomes too heavy | Document MCP as optional integration after MVP skeleton. |
-| Headless screenshot QA is unstable on this Windows environment | Keep stable `visual-smoke` as the core gate; provide optional `browser-visual-smoke` with strict mode for machines where Chrome/Edge headless rendering works. |
+## Completed Prior Baseline: T1.5 Login and Register
 
-## Next Actions
+### Phase 0: Preserve the verified baseline
+- [x] Confirm T1.1-T1.4 are complete and T1.5 is the next strict atom.
+- [x] Preserve the dirty main worktree; do not reset, clean, commit, merge, push, or add dependencies automatically.
+- **Status:** complete
 
-1. Apply the product to a real contest problem folder.
-2. Add stronger numeric consistency verification between LaTeX prose and result values.
-3. Apply the MCP configuration bundle with reviewed servers only when needed.
-4. Add optional external skill install/read workflow execution for the best candidates in `docs/knowledge/skill-catalog.md`.
-5. Build a real contest pilot using the next problem PDF/data.
-6. Run the local product UI through a real contest pilot.
-7. Add stronger provider/runtime telemetry after a real API-backed pilot.
-8. Package the app with Tauri or Electron only after the local web product proves the workflow.
-9. Review the highest-priority external skills with `skill-review` before any installation.
-10. Use `package-app` for portable folder distribution; use the generated `.exe` launcher when present and `.cmd` as fallback.
-11. Run a real contest pilot with an official PDF/data bundle and replace any PDF placeholder with verified extracted or manually pasted text.
-12. Use `onboard` on an official contest bundle, then run status/verify/build from the generated workspace.
-13. Add `package-submission` so the product can collect PDF, LaTeX source, code, figures, runs, and evidence ledgers into a reviewable final handoff folder.
-14. Add a small Windows `.exe` launcher that keeps the UI non-Python while preserving the existing Node API and `paperctl.py` workflow engine.
-15. Continue refining the frontend into a high-polish product surface: landing homepage, app workbench, persistent animation, responsive layout, and clearer workflow hierarchy.
-16. Add real screenshot-based visual regression tests when Playwright or a stable browser automation path is available.
-17. Consider a future bundled runtime installer if Node/Python/LaTeX should be embedded rather than documented as prerequisites.
+### Phase 1: Audit and approved design
+- [x] Reconcile Login, Register, AuthAside, auth API, password policy, UI primitives, and responsive CSS.
+- [x] Compare the smallest viable composition approaches against the approved specification.
+- [x] Write the T1.5 design record and step-by-step TDD implementation plan.
+- **Status:** complete
+
+### Phase 2: Test-first contracts
+- [x] Add one focused RED contract at a time for mode switching, truthful auth copy, offline entry, password policy, OAuth endpoints, and role-selector removal.
+- [x] Add browser-smoke source contracts before the real browser harness.
+- **Status:** complete
+
+### Phase 3: Minimal implementation
+- [x] Implement the shared auth composition and AuthAside visual narrative through existing primitives.
+- [x] Align client validation with the server contract and preserve real auth flows.
+- [x] Refactor only after GREEN.
+- **Status:** complete
+
+### Phase 4: Browser, responsive, and visual verification
+- [x] Verify Login/Register at 1440x900, 1100x720, 820x800, and 390x844.
+- [x] Verify keyboard, focus, validation, OAuth/offline links, reduced motion, touch targets, overflow, and browser errors.
+- [x] Run focused/full regressions, production builds, static smoke, strict Edge, and visual review.
+- **Status:** complete
+
+### Phase 5: Independent review and handoff
+- [x] Resolve actionable code/documentation review findings through RED/GREEN.
+- [x] Synchronize STATUS/HANDOFF/TESTING/redesign/issues/changelog and working-memory files.
+- [x] Run final diff, stale-state, Markdown, JSON, and report-hash gates.
+- **Status:** complete
+
+## Settled Product Boundary
+- Reuse the existing auth routes and backend; do not invent account, sync, collaboration, or production SSO capabilities.
+- Password policy is at least 10 characters and at least two character classes, exactly aligned with the server and account API tests.
+- OAuth buttons target the existing development endpoints and must not imply production provider readiness.
+- Offline opening means a truthful desktop/local-project path, not browser filesystem access that does not exist.
+- Registration must not expose a role selector; server ownership rules remain authoritative.
+- T1.1-T1.4 reopen only for a demonstrated regression.
 
 ## Errors Encountered
-
 | Error | Attempt | Resolution |
-| --- | --- | --- |
-| `git status` failed because this directory is not a git repo | Checked repo state after first planning document | Treat this as a plain workspace; do not rely on git verification. |
-| `rg --files` timed out on earlier full scan | Tried whole-workspace file listing | Switched to targeted directory inspection. |
-| LaTeX log scan produced a false failure on `File \`` | `verify sample-contest` after adding log checks | Replaced broad pattern with concrete fatal/missing-file patterns. |
-| `py_compile` created `__pycache__` inside `templates/contest/src` | Compiled template scripts directly | Removed cache directories and avoided compiling template scripts in final verification. |
-| Parallel Python checks sometimes exceeded timeout | Ran py_compile, doctor, and verify in parallel | Sequential `py_compile`, `doctor`, `verify`, and `build` succeeded; avoid parallel Python verification in this environment. |
-| `apply-response` needed a safety boundary | Started from failing tests for missing parser/applier | Implemented strict file block parsing, path rejection, preview-only default, and explicit `--apply`. |
-| Initial launcher publish produced a large WinForms-dependent bundle | Built `.exe` with Windows Forms | Replaced WinForms with direct Win32 `MessageBoxW`, reducing the launcher to a single published executable. |
-| `build-launcher.ps1` copied stale output after failed `dotnet publish` | Sandbox blocked NuGet restore | Cleared publish output first and added `$LASTEXITCODE` plus expected-file checks before copying. |
-| Reference site fetch was incomplete in sandbox | Tried to retrieve `https://api.aisz.mom/` with local shell | Used available browser/open evidence and product requirements to implement the same category of animated landing + app workbench pattern without copying assets. |
-| `npm run smoke` hung on `/api/summary` after runtime health probes were added | Summary waited for Python/LaTeX/status child processes during app startup | Added child-process deadlines, an outer summary deadline, Windows process cleanup, and `runtime-timeout-smoke`. |
-| Portable package dropped design context | `package-app` copied runtime files but not `.impeccable.md` | Added `.impeccable.md` to the package manifest and locked it with a unit test. |
-| Chrome/Edge headless screenshot fails with GPU process crashes on this machine | Tried real browser screenshot via `browser-visual-smoke` | Made browser visual smoke optional by default and strict with `PAPER_OS_BROWSER_STRICT=1`; core UI gate remains `visual-smoke`. |
-| Launcher build attempted NuGet/network access | `dotnet publish -r win-x64` required runtime packs and NuGet in this environment | Pinned .NET 8 SDK with `global.json`, added local `nuget.config`, set `DOTNET_CLI_HOME`, and switched to framework-dependent launcher output. |
+|-------|---------|------------|
+| The first parallel read orchestration contained malformed JavaScript object syntax | 1 | Split the lookup into explicit scoped commands. |
+| A piped repo-wide file lookup exceeded the 10-second Windows wrapper timeout | 1 | Used narrow rg glob matching with a larger bounded timeout. |
+| Managed Windows shell and direct patch helpers could not launch through the default sandbox | 1 | Reused the verified scoped elevated shell and Codex apply-patch channel. |
+| The first shared-shell patch payload contained literal backticks that terminated its JavaScript wrapper | 1 | Re-expressed the same production strings without backticks and applied the patch once through the UTF-8-safe channel. |
+| CDP waitForExpression returned a DOM node and exceeded the object reference-chain limit | 1 | Coerced the expression result to Boolean at the helper boundary. |
+| The first reduced-motion smoke asserted the wrong serialized CSS value | 1 | Read real computed ::before styles and normalized none / 0.001ms / 1. |
+| The first AI Apply trace targeted sample-contest instead of ai-qa | 1 | Confirmed the source deep-link logic, rebuilt the stale app/public production bundle, and verified URLSearchParams workspace selection in the emitted asset. |
+| The 390px Workbench still used a 220px 1fr root grid | 1 | Switched the narrow layout to a single-column file tree → editor → AI workflow and reran overflow evidence. |
+| Two final read-only audit agents exhausted retries with HTTP 429 | 1 | Accepted no agent conclusion; completed the document audit locally with scoped rg and direct file reads. |
+| The default apply_patch helper failed with CreateProcessWithLogonW failed: 2 | 1 | Used the previously verified codex.exe --codex-run-as-apply-patch UTF-8 argument channel. |
+
+## Notes
+- The repository is heavily dirty and currently on main.
+- The T3.3 design and execution source is docs/plans/2026-08-10-t3-3-ai-panel-design.md plus docs/plans/2026-08-10-t3-3-ai-panel-implementation.md.
+- T3.3 is closed at a verified, documented handoff boundary; do not reopen it without a failing contract, user visual finding, or new requirement.
+- The next strict task is T3.6 real Workbench product capture. Preserve provider/runtime truth, exact preview baseline, explicit Apply, conflict/rollback semantics, and the 390px vertical workflow.
