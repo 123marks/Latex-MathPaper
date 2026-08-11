@@ -1,56 +1,29 @@
 # Evidence Traceability
 
-The product needs a claim ledger because contest papers fail when polished claims are not backed by exact evidence.
+Paper OS 要求重要论断可反查。IDE 里的「放大镜」就是这条链的产品化界面。
 
-## Claim Ledger Purpose
-
-`state/claim-ledger.csv` links paper claims to:
-
-- contest question
-- LaTeX section
-- result evidence
-- figure evidence
-- source evidence
-- verification status
-
-This creates a judge-facing chain:
+## 链
 
 ```text
-paper claim -> claim-ledger row -> result/figure/source ledger -> script/data/source -> LaTeX location
+文中论断 → claim-ledger → result / figure / source ledger → 脚本·数据·文献 → LaTeX 位置
 ```
 
-## Required Columns
+## claim-ledger 列
 
-| Column | Meaning |
+| 列 | 含义 |
 | --- | --- |
-| `claim_id` | Stable identifier, such as `C-Q1-001`. |
-| `question` | Contest question ID, such as `Q1`. |
-| `section` | LaTeX section path where the claim appears. |
-| `claim_text` | Short, exact claim text. |
-| `result_ids` | Semicolon-separated result ledger identifiers or metric names. |
-| `figure_ids` | Semicolon-separated figure IDs. |
-| `source_ids` | Semicolon-separated source IDs. |
-| `status` | `draft`, `supported`, `needs-check`, or `retired`. |
-| `notes` | Boundary conditions, caveats, or follow-up checks. |
+| `claim_id` | 如 `C-Q1-001` |
+| `question` | 问题或章节 ID |
+| `section` | LaTeX 路径 |
+| `claim_text` | 短而精确的论断 |
+| `result_ids` / `figure_ids` / `source_ids` | 证据引用 |
+| `status` | `draft` / `supported` / `needs-check` / `retired` |
+| `notes` | 边界与备注 |
 
-## Rules
+## 规则
 
-- Abstract claims must appear in the claim ledger.
-- Direct-answer claims must appear in the claim ledger.
-- Claims with numbers must connect to result ledger entries.
-- Claims derived from figures must connect to figure ledger entries.
-- Rule or literature claims must connect to source ledger entries.
-- Retired claims should stay in the ledger during review, then be removed before final submission.
-
-## Verification Ideas
-
-The CLI should check:
-
-- Claim ledger exists.
-- Required columns exist.
-- Supported claims have at least one evidence reference.
-- Referenced figures exist in `figure-ledger.csv`.
-- Referenced sources exist in `source-ledger.csv`.
-- Claim section paths exist.
-
-Implemented checks live in `paperctl.py verify`.
+- 摘要与直接答案必须进账本
+- 带数字的论断必须挂 result
+- 由图得出的论断必须挂 figure
+- 规则/文献论断必须挂 source
+- 校验实现见 `paperctl.py verify`

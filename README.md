@@ -1,256 +1,154 @@
-# Math Modeling Paper OS
+# Paper OS
 
-> 这是一款针对数学建模类赛事的通用性全功能的论文生产神器。
+> A local-first IDE for serious documents.
 
-This workspace is being shaped into a local product for mathematical modeling competitions. It uses LaTeX as the final paper source, Python scripts for reproducible results and figures, skills for expert workflows, and optional MCP integrations for tool access.
+Paper OS is a general-purpose desktop document IDE built around a **Workspace
+Kernel** and **Packs**. The Kernel provides files, search, editors, preview,
+local tools, AI review, commands, and status. Packs add templates, format or
+workflow capabilities, diagnostics, semantic schemas, and views.
 
-## What Exists
+The product and UI use **Pack** as the common term for every Workspace profile.
+`general` is the baseline profile, `latex` and `markdown` are format Packs, and
+`math-modeling` is the first professional workflow Pack. Mathematical modeling
+is not the product kernel.
 
-- `MathModelingPaperOS.exe`: Windows product launcher when built with `build-launcher.ps1`.
-- `MathModelingPaperOS.cmd`: script fallback launcher.
-- `app/`: Node.js local web app with a browser-based product UI.
-- `launcher/`: small .NET launcher source that opens the browser UI and supervises the local server.
-- `paperctl.py`: CLI for contest workspace initialization, verification, build, clean, and environment checks.
-- `templates/contest/`: copyable contest workspace template.
-- `product/`: workflows, quality checklists, role prompts, and product config.
-- `product/runtime/`: OpenAI-compatible provider config and workflow stage definitions.
-- `product/mcp/`: example MCP config and security policy.
-- `product/skills/`: external skill evaluation workflow.
-- `docs/knowledge/`: skill catalog, MCP catalog, paper quality system, and LaTeX notes.
-- `docs/operator-guide.md`: practical usage guide.
-- `contests/sample-contest/`: generated sample workspace used to verify the product skeleton.
+## Start
 
-## Quick Start
+The checked-in Windows launcher and `dist/release/*.zip` are development
+artifacts, not a self-contained portable release. Before launching, install:
 
-Product UI:
+- Node.js 20+
+- .NET 8 Desktop Runtime (x64)
+- Edge WebView2 Runtime
+
+After extracting the ZIP, install its production Node dependency once:
 
 ```powershell
-.\MathModelingPaperOS.exe
-.\MathModelingPaperOS.cmd
+npm --prefix app ci --omit=dev
 ```
 
-This starts the local app at `http://127.0.0.1:3719`. The UI is intentionally a browser/desktop-style product surface rather than a Python GUI. Use the `.cmd` launcher if the `.exe` launcher file group has not been built yet.
+Then open:
 
-CLI:
+```text
+PaperOS.exe
+```
+
+Windows 11 normally includes WebView2. The current archive does not bundle
+Node, `app/node_modules`, or a self-contained .NET runtime; it must not be
+described as an install-free portable build.
+
+For local development:
+
+```powershell
+npm run ide:build
+powershell -File .\build-launcher.ps1
+```
+
+The current Windows entry is a framework-dependent WinForms/WebView2 shell that
+starts the local Node runtime and opens the IDE inside the native window. Tauri
+is a future shell target, not the current launch contract.
+
+## Workspace Packs
+
+| Pack | Class | Use | Current support |
+| --- | --- | --- | --- |
+| `general` | Baseline profile | Open an arbitrary existing folder | Registration, files, search, preview, and AI surfaces |
+| `latex` | Format Pack | Articles, reports, and books | Managed starter template, local LaTeX compile, PDF preview |
+| `markdown` | Format Pack | Notes and long-form Markdown | Managed starter template and text editing |
+| `math-modeling` | Professional workflow Pack | Competition modeling workflow | Legacy `contests/` adapter, stages, evidence ledgers, scripts, figures, verification, and packaging |
+
+Managed Workspaces live under `workspaces/`. Existing folders can be registered
+without being copied. Existing directories under `contests/` remain available
+through the mathematical-modeling compatibility adapter.
+
+## Compile Contract
+
+The general IDE compile command operates on an explicit `.tex` Resource inside
+the active Workspace. The current runtime prefers bundled Tectonic, then system
+Tectonic, then `latexmk`, and keeps all path resolution inside the Workspace
+root.
+
+`paperctl.py` is currently the compatibility CLI for the `math-modeling` Pack.
+Its `init`, `status`, `verify`, `build`, and submission commands operate on
+`contests/<id>`; they are not the generic Workspace creation or build API.
 
 ```powershell
 python paperctl.py doctor
-python paperctl.py init my-contest
-python paperctl.py verify my-contest
-python paperctl.py build my-contest
-python paperctl.py list-stages
-python paperctl.py status my-contest
-python paperctl.py pipeline my-contest
-python paperctl.py advance my-contest --dry-run
-python paperctl.py kb-search latex
-python paperctl.py recommend-skills writing
-python paperctl.py recommend-mcp verification
-python paperctl.py blueprint
-python paperctl.py skill-audit writing
-python paperctl.py skill-review athola/claude-night-market@math-review
-python paperctl.py provider-check
-python paperctl.py provider-set --base-url https://api.openai.com/v1 --api-key-env OPENAI_API_KEY --model gpt-5.4
-python paperctl.py ingest my-contest C:\path\to\problem.pdf --kind problem
-python paperctl.py onboard real-contest --problem C:\path\to\problem.pdf --data C:\path\to\data.csv
-python paperctl.py package-app
-python paperctl.py package-submission my-contest --allow-warnings
-python paperctl.py stage-prompt my-contest intake
-python paperctl.py run-stage my-contest intake --dry-run
-python paperctl.py apply-response my-contest ai-runs/<run>/response.md
-npm run visual-smoke
-npm run runtime-timeout-smoke
-python -m unittest discover -s tests
+python paperctl.py init my-modeling-project
+python paperctl.py verify my-modeling-project
+python paperctl.py build my-modeling-project
 ```
 
-## Product App
+## Operations and Workspace Lifecycle
 
-The app is a local web product, not a Python GUI. The Windows launcher starts `node app/server.mjs` and opens the browser at `http://127.0.0.1:3719`.
+- `PaperOS.exe` uses `PAPER_OS_PORT` when set. Otherwise it uses loopback port
+  `3719` when available or already serving Paper OS, and selects a free loopback
+  port if another process owns `3719`. Check the active service at
+  `http://127.0.0.1:<port>/api/health`.
+- Closing the native window stops the Node process started by that window. A
+  healthy server that the launcher reused is not owned or stopped by it.
+- The server currently writes runtime messages to stdout/stderr; the launcher
+  does not create a persistent log file. Run `node app/server.mjs` in a terminal
+  when console output is needed for diagnosis.
+- External Workspace registrations are stored in `app/data/workspaces.json`;
+  managed Workspace content remains under `workspaces/`. Back up both the
+  registry and the actual Workspace directories, preferably while the runtime
+  is stopped. A registry copy alone is not a content backup.
+- An external folder is registered by absolute path. If it moves, the old entry
+  remains visible as `missing`; there is no relink/unregister API yet. Restore
+  the old path or, with Paper OS stopped and the registry backed up, remove the
+  stale entry and register the folder at its new location.
+- Current Packs are the built-ins declared in `product/workspace-packs.json`.
+  Third-party Pack installation, update, rollback, signing, and marketplace
+  flows are not shipped.
 
-The frontend has two layers:
+## Project Status
 
-- Official-site homepage: a model-gateway style product site with provider relay, signal routing, always-on trace motion, and executable-runtime positioning.
-- Workbench app: provider setup, contest onboarding, stage gates, verification/build/package actions, and Skill/MCP recommendations.
-- Runtime section: explains the Windows EXE launcher, OpenAI-compatible provider switchboard, portable folder, and submission packaging path.
+The Workspace Kernel, Pack catalog, managed creation, external-folder
+registration, legacy contest discovery, safe Workspace-relative paths, Pack
+Capability gating, independent text buffers, stale-response guards, and the
+server-side Workspace API are implemented. The compatibility Apply path now
+rejects stale mtime baselines and rolls back failed multi-file writes, but a
+durable, undoable EditTransaction is still an architecture contract. Provider
+registries, declarative Build Jobs, generic Artifact Sets, and signed
+cross-platform desktop distribution remain incomplete. AI provider failures can
+fall back to `mock-local`; product surfaces must not present that as a real model.
 
-Design context is stored in `.impeccable.md`. Future UI changes should preserve the official-site-to-application split, the research command-center tone, and persistent idle motion instead of hover-only effects.
+See [docs/CAPABILITY_MAP.md](docs/CAPABILITY_MAP.md) for the evidence-based
+status of each capability and [docs/STATUS.md](docs/STATUS.md) for the current
+audited worktree snapshot.
 
-Frontend quality gates:
+## Documentation
 
-```powershell
-npm run smoke
-npm run visual-smoke
-npm run dom-ui-smoke
-npm run headed-visual-smoke
-npm run runtime-timeout-smoke
-npm run browser-visual-smoke
-```
+| Document | Purpose |
+| --- | --- |
+| [docs/README.md](docs/README.md) | Documentation map, precedence, and update rules |
+| [CONTEXT.md](CONTEXT.md) | Canonical domain language and invariants |
+| [docs/HANDOFF.md](docs/HANDOFF.md) | Past, present, future, risks, and next-maintainer sequence |
+| [docs/STATUS.md](docs/STATUS.md) | Current implementation and verification snapshot |
+| [docs/PRODUCT.md](docs/PRODUCT.md) | Product position, boundaries, and delivery stages |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Runtime and extension architecture |
+| [docs/CAPABILITY_MAP.md](docs/CAPABILITY_MAP.md) | Implemented, partial, and planned capabilities |
+| [docs/DESIGN.md](docs/DESIGN.md) | Visual language and primary surfaces |
+| [docs/GUIDE.md](docs/GUIDE.md) | Current usage and commands |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Setup, repository layout, and change workflow |
+| [docs/TESTING.md](docs/TESTING.md) | Test matrix and evidence format |
+| [docs/RUNBOOK.md](docs/RUNBOOK.md) | Runtime, backup, recovery, secrets, and release operations |
+| [docs/TRACEABILITY.md](docs/TRACEABILITY.md) | Requirement-to-code-to-test traceability |
+| [docs/adr/README.md](docs/adr/README.md) | Architecture decision index |
+| [docs/redesign/README.md](docs/redesign/README.md) | Active enterprise redesign specification |
+| [product/README.md](product/README.md) | Runtime-consumed Packs, workflows, agents, skills, and release metadata |
+| [CHANGELOG.md](CHANGELOG.md) | Versioned change history and known limitations |
 
-`smoke` checks the live local API plus page shell. `visual-smoke` checks that the frontend keeps the landing/app split, persistent motion system, responsive breakpoints, reduced-motion support, and avoids obvious generic AI UI patterns. `dom-ui-smoke` starts the local app and checks the runtime HTML/API contract for the official homepage, app workbench, live relay components, and Skill/MCP intelligence. `runtime-timeout-smoke` verifies that runtime probes cannot hang the app startup path when an external command stalls.
+## Naming
 
-`headed-visual-smoke` opens a real local Chrome/Edge window, connects through DevTools, and captures `dist/visual-qa/headed-homepage.png` plus `dist/visual-qa/headed-app.png`. Use it on Windows machines where headless browser screenshot mode crashes.
-
-`browser-visual-smoke` is an optional real-browser screenshot probe. It attempts homepage and application screenshots under `dist/visual-qa/` when local Chrome/Edge headless rendering works. On Windows machines where Chrome/Edge headless GPU crashes, it reports `SKIP`; set `PAPER_OS_BROWSER_STRICT=1` to make that fatal.
-
-Current product functions:
-
-- Create contest workspaces from `templates/contest/`.
-- Configure an OpenAI-compatible provider with `base_url`, API key environment variable, model, temperature, and timeout.
-- Import official problem files, raw data, references, or user-provided skills into the active contest workspace.
-- Run status, pipeline, dry-run advance, verification, build, submission packaging, skill audit, MCP audit, and provider checks.
-- Inspect the workflow blueprint plus stage-specific Skill/MCP recommendations in the product UI.
-- Keep LaTeX and evidence ledgers as the source of truth; AI output remains reviewable before file writes.
-- Generate a portable app folder that excludes private contest workspaces.
-- Generate a final submission package for a contest workspace.
-- Onboard a real contest by creating the workspace, importing materials, writing a pipeline report, and creating the first intake prompt.
-- Present the product as a polished animated website plus an application workspace instead of a Python-style form panel.
-- Keep persistent motion visible while idle: traffic lanes, model orbit, signal pulse, trace stream, runtime orbit, stage sheen, and progress tracks.
-
-Packaging direction:
-
-- Current MVP: `.exe/.cmd + Node local web server + browser UI`, which is low-dependency and easy to debug during contest pressure.
-- Next desktop shell: Tauri if small Windows binaries matter most; Electron if fastest packaging and maximum web UI consistency matter most; Neutralino if a lightweight shell is acceptable with a smaller ecosystem.
-- The packaging layer should not own workflow logic. It should keep calling the same local API/CLI contract.
-
-## Contest Workflow
-
-1. Put the official problem statement in `contests/<id>/problem/`.
-2. Put raw data in `contests/<id>/data/raw/`.
-3. Refresh `contests/<id>/contest-rules.md`.
-4. Fill `state/problem-map.md` and `state/modeling-plan.md`.
-5. Write scripts in `src/` and store outputs in `runs/`.
-6. Record result evidence in `state/result-ledger.csv`.
-7. Generate figures into `figures/` and record them in `state/figure-ledger.csv`.
-8. Record important claims in `state/claim-ledger.csv`.
-9. Write paper sections in `paper/sections/`.
-10. Run `verify`, `build`, and `package-submission`.
-
-Use `status` during a contest to see which workflow stage is currently incomplete and which command should run next. Use `pipeline` for a full stage-gate report. Use `advance --dry-run` to create the next-stage prompt package without calling an API.
-
-## Product Principle
-
-Every important paper claim must trace through `state/claim-ledger.csv` to a result row, figure row, script, source, or LaTeX artifact. The product should make high-quality contest writing faster without hiding weak evidence behind polished language.
-
-## Knowledge Base
-
-`product/knowledge-base.json` is the machine-readable local knowledge base. It records product principles, official reference sources, skill candidates, MCP categories, and stage gates.
-
-`product/workflows/competition-blueprint.json` is the product-level operating blueprint. It defines lanes from contest intake to submission verification, including entry commands, recommended skills, MCP capabilities, required outputs, and gates.
-
-Useful queries:
-
-```powershell
-python paperctl.py kb-search mcp
-python paperctl.py kb-search scientific figure
-python paperctl.py recommend-skills figure
-python paperctl.py recommend-mcp modeling
-python paperctl.py blueprint
-python paperctl.py blueprint scientific-figures
-python paperctl.py skill-audit verification
-```
-
-`skill-audit` checks whether recommended local/global skills are currently installed. It does not install anything; install commands remain advisory until you read each candidate's `SKILL.md`.
-
-Use `skill-review` before installing an external skill:
-
-```powershell
-python paperctl.py skill-review athola/claude-night-market@math-review
-```
-
-This writes a review checklist under `product/skills/reviews/`. Install only after the review records a clear adoption decision.
-
-## Portable Package
-
-Create a portable Windows folder:
-
-```powershell
-python paperctl.py package-app
-```
-
-Output defaults to `dist/MathModelingPaperOS-portable`. It includes the app, templates, product config, docs, tests, launcher, and CLI, but intentionally excludes `contests/` so private contest files are not copied.
-
-Build the optional Windows `.exe` launcher:
-
-```powershell
-.\build-launcher.ps1
-```
-
-The executable is a thin launcher only. It locates Node.js, starts `app/server.mjs`, waits for `/api/health`, opens the browser UI, and leaves all workflow logic in `paperctl.py`.
-
-Current executable boundary:
-
-- `MathModelingPaperOS.exe` is the local desktop entry point.
-- The launcher is framework-dependent and ships with `MathModelingPaperOS.dll`, `MathModelingPaperOS.deps.json`, and `MathModelingPaperOS.runtimeconfig.json`; keep those files beside the `.exe`.
-- Node.js 20+ is still required on the target machine.
-- Python and `latexmk` are required for full contest verification and PDF building.
-- The launcher is deliberately thin so backend workflow logic remains testable and portable.
-- If port `3719` is occupied by Paper OS, the launcher reuses it. If the port belongs to another service, it falls back to a free local port unless `PAPER_OS_PORT` is explicitly set.
-- The app probes Python and LaTeX with deadlines so a slow or broken runtime does not block the UI. Override command paths with `PAPER_OS_PYTHON` and `PAPER_OS_LATEXMK` when needed.
-
-## Submission Package
-
-Create a final handoff folder for a contest:
-
-```powershell
-python paperctl.py package-submission my-contest --allow-warnings
-```
-
-By default this runs `build`, runs `verify`, blocks on `FAIL`, blocks on `WARN` unless `--allow-warnings` is provided, and writes `contests/<id>/submission-package/`. The package includes `paper/main.pdf`, LaTeX sources, sections, bibliography, scripts, figures, run artifacts, evidence ledgers, verification report, pipeline report, and `SUBMISSION_MANIFEST.md`.
-
-## AI Runtime
-
-The tool supports OpenAI-compatible providers through `product/runtime/providers.example.json` or the UI-created `product/runtime/providers.local.json`. A provider can have its own `base_url`, `api_key_env`, and `model`. Use the product UI, `list-stages`, and `provider-check` to validate provider configuration before a real call.
-
-CLI setup example:
-
-```powershell
-python paperctl.py provider-set --base-url https://api.openai.com/v1 --api-key-env OPENAI_API_KEY --model gpt-5.4
-$env:OPENAI_API_KEY="..."
-python paperctl.py provider-check --provider-config product/runtime/providers.local.json --require-key
-```
-
-The app can import local materials into a contest workspace:
-
-- Problem files into `problem/`; text-like files sync directly to `problem/problem.md`, and PDFs attempt text extraction with a placeholder fallback.
-- Raw data into `data/raw/`.
-- References into `references/`.
-- User-provided skills into `skills/`.
-
-CLI ingest example:
-
-```powershell
-python paperctl.py ingest my-contest C:\path\to\problem.pdf --kind problem
-python paperctl.py ingest my-contest C:\path\to\data.csv --kind data
-python paperctl.py ingest my-contest C:\path\to\my-skill.md --kind skill
-```
-
-Real contest onboarding:
-
-```powershell
-python paperctl.py onboard real-contest --problem C:\path\to\problem.pdf --data C:\path\to\data.csv --reference C:\path\to\rules.pdf
-```
-
-This creates or reuses the contest workspace, imports materials, writes `state/pipeline-report.md`, and creates a manual intake prompt under `ai-runs/`.
-
-`stage-prompt` creates a reviewable prompt package; `run-stage` can call the provider and stores the response under `contests/<id>/ai-runs/`. AI output is intentionally not auto-applied to paper files. To make model output actionable, responses can include strict file blocks:
-
-```text
-BEGIN_FILE: state/problem-map.md
-...complete file content...
-END_FILE
-```
-
-`apply-response` previews these blocks by default. Re-run with `--apply` only after review.
-
-Runtime loop:
-
-```text
-status/pipeline -> advance --dry-run or run-stage -> review response.md -> apply-response preview -> apply-response --apply -> verify -> build
-```
-
-## Current Verification
-
-The sample workspace has been initialized, model/plot templates have run, and `paperctl.py verify sample-contest` reports 51 PASS, 1 WARN, 0 FAIL. The remaining warning is intentional because the template still contains TODO placeholders.
+| Name | Use |
+| --- | --- |
+| **Paper OS** | Product display name |
+| `PaperOS.exe` | Current Windows desktop entry |
+| `paper-os` | npm/config package name |
+| `paperos://` | Planned deep-link scheme |
 
 ## License
 
-Released under the Apache License 2.0. See `LICENSE` for the full text.
+Apache License 2.0. See `LICENSE`.

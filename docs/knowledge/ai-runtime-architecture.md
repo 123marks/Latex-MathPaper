@@ -1,77 +1,34 @@
-# AI Runtime Architecture
+# AI Runtime
 
-This product is a LaTeX-first math modeling paper workflow framework. The AI runtime is a stage runner, not an autonomous black box.
+Paper OS 的 AI 是 **IDE 内的阶段式助手**，不是无人值守黑盒。模型经用户配置的 OpenAI 兼容 API 调用。
 
-## Core Components
+## 组件
 
-| Component | Path | Purpose |
+| 组件 | 路径 | 用途 |
 | --- | --- | --- |
-| Provider config | `product/runtime/providers.example.json` | Defines OpenAI-compatible `base_url`, API key environment variable, model, and timeout. |
-| Stage config | `product/runtime/stages.json` | Defines intake, modeling, figure, writing, and verification stages. |
-| Prompt package | `contests/<id>/ai-runs/<run>/prompt.md` | Human-reviewable prompt built from workflow and contest context. |
-| Response package | `contests/<id>/ai-runs/<run>/response.md` | AI output when `run-stage` calls a provider. |
-| AI run ledger | `contests/<id>/state/ai-run-ledger.csv` | Records stage, provider, model, prompt path, response path, and status. |
-| Response applier | `paperctl.py apply-response` | Previews or applies strict `BEGIN_FILE` response blocks inside the contest workspace. |
+| Provider | `product/runtime/providers.example.json` | `base_url` / `api_key_env` / `model` / timeout |
+| Stages | `product/runtime/stages.json` | intake → modeling → figure → writing → verification |
+| Prompt 包 | `…/ai-runs/<run>/prompt.md` | 可审阅提示 |
+| Response 包 | `…/ai-runs/<run>/response.md` | 模型输出 |
+| Run ledger | `…/state/ai-run-ledger.csv` | 阶段、模型、路径、状态 |
+| Applier | `paperctl.py apply-response` | 预览/应用 `BEGIN_FILE` 块 |
 
-## Commands
+## 循环
 
-Create a prompt package without calling a model:
-
-```powershell
-python paperctl.py stage-prompt sample-contest intake
+```text
+项目文件 → stage prompt → API 响应 → apply 预览 → 人工确认 → 写入 → verify/build
 ```
 
-Dry-run provider config and prompt packaging:
+## 规则
 
-```powershell
-python paperctl.py run-stage sample-contest intake --dry-run
-```
-
-Call an OpenAI-compatible provider:
-
-```powershell
-$env:OPENAI_API_KEY="..."
-python paperctl.py run-stage sample-contest intake --provider default
-```
-
-Inspect runtime configuration:
-
-```powershell
-python paperctl.py list-stages
-python paperctl.py provider-check --provider default
-python paperctl.py provider-check --provider default --require-key
-```
-
-Preview or apply AI response file blocks:
-
-```powershell
-python paperctl.py apply-response sample-contest ai-runs/<run>/response.md
-python paperctl.py apply-response sample-contest ai-runs/<run>/response.md --apply
-```
-
-## Design Rules
-
-- AI output does not auto-edit LaTeX or scripts.
-- Every response is saved for review before edits are applied.
-- AI-proposed file edits must use strict blocks:
+- 不自动改 LaTeX / 脚本
+- 写入块：
 
 ```text
 BEGIN_FILE: relative/path
-...complete file content...
+...完整文件内容...
 END_FILE
 ```
 
-- `apply-response` rejects absolute paths, drive-letter paths, backslash paths, traversal segments, nested blocks, duplicate paths, and unclosed blocks.
-- Provider config uses `base_url`, `api_key_env`, and `model` so users can connect OpenAI, local gateways, or compatible API services.
-- MCP and skills are stage recommendations, not hidden runtime magic.
-- Verification remains deterministic through `paperctl.py verify` and `latexmk`.
-
-## Stage Model
-
-The runtime follows this loop:
-
-```text
-contest files -> stage prompt -> AI response -> apply-response preview -> reviewed file edits -> deterministic verify/build
-```
-
-This keeps the tool useful under contest pressure while preserving evidence traceability and preventing unreviewed AI claims from entering the final paper.
+- 拒绝绝对路径、盘符、反斜杠、`..`、嵌套/重复/未闭合块
+- MCP 与 Skill 只是阶段推荐，不替代确定性校验

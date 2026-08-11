@@ -1,65 +1,30 @@
-# Paper Quality System
+# Paper Quality
 
-A strong mathematical modeling paper is judged as an artifact under time pressure. The product must make the judge see the answer, the model logic, and the evidence quickly.
+Paper OS 产出的是可交付长文档。质量闸门对学术论文、建模赛、工程白皮书同样适用。
 
-## Core Quality Principles
+## 原则
 
-1. Every subquestion receives an explicit direct answer.
-2. Every important claim is backed by computed evidence, a formula, a table, a figure, or a cited source.
-3. Every model choice explains why this method is appropriate and what alternative was rejected.
-4. Every formula has motivation before it and interpretation after it.
-5. Every figure has one evidence purpose and is interpreted in the text.
-6. Every assumption has a reason and a validation path.
-7. Sensitivity analysis is a main credibility section, not an appendix decoration.
-8. Abstract, body, figures, and tables use consistent numbers.
+1. 每个子问题有明确直接答案
+2. 重要论断有数/表/图/公式/出处
+3. 方法选择说明「为何用、放弃了什么」
+4. 公式：动机 → 公式 → 解释
+5. 每张图一个证据目的，并在正文解读
+6. 假设可辩护且有验证路径
+7. 敏感性分析是正文可信度，不是装饰附录
+8. 摘要、正文、图、表数字一致
 
-## Required Paper Sections
+## 图
 
-| Section | Job |
-| --- | --- |
-| Title | Identify object, method, and goal without generic contest wording. |
-| Abstract | Give background, per-question method/results, validation, and final value. |
-| Problem restatement | Restate tasks in original words without solving them. |
-| Problem analysis | Expose mathematical nature, difficulty, method route, and problem dependencies. |
-| Assumptions | State only assumptions that affect the model and can be justified. |
-| Symbols | Include symbols that actually appear in formulas. |
-| Data preprocessing | Explain data quality, transformations, feature extraction, and modeling implications. |
-| Model sections | Define variables, objectives, constraints, solver, results, validation, and direct answers. |
-| Sensitivity and validation | Stress critical parameters, assumptions, and simplified boundaries. |
-| Evaluation and extension | State strengths, limitations, and extensibility without self-damage. |
-| Appendix | Include reproducible code and supporting artifacts when allowed. |
+- 矢量优先 PDF/SVG；必要时才 PNG
+- 轴、单位、标签、图注清楚
+- 禁默认 matplotlib 花哨样式与无目的饼图
+- 图注写证据信息，不只写图表类型
 
-## Figure Standards
+## 反 slop
 
-- Use vector PDF/SVG for charts when possible.
-- Use PNG only for raster image panels.
-- Use clear axes, units, labels, and captions.
-- Avoid default matplotlib styling.
-- Avoid pie charts and decorative charts unless explicitly justified.
-- Use direct labels over legends when that reduces reader effort.
-- Each caption should state the evidence message, not just the chart type.
-
-## Verification Checklist
-
-- LaTeX compiles.
-- No missing image files.
-- No unresolved `??` references.
-- No undefined citations.
-- All required section files exist.
-- Result ledger has source, metric, value, unit, and script columns.
-- Figure ledger has figure path, purpose, script, source data, and caption claim columns.
-- Every model section contains a direct answer paragraph.
-- Sensitivity section exists and contains at least one substantive parameter or assumption check.
-
-## Anti-Slop Scan
-
-Flag these patterns:
-
-- Generic transitions such as "first, then, finally" without content.
-- Claims like "good performance", "reasonable", or "effective" without numbers.
-- Equations introduced but not used.
-- Figures shown but not interpreted.
-- Tables that duplicate prose without comparison value.
-- Long background writing that delays the model.
-- English abstract facts that do not match the Chinese abstract.
-- Absolute local paths in LaTeX or appendix code.
+- 空转场（「首先…然后…最后」而无内容）
+- 「效果好 / 合理」却无数
+- 引入却不用的公式
+- 有图无解释
+- 中英摘要事实不一致
+- LaTeX/附录里的绝对本地路径

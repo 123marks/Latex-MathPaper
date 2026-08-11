@@ -1,28 +1,15 @@
-# LaTeX Build Notes
+# LaTeX Build
 
-## Build Driver
+## 驱动
 
-Use `latexmk` as the preferred build driver. It automatically reruns LaTeX and related tools until cross-references and generated files stabilize.
-
-## Minimal Build Commands
+默认 `latexmk`；桌面产品路线同时支持内嵌 Tectonic，本机有 TeX Live 时优先本机。
 
 ```powershell
 latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
 latexmk -C
 ```
 
-The product CLI should call `latexmk` when available, but verification should still work without it.
-
-## Template Policy
-
-- Keep `main.tex` small.
-- Put content in `sections/*.tex`.
-- Use relative paths for figures and appendix code.
-- Keep references in `refs.bib`.
-- Prefer `ctexart` for Chinese contest papers if the local TeX environment supports it.
-- Prefer modular sections so agents can edit one part without damaging the whole paper.
-
-## Required Structure
+## 结构
 
 ```text
 paper/
@@ -32,23 +19,15 @@ paper/
 `-- sections/
     |-- 00-abstract.tex
     |-- 01-restatement.tex
-    |-- 02-analysis.tex
-    |-- 03-assumptions.tex
-    |-- 04-symbols.tex
-    |-- 05-data.tex
-    |-- 06-model-q1.tex
-    |-- 07-model-q2.tex
-    |-- 08-model-q3.tex
-    |-- 09-validation.tex
+    |-- …
     `-- 10-evaluation.tex
 ```
 
-## Build Gate
+原则：`main.tex` 保持薄；正文在 `sections/`；图与附录用相对路径；中文场景可用 `ctexart`。
 
-A paper is not complete until:
+## 完成条件
 
-- `latexmk` succeeds, or the missing local LaTeX dependency is explicitly reported.
-- Generated PDF exists.
-- No unresolved references are visible in the `.log` or PDF text review.
-- Figure paths resolve.
-- Appendix code paths are relative.
+- 编译成功（或明确报告缺引擎）
+- PDF 存在
+- 无未解析引用
+- 图路径有效

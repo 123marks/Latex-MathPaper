@@ -1,0 +1,117 @@
+# Changelog
+
+本项目使用版本化变更记录。日期和状态以仓库证据为准；历史“第几轮”开发记录已归档到 `docs/history/`。
+
+## [Unreleased]
+
+### Added
+
+- 企业级文档治理：当前状态、工程交接、开发、测试、运维、追溯和 ADR 索引。
+- Horizon Atelier 重设计总览与 `docs/redesign/01`–`08` 规格集。
+- 设计令牌、Horizon dynamic background 和 Home hero 三个重设计黄金样例。
+- 可复用 motion hooks 及其 SSR、reduced-motion、资源清理回归测试。
+- Horizon T0.3 严格浏览器行为探针、结构化环境/renderer 证据和四张截图 SHA-256 记录。
+- T0.4 五个可复用母题组件及其 Vite SSR、可访问性、非法输入、唯一 SVG ID 和 CSS 解析门禁。
+- 不依赖 Node 全局 `WebSocket` 的 CDP 客户端与真实 back/forward BFCache 事件取证。
+- T1.1 Home Hero 四视口浏览器门禁，覆盖产品事实、导航互斥、工作流锚点、reduced-motion、移动菜单键盘/焦点与截图哈希。
+- T1.2 七个公共区块组件：`SectionHead`、`StatRow`、`WorkflowRibbon`、`FeatureCard`、`FAQ`、`LogoWall`、`CtaBand`，以及独立 SSR/语义/输入合同。
+- T1.3 公共导航合同与 Edge 证据：当前路由、2px 指示、40px/41px 阈值、下载主 CTA、移动账户可达、881px 桌面边界、820/390 首链接焦点/Escape、认证态主 CTA 和 reduced-motion。
+- T1.4 Features/Pricing/Enterprise：五段真实产品深挖、真实 Workbench 截图资产、月/年 `Segmented`、四方案 `Table`、BYOK/模型 token 边界、FAQ、六项企业范围与安全架构块。
+- T1.4 专用 Edge smoke：三路由 × 四视口截图、键盘年付、FAQ Enter/焦点、Reveal reduced-motion、触控/溢出/越界和稳定行为摘要。
+- T1.5 共享 AuthPanel、通用 AuthAside code/PDF/五步 trace、登录/注册 Segmented、离线桌面入口与开发 OAuth 控件。
+- T1.5 共享密码策略与专用 Edge smoke：10–256 位、两类字符、确认密码、无效提交禁用，以及两路由 × 四视口、键盘、reduced-motion 和零 overflow 门禁。
+- T3.3 Web Workbench AI 审查流：provider/runtime truth、真实 `ActionTimeline`、BEGIN_FILE proposal/diff、Preview → Reject/Apply、409 conflict refresh、rollback/preview-error 状态。
+- T3.3 strict Edge 证据：临时 `ai-qa` Workspace 两轮 mock-local 请求、Reject 不落盘、Apply 真实写入、1440×1200/390×844、reduced-motion、请求/响应 trace、截图 SHA-256。
+
+### Changed
+
+- 交接由累积轮次日志改为“当前事实 + 历史归档 + 下一步”。
+- 产品状态声明区分源码存在、本轮实测、产物存在和生产交付。
+- `Reveal` 与 `Ambient` 统一使用全站 reduced-motion 门控；旧 Ambient 装饰性 orb 已移除。
+- `npm run browser-visual-smoke` 现在默认 strict；显式 optional 入口仅用于非门禁环境探查。
+- motion reduced-motion 首值改为 SSR/hydration 确定，并在浏览器 layout effect 阶段于绘制前收敛；CountUp 默认 locale 固定为 `zh-CN`。
+- Home Hero 采用 truth-driven B 路线：以明确标注的 `HeroIdeMock` 临时界面示意承载工作流，真实 AI timeline 与 Workbench 截图分别留给 T3.3/T3.6。
+- Home Hero 报告新增稳定行为 SHA-256；采集时间、逐帧截图哈希和亚像素抖动不再导致交接文档中的行为证据漂移，原始截图 SHA 仍逐次保留。
+- Home 的 post-Hero 叙事改用全部七个公共组件，形成六项能力、五节点 workflow、五维中性比较、非背书场景墙、四项 FAQ 与最终 CTA；不引入 schema renderer、新 barrel 或新依赖。
+- Home Edge 门禁扩展到 workflow `5/5/2/1` 列、connector `4/4/0/4`、comparison caption、FAQ 键盘、CTA Reveal、全页回顶与 reduced-motion；稳定行为摘要与原始 PNG/报告文件 SHA 保持双层证据边界。
+- 公共 Header 在 `scrollY > 40` 后进入 compact `glass-frost`；`NavLink` 的 `aria-current="page"` 成为唯一当前态来源，主 CTA 统一为 `/download`“下载桌面端”。复审后的 Edge smoke 以真实 881px/390px/认证态合同关闭边界风险，没有增加第二个导航断点或测试专用生产 API。
+- Features 改为五段交替叙事；Pricing 删除无来源价格和本机模型推理承诺，公开价格改为待发布；Enterprise 把 SSO、RBAC、SLA、私有部署等能力降为可配置、需评估或合同确认。
+- `SectionHead` 支持显式 heading level，Features/Pricing/Enterprise 各输出一个页面级 `h1`，既有 section 默认仍为 `h2`。
+- Login/Register 仅共享表单 chrome；真实 useAuth 调用、redirect state 和 API payload 仍由页面持有，confirmPassword 不发送到服务端，owner/member 继续由服务端决定。
+- `/api/chat` 在真实 provider 与 mock-local 路径的首个 delta 前发送无密钥 runtime metadata；配置 provider 不再被当作本次回答来源。
+- ≤640px Workbench 改为文件树、编辑器、AI 面板的垂直工作流，保留核心文件导航和 proposal 控件。
+
+### Fixed
+
+- 视觉冒烟从已退役的 Aurora fallback 断言切换到当前 Horizon WebGL、reduced-motion、failure fallback 和 App 接线契约。
+- Windows 打包在 launcher 文件集不完整时现在会失败，不再生成误导性的 EXE 启动说明。
+- 指针视差不再在页面挂载后常驻 RAF，仅在指针输入后按需运行并在稳定或卸载时停止。
+- 窄屏 comparison caption 不再逐字竖排；caption 在 Table card reflow 下显式占满可用宽度。
+- Workflow 可见 connector 增强到 2px 并使用既有 cool-ink/jade 语义；FAQ 增加 region landmark，未增加额外状态机。
+- Home 全页截图在访问 Reveal 区块后恢复 `scrollY=0`，固定导航不再出现在页面中段；820px connector 门禁按既有两列断点条件化，避免错误回归。
+- Horizon 在首次 IntersectionObserver 可见结果前不再启动 RAF；隐藏、离屏和迟到回调不能重启动画。
+- BFCache `pagehide` 现在暂停并保留 WebGL surface，`pageshow` 恢复；普通离开和 React 卸载才幂等释放资源。
+- BFCache 门禁不再用合成 `PageTransitionEvent` 作为通过证据，改为同源导航、原生 persisted 事件、文档 token 与 CDP not-restored 诊断。
+- 删除零引用且破坏 CSS 解析的孤立 `will-change`/`grainShift`，视觉冒烟改为验证有真实调用方的 `foilShimmer`/`marchAnts`。
+- 删除 Hero 中未经证实的本机 AI/服务器零算力、编译秒数和证据数量承诺；统一 880px 导航断点，补齐移动菜单 ARIA、首焦点、Escape、焦点恢复及跨回桌面断点时的状态清理。
+- Hero 入场/滚动视差完整服从 reduced-motion；Horizon/Aurora shader 的 `smoothstep` 边界改为有序表达式，避免未定义行为。
+- ≤880px 顶栏不再因新增下载 CTA 挤压账户操作；登录/注册或工作台/退出移入现有移动导航，44px Icon menu、首焦点、Escape、焦点恢复与跨断点关闭保持可用。
+- T1.4 reduced-motion smoke 不再采样无动画的内部 article，而是直接测量 Pricing/Enterprise 的 `Reveal` 包装层；Enterprise SectionHead 限宽选择器也已穿过该包装层。
+- 注册页在密码策略或确认密码失败时禁用提交，合法匹配后恢复；auth smoke 的离线标题断言按可访问文本包含关系判断，不再误拒绝图标和副说明。
+- provider 上游 SSE 现在跨 chunk 缓冲解析，并以 `PROVIDER_STREAM_ERROR` 明确失败边界；JSON API 响应统一 `Cache-Control: no-store`。
+- Workbench 深链在生产 bundle 中恢复读取 `?workspace=...`；AI Apply 不再因过期构建产物写入错误 Workspace。
+- 390px Workbench 根级横向溢出已关闭；AI diff 保留局部滚动，不再撑宽页面。
+
+### T0.5 UI primitives
+
+- 新增十四个可复用 UI primitives、共享 selection/dialog helper、dev-only /_kitchensink 和 web-ui-primitives 回归测试。
+- 新增 BackgroundVideo MIME/HTML fallback/reduced-motion 回归测试；production server 现在以 `video/mp4` 提供可选视频、以 `image/jpeg` 提供 `.jpg/.jpeg` poster，video/scrim 固定并在不透明 Horizon 上方低透明叠加。
+- BackgroundVideo 在 reduced-motion 下不再探测或创建 `autoPlay loop` 视频；共享 motion hook 支持系统偏好双向切换并在卸载时清理 listener。
+- Kitchensink smoke 在采集前关闭 smooth scrolling 并等待 scrollY=0，三视口行为与 viewport/full-page 证据写入 dist/visual-qa/；Drawer 的初始焦点、Tab 环绕、Escape 和焦点恢复已纳入真实 Edge 门禁。
+- 独立复审后的第二轮 TDD 修复 Tabs `aria-controls` IDREF，并要求 Dialog title 与 Meter label 为非空可访问名称。
+- T0.5 已完成，但企业级 redesign 仍为 Active；实体 GPU、移动真机、像素基准和桌面壳验证不属于本阶段。
+
+### T0.6 Icon registry
+
+- Web 与桌面端统一注册 `menu`、`template`、`git-branch`、`sync`、`magnifier`、`evidence`、`mcp`、`play`、`filter`、`export`，并导出两端 `ICON_NAMES`。
+- 桌面端保留 `branch`/`refresh` 兼容别名；未知 Web 名称静默返回空，未知桌面名称保留圆形 fallback。
+- 新增 `tests/icon-registry.test.mjs`，从源码正则升级为两端实际 Vite SSR/SVG 渲染断言；T0.6 聚焦 2/2、全量 Node 115/115。
+- T0.6 已完成；企业级 redesign 仍为 Active，下一严格顺序为 T1/T3 页面级接入。实体 GPU、移动真机、像素基准、桌面壳和签名安装链仍未验证。
+
+### Known limitations
+
+- 工作区仍未形成可审计的 clean commit 基线。
+- root/desktop/Cargo 版本存在漂移。
+- Windows ZIP 缺少 Node 生产依赖和 self-contained .NET runtime，不能称为零依赖 portable。
+- macOS/Linux 清单资产尚不存在，不能视为已发布。
+- Tauri 仍依赖系统 Node 且 CSP 未启用。
+- Horizon 的实体 GPU 呈现 FPS、移动端功耗/温度和降级阈值仍待真机基准；SwiftShader draw-call 采样不构成性能通过。
+
+## [0.5.0] - 2026-07-20
+
+> `product/releases.json` 将本版本标为 stable；仓库当前只能证明 Windows 开发预览 ZIP 存在。该包不含 Node 生产依赖和 self-contained .NET runtime，也不能证明完整跨平台发布。
+
+### Added
+
+- Workspace Kernel、built-in Packs、managed/external/legacy Workspace 入口。
+- Windows WebView2 桌面入口、Web 站点、账户/后台和下载表面。
+- 用户 provider key 加密存储、Ed25519 release manifest signing。
+- Quick Open、Save All、dirty tab、explicit LaTeX compile 和 preview。
+
+### Changed
+
+- 产品从数学建模专用工具收敛为通用文档 IDE；数学建模保留为专业 Pack。
+- AI Apply Blocks 增加 baseline mtime、冲突拒绝和写失败回滚。
+- Desktop local auth 增加一次性 bootstrap。
+
+### Security
+
+- loopback Host/Origin/WS policy、请求体上限、登录限流和安全响应头。
+- Workspace canonical containment、walker 预算和 junction escape 防护。
+- 原子 JSON store、AES-256-GCM provider secret、Ed25519 manifest。
+
+### Known limitations
+
+- 无通用 Terminal/Git/实时协作。
+- EditTransaction、BuildJob、ArtifactSet 和 Pack contribution contracts 未完整实现。
+- 平台原生代码签名、自动更新和 macOS/Linux 安装包未完成。
