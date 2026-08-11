@@ -2,87 +2,188 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api.js";
 import { useAuth } from "../../lib/auth.jsx";
+import { formatRelative } from "../../lib/format.js";
 import StageGrid from "../../components/StageGrid.jsx";
 
-function Row({ k, v, bad }) {
+// 登录后首页 = 本地控制中枢。全部数据来自真实端点：
+// /api/summary（运行时）、/api/editor/projects（工作区）、/api/chat/history
+// （最近会话）、/api/usage/me（7 天用量）、/api/engine/status（编译引擎）。
+function RuntimeRow({ k, v, ok, hint }) {
   return (
-    <div className="spread" style={{ fontSize: 13 }}>
+    <div className="spread" style={{ fontSize: 13, alignItems: "baseline" }}>
       <span style={{ color: "var(--muted)" }}>{k}</span>
-      <span className={`chip ${bad ? "rose" : "muted"}`}>{v}</span>
+      <span style={{ textAlign: "right" }}>
+        <span className={`chip ${ok === false ? "rose" : "muted"}`}>{v}</span>
+        {ok === false && hint ? (
+          <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 2 }}>{hint}</div>
+        ) : null}
+      </span>
     </div>
-  );
-}
-
-function QuickLink({ to, t, d }) {
-  return (
-    <Link to={to} className="stat" style={{ textDecoration: "none", display: "block" }}>
-      <b style={{ fontSize: 18 }}>{t}</b>
-      <span>{d}</span>
-    </Link>
   );
 }
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [summary, setSummary] = useState(null);
+  const [projects, setProjects] = useState(null);
+  const [sessions, setSessions] = useState(null);
+  const [usage, setUsage] = useState(null);
+  const [engine, setEngine] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     api.get("/api/summary").then(setSummary).catch((e) => setError(e.message));
+    api.get("/api/editor/projects").then((d) => setProjects(d.projects || [])).catch(() => setProjects([]));
+    api.get("/api/chat/history").then((d) => setSessions((d.threads || []).slice(0, 5))).catch(() => setSessions([]));
+    api.get("/api/usage/me?days=7").then(setUsage).catch(() => {});
+    api.get("/api/engine/status").then(setEngine).catch(() => {});
   }, []);
 
   const rt = summary?.runtime;
   const ok = (p) => (p?.ok ? p.detail || "可用" : "缺失");
-  const workspaceCount = summary?.workspaces?.length ?? summary?.contests?.length ?? 0;
-  const activeWs = summary?.activeWorkspace || summary?.activeContest || "无";
-  const readyCount = [rt?.python?.ok, rt?.latexmk?.ok].filter(Boolean).length;
+  const workspaceCount = projects?.length ?? summary?.workspaces?.length ?? 0;
+  const activeWs = summary?.activeWorkspace || summary?.activeContest || "";
+  const tectonicOk = Boolean(engine?.tectonic?.present);
+  const readyCount = [rt?.python?.ok, rt?.latexmk?.ok, tectonicOk].filter(Boolean).length;
+  const comp = usage ? usage.promptTokens + usage.completionTokens : 0;
+  const promptPct = comp > 0 ? Math.round((usage.promptTokens / comp) * 100) : 0;
 
   return (
     <>
-      <div className="page-head">
-        <h1>欢迎回来，{user?.displayName || user?.username}</h1>
-        <p>本地文档运行时总览：Workspace 文件与编译在你的机器上；模型请求按你配置的 provider 处理。</p>
+      <div className="page-head spread" style={{ alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
+        <div>
+          <h1>欢迎回来，{user?.displayName || user?.username}</h1>
+          <p>本地文档运行时总览：Workspace 文件与编译在你的机器上；模型请求按你配置的 provider 处理。</p>
+        </div>
+        <div className="row" style={{ gap: 10 }}>
+          <Link className="btn btn-quiet btn-sm" to="/app/sessions">AI 会话</Link>
+          <Link className="btn btn-primary btn-sm" to="/app/workbench">进入工作台 →</Link>
+        </div>
       </div>
       {error && <div className="alert error">{error}</div>}
+
       <div className="stat-grid" style={{ marginBottom: 18 }}>
-        <div className="stat"><b>{workspaceCount}</b><span>工作区 · 当前 {activeWs}</span></div>
-        <div className="stat"><b>{readyCount}/2</b><span>运行时就绪 · Python / LaTeX</span></div>
+        <div className="stat"><b>{workspaceCount}</b><span>工作区{activeWs ? ` · 当前 ${activeWs}` : ""}</span></div>
+        <div className="stat"><b>{readyCount}/3</b><span>运行时就绪 · Python / LaTeX / Tectonic</span></div>
         <div className="stat"><b style={{ fontSize: 15 }}>{rt?.node || "—"}</b><span>Node 运行时</span></div>
         <div className="stat"><b style={{ fontSize: 13, fontFamily: "var(--font-mono)" }}>{rt?.url || "—"}</b><span>本地运行地址</span></div>
       </div>
+
       <div className="grid">
         <section className="panel c8 glass">
           <div className="panel-head">
-            <h3>工作流阶段</h3>
-            <Link className="ulink" to="/app/workbench">进入工作台 →</Link>
+            <h3>工作区</h3>
+            <span className="chip muted">{workspaceCount} 个</span>
           </div>
-          <StageGrid status={summary?.status} />
+          {projects === null ? (
+            <div className="spinner" />
+          ) : projects.length === 0 ? (
+            <div className="empty">
+              还没有工作区。打开工作台会得到示例工作区，也可以在顶栏的工作区切换器里新建。
+            </div>
+          ) : (
+            <div className="ws-list">
+              {projects.map((p) => (
+                <div key={p.id} className={`ws-row ${p.id === activeWs ? "active" : ""}`}>
+                  <div className="ws-row-main">
+                    <b>{p.name || p.id}</b>
+                    <span className="chip muted">{p.pack || "latex"}</span>
+                    {p.id === activeWs && <span className="chip signal">当前</span>}
+                  </div>
+                  <div className="ws-row-side">
+                    <code className="ws-id">{p.id}</code>
+                    <Link className="btn btn-quiet btn-sm" to={`/app/workbench?workspace=${encodeURIComponent(p.id)}`}>
+                      打开 →
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
+
         <section className="panel c4 glass">
-          <div className="panel-head"><h3>运行时</h3></div>
+          <div className="panel-head"><h3>运行时体检</h3></div>
           <div className="stack" style={{ gap: 12 }}>
-            <Row k="本地地址" v={rt?.url || "—"} />
-            <Row k="Node" v={rt?.node || "—"} />
-            <Row k="Python" v={ok(rt?.python)} bad={rt && !rt.python?.ok} />
-            <Row k="latexmk" v={ok(rt?.latexmk)} bad={rt && !rt.latexmk?.ok} />
+            <RuntimeRow k="本地地址" v={rt?.url || "—"} />
+            <RuntimeRow k="Node" v={rt?.node || "—"} />
+            <RuntimeRow k="Python" v={ok(rt?.python)} ok={rt ? Boolean(rt.python?.ok) : undefined} hint="装 Python 3 后可跑数据脚本" />
+            <RuntimeRow k="latexmk" v={ok(rt?.latexmk)} ok={rt ? Boolean(rt.latexmk?.ok) : undefined} hint="可选：本机 TeX 发行版" />
+            <RuntimeRow
+              k="Tectonic"
+              v={tectonicOk ? engine?.tectonic?.detail || "已安装" : "未安装"}
+              ok={engine ? tectonicOk : undefined}
+              hint="工作台内一键下载后可编译 PDF"
+            />
           </div>
         </section>
-        <section className="panel c4 glass">
-          <div className="panel-head"><h3>工作区</h3></div>
-          <div className="stat">
-            <b>{summary?.workspaces?.length ?? summary?.contests?.length ?? "—"}</b>
-            <span>个工作区 · 当前 {summary?.activeWorkspace || summary?.activeContest || "无"}</span>
-          </div>
-        </section>
+
         <section className="panel c8 glass">
-          <div className="panel-head"><h3>快速上手</h3></div>
-          <div className="stat-grid">
-            <QuickLink to="/app/workbench" t="打开工作台" d="编辑、编译、AI 协作" />
-            <QuickLink to="/app/api-keys" t="配置模型 Key" d="加密存储 · 本机使用" />
-            <QuickLink to="/app/community" t="逛社区" d="交流方法与经验" />
-            <QuickLink to="/docs" t="使用文档" d="快速上手流程" />
+          <div className="panel-head">
+            <h3>最近 AI 会话</h3>
+            <Link className="ulink" to="/app/sessions">全部会话 →</Link>
           </div>
+          {sessions === null ? (
+            <div className="spinner" />
+          ) : sessions.length === 0 ? (
+            <div className="empty">还没有会话。去工作台选中一段源码，让 AI 给出修改提案。</div>
+          ) : (
+            <div className="dash-sessions">
+              {sessions.map((s) => (
+                <div key={s.id} className="dash-session-row">
+                  <span className={`chip ${s.mode === "inline" ? "" : "muted"}`}>{s.mode}</span>
+                  <span className="dash-session-prompt">{s.prompt}</span>
+                  <span className="dash-session-time">{formatRelative(s.createdAt)}</span>
+                  <Link
+                    className="btn btn-quiet btn-sm"
+                    to={`/app/workbench?prompt=${encodeURIComponent(s.prompt)}`}
+                  >
+                    复用
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
+
+        <section className="panel c4 glass">
+          <div className="panel-head">
+            <h3>近 7 天用量</h3>
+            <Link className="ulink" to="/app/usage">明细 →</Link>
+          </div>
+          {!usage ? (
+            <div className="spinner" />
+          ) : usage.totalRequests === 0 ? (
+            <div className="empty">近 7 天没有模型调用。</div>
+          ) : (
+            <div className="stack" style={{ gap: 12 }}>
+              <div className="stat" style={{ padding: 0, background: "none", border: 0 }}>
+                <b>{usage.totalTokens.toLocaleString()}</b>
+                <span>tokens · {usage.totalRequests} 次请求 · ${usage.costUsd.toFixed(4)}</span>
+              </div>
+              <div className="token-comp">
+                <div className="token-comp-bar">
+                  <span className="token-comp-prompt" style={{ width: `${promptPct}%` }} />
+                  <span className="token-comp-completion" style={{ width: `${comp > 0 ? 100 - promptPct : 0}%` }} />
+                </div>
+                <div className="token-comp-legend" style={{ fontSize: 11.5 }}>
+                  <span><i className="dot dot-prompt" /> 输入 {promptPct}%</span>
+                  <span><i className="dot dot-completion" /> 输出 {comp > 0 ? 100 - promptPct : 0}%</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {summary?.status ? (
+          <section className="panel c12 glass">
+            <div className="panel-head">
+              <h3>工作流阶段</h3>
+              <Link className="ulink" to="/app/workbench">进入工作台 →</Link>
+            </div>
+            <StageGrid status={summary.status} />
+          </section>
+        ) : null}
       </div>
     </>
   );

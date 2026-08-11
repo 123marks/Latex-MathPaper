@@ -38,6 +38,8 @@ import AdminCommunity from "./pages/admin/AdminCommunity.jsx";
 import AdminContent from "./pages/admin/AdminContent.jsx";
 import AdminAudit from "./pages/admin/AdminAudit.jsx";
 import AdminSystem from "./pages/admin/AdminSystem.jsx";
+import AdminMonitor from "./pages/admin/AdminMonitor.jsx";
+import AdminSessions from "./pages/admin/AdminSessions.jsx";
 import AdminKeys from "./pages/admin/AdminKeys.jsx";
 import AdminReleases from "./pages/admin/AdminReleases.jsx";
 
@@ -102,6 +104,8 @@ export default function App() {
           <Route path="/admin/content" element={<AdminContent />} />
           <Route path="/admin/audit" element={<AdminAudit />} />
           <Route path="/admin/system" element={<AdminSystem />} />
+          <Route path="/admin/monitor" element={<AdminMonitor />} />
+          <Route path="/admin/sessions" element={<AdminSessions />} />
           <Route path="/admin/keys" element={<AdminKeys />} />
           <Route path="/admin/releases" element={<AdminReleases />} />
         </Route>

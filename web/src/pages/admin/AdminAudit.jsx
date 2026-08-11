@@ -22,12 +22,15 @@ function categoryOf(action = "") {
   return CATEGORY_LABEL[head] || head || "其他";
 }
 
+const PAGE_SIZE = 50;
+
 export default function AdminAudit() {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     api
@@ -56,6 +59,13 @@ export default function AdminAudit() {
         .some((s) => String(s).toLowerCase().includes(q));
     });
   }, [entries, query, category]);
+
+  useEffect(() => { setPage(1); }, [query, category]);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = useMemo(
+    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filtered, page]
+  );
 
   const today = useMemo(() => {
     const start = new Date();
@@ -129,7 +139,7 @@ export default function AdminAudit() {
           </div>
         ) : (
           <div>
-            {filtered.map((e) => (
+            {pageItems.map((e) => (
               <div key={e.id} className="audit-row">
                 <div>
                   <div className="when">{formatDate(e.at)}</div>
@@ -153,6 +163,17 @@ export default function AdminAudit() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {!loading && pageCount > 1 && (
+          <div className="pager">
+            <button className="btn btn-quiet btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              ← 上一页
+            </button>
+            <span className="pager-info">{page} / {pageCount} 页 · 共 {filtered.length} 条</span>
+            <button className="btn btn-quiet btn-sm" disabled={page >= pageCount} onClick={() => setPage((p) => p + 1)}>
+              下一页 →
+            </button>
           </div>
         )}
       </section>

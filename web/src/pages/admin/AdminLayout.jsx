@@ -29,6 +29,13 @@ const NAV = [
     ],
   },
   {
+    group: "监控",
+    items: [
+      { to: "/admin/monitor", label: "服务监控", icon: "system" },
+      { to: "/admin/sessions", label: "在线会话", icon: "community" },
+    ],
+  },
+  {
     group: "系统",
     items: [
       { to: "/admin/system", label: "系统设置", icon: "system" },

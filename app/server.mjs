@@ -4,6 +4,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { WebSocketServer } from "ws";
 import { existsSync, readFileSync, writeFileSync, renameSync, unlinkSync, chmodSync, rmSync, mkdirSync, readdirSync, lstatSync, statSync } from "node:fs";
 import { dirname, extname, join, resolve, sep } from "node:path";
+import { cpus, freemem, loadavg, totalmem, uptime as osUptime } from "node:os";
 import { fileURLToPath } from "node:url";
 
 import { createStore } from "./lib/store.mjs";
@@ -1699,6 +1700,101 @@ async function api(req, res, path) {
   if (req.method === "GET" && path === "/api/admin/metrics") {
     if (!requireAdmin(req, res)) return undefined;
     return sendJson(res, 200, computeMetrics());
+  }
+
+  // 服务监控（mars-admin 式）：进程/系统/数据存储的真实事实，无编造指标。
+  if (req.method === "GET" && path === "/api/admin/monitor") {
+    if (!requireAdmin(req, res)) return undefined;
+    const mem = process.memoryUsage();
+    const storeFiles = [
+      "users.json", "sessions.json", "posts.json", "skills.json", "installs.json",
+      "chat.json", "usage.json", "account-providers.json", "audit.json", "workspaces.json",
+    ];
+    const stores = storeFiles.map((name) => {
+      try {
+        const st = statSync(join(dataDir, name));
+        return { name, bytes: st.size, mtime: st.mtimeMs };
+      } catch {
+        return { name, bytes: 0, mtime: null };
+      }
+    });
+    let workspaceCount = 0;
+    try { workspaceCount = workspaceKernel.listWorkspaces().length; } catch { /* registry unreadable */ }
+    return sendJson(res, 200, {
+      process: {
+        node: process.version,
+        pid: process.pid,
+        uptimeSeconds: Math.round(process.uptime()),
+        rssBytes: mem.rss,
+        heapUsedBytes: mem.heapUsed,
+        heapTotalBytes: mem.heapTotal,
+      },
+      system: {
+        platform: process.platform,
+        arch: process.arch,
+        cpus: cpus().length,
+        totalMemBytes: totalmem(),
+        freeMemBytes: freemem(),
+        // Unix load averages; Windows reports zeros — UI labels this honestly.
+        loadavg: loadavg().map((v) => Number(v.toFixed(2))),
+        hostUptimeSeconds: Math.round(osUptime()),
+      },
+      stores,
+      workspaceCount,
+      dataDir,
+    });
+  }
+
+  // 在线会话管理：列出未过期会话（只暴露 token 前缀），支持强制下线。
+  if (req.method === "GET" && path === "/api/admin/sessions") {
+    if (!requireAdmin(req, res)) return undefined;
+    const { sessions } = sessionsStore.read();
+    const { users } = usersStore.read();
+    const byId = new Map(users.map((u) => [u.id, u]));
+    const now = Date.now();
+    const currentToken = parseCookies(req.headers.cookie)[SESSION_COOKIE] || "";
+    const list = Object.entries(sessions)
+      .filter(([, s]) => s && s.expiresAt > now)
+      .map(([token, s]) => {
+        const u = byId.get(s.userId);
+        return {
+          id: token.slice(0, 12),
+          current: token === currentToken,
+          username: u?.username || "unknown",
+          displayName: u?.displayName || u?.username || "未知用户",
+          role: u?.role || "member",
+          label: s.label || "会话",
+          createdAt: new Date(s.createdAt || now).toISOString(),
+          expiresAt: new Date(s.expiresAt).toISOString(),
+        };
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return sendJson(res, 200, { sessions: list });
+  }
+
+  if (req.method === "DELETE" && /^\/api\/admin\/sessions\/[\w-]{6,}$/.test(path)) {
+    const actor = requireAdmin(req, res);
+    if (!actor) return undefined;
+    const prefix = path.split("/").pop();
+    const currentToken = parseCookies(req.headers.cookie)[SESSION_COOKIE] || "";
+    let removed = false;
+    let refusedCurrent = false;
+    sessionsStore.update((data) => {
+      for (const token of Object.keys(data.sessions)) {
+        if (token.slice(0, 12) === prefix) {
+          if (token === currentToken) { refusedCurrent = true; continue; }
+          delete data.sessions[token];
+          removed = true;
+        }
+      }
+      return data;
+    });
+    if (refusedCurrent && !removed) {
+      return sendJson(res, 400, { error: "不能强制下线自己的当前会话" });
+    }
+    if (!removed) return sendJson(res, 404, { error: "会话不存在或已过期" });
+    audit(actor, "admin.session.revoke", prefix);
+    return sendJson(res, 200, { ok: true });
   }
 
   if (req.method === "GET" && path === "/api/admin/users") {

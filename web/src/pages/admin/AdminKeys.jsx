@@ -12,6 +12,8 @@ export default function AdminKeys() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [onlyConfigured, setOnlyConfigured] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -29,6 +31,14 @@ export default function AdminKeys() {
   }, [load]);
 
   const configured = users.filter((u) => u.hasProviderKey).length;
+  const q = query.trim().toLowerCase();
+  const visible = users.filter((u) => {
+    if (onlyConfigured && !u.hasProviderKey) return false;
+    if (!q) return true;
+    return [u.displayName, u.username, u.providerModel]
+      .filter(Boolean)
+      .some((s) => String(s).toLowerCase().includes(q));
+  });
 
   return (
     <>
@@ -47,11 +57,27 @@ export default function AdminKeys() {
           <div className="empty">暂无用户数据。</div>
         ) : (
           <>
-            <div className="spread" style={{ marginBottom: 14 }}>
+            <div className="spread" style={{ marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
               <span style={{ color: "var(--muted)", fontSize: 13 }}>
                 {configured} / {users.length} 用户已配置自有 Key
               </span>
-              <span className="chip muted">只读概览</span>
+              <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+                <input
+                  className="input"
+                  style={{ minWidth: 180 }}
+                  placeholder="搜索用户 / 模型…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+                <button
+                  className={`chip ${onlyConfigured ? "" : "muted"}`}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => setOnlyConfigured((v) => !v)}
+                >
+                  只看已配置
+                </button>
+                <span className="chip muted">只读概览</span>
+              </div>
             </div>
             <table className="table">
               <thead>
@@ -65,7 +91,7 @@ export default function AdminKeys() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => (
+                {visible.map((u) => (
                   <tr key={u.id}>
                     <td>
                       <strong>{u.displayName}</strong>

@@ -48,8 +48,8 @@ test("Dashboard does not claim local AI inference or data never leaving the mach
 test("Dashboard shows an at-a-glance summary strip from real runtime/workspace data", () => {
   assert.match(dashboardSource, /const workspaceCount =/);
   assert.match(dashboardSource, /const readyCount =/);
-  assert.match(dashboardMarkup, /运行时就绪/);
-  assert.match(dashboardMarkup, /工作区 · 当前/);
+  assert.match(dashboardMarkup, /运行时就绪 · Python \/ LaTeX \/ Tectonic/);
+  assert.match(dashboardMarkup, /工作区/);
 });
 
 test("TeamSpace shows only real derived metrics, never fabricated counts or people", () => {
