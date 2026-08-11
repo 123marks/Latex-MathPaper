@@ -28,6 +28,8 @@ export default function Usage() {
   }, [days]);
 
   const max = data ? Math.max(1, ...(data.daily || []).map((d) => d.tokens)) : 1;
+  const hourMax = data ? Math.max(1, ...(data.hours || [0])) : 1;
+  const wsMax = data ? Math.max(1, ...(data.workspaces || []).map((w) => w.tokens)) : 1;
 
   return (
     <>
@@ -130,6 +132,47 @@ export default function Usage() {
                 ))}
             </div>
           </section>
+
+          <div className="grid-2" style={{ marginTop: 18, gap: 18, alignItems: "stretch" }}>
+            <section className="panel glass" style={{ padding: 22, margin: 0 }}>
+              <div className="panel-head" style={{ marginBottom: 14 }}>
+                <h3>24h 分布</h3>
+                <span className="chip muted" style={{ fontSize: 11 }}>tokens / 小时 · 本机时区</span>
+              </div>
+              <div className="bars">
+                {(data.hours || []).map((tok, h) => (
+                  <div
+                    key={h}
+                    className="bar"
+                    style={{ height: `${Math.max(6, (tok / hourMax) * 100)}%` }}
+                    title={`${h}:00 – ${h}:59 · ${tok.toLocaleString()} tok`}
+                  />
+                ))}
+              </div>
+              <div className="bar-label">
+                <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span>
+              </div>
+            </section>
+            <section className="panel glass" style={{ padding: 22, margin: 0 }}>
+              <div className="panel-head" style={{ marginBottom: 14 }}>
+                <h3>按工作区</h3>
+                <span className="chip muted" style={{ fontSize: 11 }}>tokens 排名</span>
+              </div>
+              {(data.workspaces || []).length === 0 ? (
+                <div className="empty">过去 {data.days} 天还没有用量记录。</div>
+              ) : (
+                <div className="ws-rank">
+                  {data.workspaces.map((w) => (
+                    <div key={w.workspace} className="ws-rank-row" title={`${w.requests} 次请求`}>
+                      <span className="ws-name">{w.workspace}</span>
+                      <span className="ws-meter"><i style={{ width: `${Math.max(2, (w.tokens / wsMax) * 100)}%` }} /></span>
+                      <span className="ws-val">{w.tokens.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
 
           <section className="panel glass" style={{ marginTop: 18, padding: 22 }}>
             <div className="panel-head">

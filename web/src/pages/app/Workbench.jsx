@@ -552,6 +552,7 @@ export default function Workbench() {
             })),
             { role: "user", content: userText },
           ],
+          workspace: contest,
           ...(aiProfileId ? { profileId: aiProfileId } : {}),
         }),
       });
@@ -804,11 +805,32 @@ function ReferencesPanel({ contest, onOpenFile }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [doi, setDoi] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState("");
 
   useEffect(() => {
     setData(null);
     setOpen(false);
+    setImportMsg("");
   }, [contest]);
+
+  async function importDoi(e) {
+    e.preventDefault();
+    if (!doi.trim() || importing) return;
+    try {
+      setImporting(true);
+      setImportMsg("");
+      const d = await api.post("/api/editor/references/import", { workspace: contest, doi: doi.trim() });
+      setImportMsg(`已导入 ${d.key} → ${d.file}`);
+      setDoi("");
+      await load();
+    } catch (err) {
+      setImportMsg(err.message);
+    } finally {
+      setImporting(false);
+    }
+  }
 
   async function load() {
     try {
@@ -852,8 +874,20 @@ function ReferencesPanel({ contest, onOpenFile }) {
           <div className="alert error">{error}</div>
         ) : !data ? null : (
           <div className="refs-body">
+            <form className="refs-import" onSubmit={importDoi}>
+              <input
+                placeholder="DOI（10.xxxx/yyy 或 doi.org 链接）→ 联网导入 BibTeX"
+                value={doi}
+                onChange={(e) => { setDoi(e.target.value); setImportMsg(""); }}
+                disabled={importing}
+              />
+              <button className="btn btn-quiet btn-sm" disabled={importing || !doi.trim()}>
+                {importing ? "导入中…" : "导入"}
+              </button>
+            </form>
+            {importMsg && <div className="refs-import-msg">{importMsg}</div>}
             {data.bibFiles.length === 0 ? (
-              <div className="empty">工作区里还没有 .bib 文件。把 references.bib 放进 paper/ 即可在这里管理。</div>
+              <div className="empty">工作区里还没有 .bib 文件。导入一个 DOI，或把 references.bib 放进 paper/ 即可在这里管理。</div>
             ) : (
               <>
                 <div className="refs-meta muted">{data.bibFiles.join(" · ")}</div>

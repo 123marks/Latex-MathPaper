@@ -22,3 +22,10 @@ test("references panel styles exist", () => {
   assert.match(css, /\.chip\.warn \{/);
   assert.match(css, /\.ref-loc \{/);
 });
+
+test("references panel can import a DOI through the real endpoint", () => {
+  assert.match(workbenchSource, /\/api\/editor\/references\/import/);
+  assert.match(workbenchSource, /refs-import/);
+  assert.match(workbenchSource, /doi\.org 链接/);
+  assert.match(css, /\.refs-import \{/);
+});

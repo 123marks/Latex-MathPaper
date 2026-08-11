@@ -103,15 +103,21 @@ owner: redesign
 - [x] 2a AI 会话历史 API（`/api/chat/history` 列表/详情/搜索，真实 chat.json）+ 测试（2026-08-11）
 - [x] 2b `/app/sessions` 会话管理页（搜索/详情/提案文件块/复用）+ 导航 + Workbench `?prompt` 复用（2026-08-11）
 - [x] 2c Usage token 输入/输出构成（真实 promptTokens/completionTokens）+ 测试（2026-08-11）。
-      每日调用量与按模型排名此前已有；workspace 排名 / 24h 分布需要用量记录先补
-      workspace + 小时字段（后端数据模型变更），保持真实、列入后续。
+      每日调用量与按模型排名此前已有。
+- [x] 2c-补全 用量归因：usage 记录新增 `workspace` 字段（chat 由 Workbench 传当前
+      工作区、skill 从 context 读取），`aggregateUsage` 输出 `workspaces` 排名与
+      24h `hours` 桶（本机时区；旧记录如实归入「未标注」）；Usage 页新增
+      「24h 分布」与「按工作区」面板 + 测试（2026-08-11）
 - [x] 3a `/api/editor/references`：解析工作区真实 `.bib`（平衡大括号 BibTeX 解析）+
       全 `.tex` 扫描 `\cite` 系宏，输出条目、citation↔source 位置双链、missing
       （引了但 `.bib` 没有）检测 + 测试（2026-08-11）
 - [x] 3b Workbench 文献面板：可折叠条（条数/缺失徽标）、条目卡（作者/发表处/被引次数）、
       引用位置点击直达源文件、missing 列表 + 测试（2026-08-11）
 - [ ] 3c PDF 高亮批注 / 划词→问（依赖 PDF viewer 层，后续）
-- [ ] 3d 文献导入（DOI/arXiv 抓取 BibTeX，涉及外网，后续）
+- [x] 3d DOI 导入：`POST /api/editor/references/import` 接受裸 DOI / doi.org 链接，
+      content negotiation 抓取 BibTeX 追加进第一个 `.bib`（无则建 `paper/references.bib`），
+      按条目 key 去重（409）；离线/上游错误如实 502/404，测试用本地 mock DOI 服务
+      全链路验证；文献面板内置导入框（2026-08-11）。arXiv 后续。
 - [x] 4a 多 provider 档案：`/api/account/providers` 新增/激活/删除（Key AES-256-GCM
       加密，明文与密文均不回传），生效顺序 激活档案 > 单一配置 > 共享网关，
       ApiKeys 页档案管理 UI + 测试（2026-08-11）

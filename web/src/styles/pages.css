@@ -2239,6 +2239,19 @@
 .ref-loc:hover { border-color: var(--amber); color: var(--amber); }
 .refs-missing { font-size: 12px; color: var(--text-soft); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .ref-missing-item { display: inline-flex; gap: 4px; align-items: center; }
+.refs-import { display: flex; gap: 8px; align-items: center; }
+.refs-import input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-1);
+  border: 1px solid var(--ink-line-2);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  padding: 6px 10px;
+}
+.refs-import-msg { font-size: 11.5px; color: var(--muted); font-family: var(--font-mono); }
 
 /* Provider 档案（09-integrations Epic 4a） */
 .provider-list { display: grid; gap: 8px; }
@@ -2285,6 +2298,42 @@
   padding: 6px 8px;
 }
 .ai-profile-row select:disabled { opacity: 0.5; }
+
+/* Usage 按工作区排名（09-integrations Epic 2c 补全） */
+.ws-rank { display: grid; gap: 8px; }
+.ws-rank-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 160px) 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+}
+.ws-rank-row .ws-name {
+  font-family: var(--font-mono);
+  color: var(--text-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ws-rank-row .ws-meter {
+  height: 8px;
+  background: var(--bg-1);
+  border: 1px solid var(--ink-line-2);
+  border-radius: 4px;
+  overflow: hidden;
+  display: block;
+}
+.ws-rank-row .ws-meter i {
+  display: block;
+  height: 100%;
+  background: var(--amber);
+  border-radius: 4px;
+}
+.ws-rank-row .ws-val {
+  font-family: var(--font-mono);
+  color: var(--muted);
+  font-size: 11.5px;
+}
 .aside-block {
   padding: 18px;
 }

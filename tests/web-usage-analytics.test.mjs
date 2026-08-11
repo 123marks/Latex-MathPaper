@@ -46,3 +46,16 @@ test("Usage shows a real prompt/completion token composition", () => {
   // Composition is derived from real aggregated tokens, not fabricated.
   assert.match(usageSource, /data\.promptTokens \+ data\.completionTokens/);
 });
+
+test("Usage renders 24h distribution and workspace ranking from real buckets", () => {
+  assert.match(usageSource, /24h 分布/);
+  assert.match(usageSource, /data\.hours/);
+  assert.match(usageSource, /按工作区/);
+  assert.match(usageSource, /data\.workspaces/);
+  assert.match(usageSource, /ws-rank/);
+});
+
+test("Workbench attributes chat usage to the current workspace", () => {
+  const workbenchSource = readFileSync(resolve(webRoot, "src/pages/app/Workbench.jsx"), "utf8");
+  assert.match(workbenchSource, /workspace: contest,/);
+});

@@ -102,7 +102,7 @@ function estimateCost(model, promptTok, completionTok) {
   const p = PRICE_PER_1K[model] || PRICE_PER_1K.default;
   return (promptTok / 1000) * p.prompt + (completionTok / 1000) * p.completion;
 }
-function recordUsage(userId, { model, kind, promptTokens = 0, completionTokens = 0, durationMs = 0, ok = true }) {
+function recordUsage(userId, { model, kind, promptTokens = 0, completionTokens = 0, durationMs = 0, ok = true, workspace = "" }) {
   const cost = estimateCost(model, promptTokens, completionTokens);
   usageStore.update((d) => {
     d.records.push({
@@ -116,6 +116,7 @@ function recordUsage(userId, { model, kind, promptTokens = 0, completionTokens =
       costUsd: Number(cost.toFixed(6)),
       durationMs,
       ok,
+      workspace: String(workspace || "").slice(0, 64),
       at: new Date().toISOString(),
     });
     // keep the last 10k records
@@ -128,6 +129,8 @@ function aggregateUsage(records, days = 30) {
   const inWindow = records.filter((r) => new Date(r.at).getTime() >= cutoff);
   const byDay = {};
   const byModel = {};
+  const byWorkspace = {};
+  const byHour = new Array(24).fill(0);
   let total = 0, prompt = 0, completion = 0, cost = 0;
   for (const r of inWindow) {
     const day = String(r.at).slice(0, 10);
@@ -136,6 +139,13 @@ function aggregateUsage(records, days = 30) {
     byModel[r.model].tokens += r.totalTokens;
     byModel[r.model].cost += r.costUsd;
     byModel[r.model].requests += 1;
+    // Server-local hour of day; older records without workspace group honestly.
+    const hour = new Date(r.at).getHours();
+    if (hour >= 0 && hour < 24) byHour[hour] += r.totalTokens;
+    const ws = r.workspace || "未标注";
+    byWorkspace[ws] = byWorkspace[ws] || { tokens: 0, requests: 0 };
+    byWorkspace[ws].tokens += r.totalTokens;
+    byWorkspace[ws].requests += 1;
     total += r.totalTokens;
     prompt += r.promptTokens;
     completion += r.completionTokens;
@@ -143,6 +153,10 @@ function aggregateUsage(records, days = 30) {
   }
   const daily = Object.entries(byDay).sort().map(([day, tokens]) => ({ day, tokens }));
   const models = Object.entries(byModel).map(([model, v]) => ({ model, ...v, costUsd: Number(v.cost.toFixed(6)) })).sort((a, b) => b.tokens - a.tokens);
+  const workspaces = Object.entries(byWorkspace)
+    .map(([workspace, v]) => ({ workspace, ...v }))
+    .sort((a, b) => b.tokens - a.tokens)
+    .slice(0, 20);
   return {
     totalRequests: inWindow.length,
     totalTokens: total,
@@ -151,6 +165,8 @@ function aggregateUsage(records, days = 30) {
     costUsd: Number(cost.toFixed(6)),
     daily,
     models,
+    workspaces,
+    hours: byHour,
   };
 }
 
@@ -2135,6 +2151,86 @@ async function api(req, res, path) {
     return sendJson(res, 200, { workspace: workspaceId, bibFiles, entries: withCounts, citations, missing, truncated });
   }
 
+  // References Pack (09-integrations Epic 3d): DOI -> BibTeX import. Requires
+  // network to doi.org (overridable base for tests); fails honestly offline.
+  if (req.method === "POST" && path === "/api/editor/references/import") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const body = await readBody(req);
+    if (!body.workspace && !body.contest) return sendJson(res, 400, { error: "workspace is required" });
+    const workspaceId = bodyWorkspaceId(body);
+    let rootPath;
+    try { rootPath = workspaceRoot(workspaceId); } catch { return sendJson(res, 404, { error: "Workspace not found" }); }
+    if (!existsSync(rootPath)) return sendJson(res, 404, { error: "Workspace not found" });
+
+    // Accept a bare DOI or a doi.org URL.
+    const raw = String(body.doi || "").trim();
+    const doi = raw.replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").trim();
+    if (!/^10\.\d{4,9}\/\S+$/i.test(doi)) {
+      return sendJson(res, 400, { error: "DOI 格式不正确，应为 10.xxxx/yyy 或 doi.org 链接" });
+    }
+
+    const doiBase = String(process.env.PAPER_OS_DOI_BASE || "https://doi.org").replace(/\/+$/, "");
+    let bibText = "";
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      const resp = await fetch(`${doiBase}/${doi}`, {
+        headers: { Accept: "application/x-bibtex; charset=utf-8" },
+        redirect: "follow",
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (resp.status === 404) return sendJson(res, 404, { error: `DOI 未找到: ${doi}` });
+      if (!resp.ok) return sendJson(res, 502, { error: `doi.org 返回 ${resp.status}` });
+      bibText = (await resp.text()).trim();
+    } catch {
+      return sendJson(res, 502, { error: "无法访问 doi.org（离线或超时）。可手动把 BibTeX 粘贴进 .bib 文件。" });
+    }
+
+    const parsed = parseBibTeX(bibText);
+    if (!parsed.length || !bibText.startsWith("@")) {
+      return sendJson(res, 502, { error: "返回内容不是可解析的 BibTeX" });
+    }
+    const entry = parsed[0];
+
+    // Append to the first existing .bib (shallow scan), else create the default.
+    let targetRel = "paper/references.bib";
+    const found = [];
+    (function scanBib(dir, rel, depth) {
+      if (depth > 3 || found.length) return;
+      let names;
+      try { names = readdirSync(dir); } catch { return; }
+      for (const name of names.sort()) {
+        if (found.length) return;
+        const relPath = rel ? `${rel}/${name}` : name;
+        const item = workspaceEntry(workspaceId, relPath);
+        if (!item) continue;
+        if (item.stat.isDirectory()) {
+          if (!["node_modules", ".git", "state", "build", ".tectonic"].includes(name)) scanBib(item.absolute, relPath, depth + 1);
+        } else if (/\.bib$/i.test(name)) {
+          found.push(relPath);
+        }
+      }
+    })(rootPath, "", 0);
+    if (found.length) targetRel = found[0];
+
+    const targetAbs = workspacePath(workspaceId, targetRel);
+    let existingText = "";
+    if (existsSync(targetAbs)) existingText = readFileSync(targetAbs, "utf-8");
+    const existingKeys = new Set(parseBibTeX(existingText).map((e) => e.key));
+    if (existingKeys.has(entry.key)) {
+      return sendJson(res, 409, { error: `条目已存在: ${entry.key}`, key: entry.key, file: targetRel });
+    }
+    mkdirSync(dirname(targetAbs), { recursive: true });
+    const joined = existingText.trim().length > 0
+      ? `${existingText.replace(/\s+$/, "")}\n\n${bibText}\n`
+      : `${bibText}\n`;
+    writeFileSync(targetAbs, joined, "utf-8");
+    audit(user, "references.import", `${workspaceId} ${doi} -> ${targetRel}`);
+    return sendJson(res, 201, { ok: true, key: entry.key, file: targetRel, entry });
+  }
+
   if (req.method === "GET" && path === "/api/editor/file") {
     const user = requireUser(req, res);
     if (!user) return undefined;
@@ -3150,7 +3246,7 @@ async function api(req, res, path) {
     if (!input) return sendJson(res, 400, { error: "input is required" });
 
     audit(user, "skill.run", `${skillId} (${skill.execute})`);
-    recordUsage(user.id, { model: `skill:${skillId}`, kind: "skill", promptTokens: input.length, completionTokens: 0, ok: true });
+    recordUsage(user.id, { model: `skill:${skillId}`, kind: "skill", promptTokens: input.length, completionTokens: 0, ok: true, workspace: String(ctx.workspace || ctx.contest || body.workspace || body.contest || "").trim().slice(0, 64) });
 
     const ts = new Date().toISOString();
     try {
@@ -3379,6 +3475,9 @@ async function api(req, res, path) {
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const mode = String(body.mode || "chat");
     const selection = String(body.selection || "");
+    // Usage attribution only; not validated against the kernel on purpose so a
+    // stale workspace id never blocks a chat.
+    const chatWorkspace = String(body.workspace || body.contest || "").trim().slice(0, 64);
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     const userText = String(lastUser?.content || body.prompt || "").trim();
     if (!userText && mode !== "inline") return sendJson(res, 400, { error: "no user message" });
@@ -3476,7 +3575,7 @@ async function api(req, res, path) {
           res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
           res.end();
           chatStore.update((d) => { d.threads.push({ id: newToken().slice(0, 10), userId: user.id, prompt: userText, reply, createdAt: new Date().toISOString(), mode }); if (d.threads.length > 200) d.threads = d.threads.slice(-200); return d; });
-          recordUsage(user.id, { model: usedModel, kind: mode === "inline" ? "inline" : "chat", promptTokens: promptTok, completionTokens: completionTok, durationMs: Date.now() - chatStart, ok: true });
+          recordUsage(user.id, { model: usedModel, kind: mode === "inline" ? "inline" : "chat", promptTokens: promptTok, completionTokens: completionTok, durationMs: Date.now() - chatStart, ok: true, workspace: chatWorkspace });
           return undefined;
         }
       }
@@ -3499,6 +3598,7 @@ async function api(req, res, path) {
           completionTokens: completionTok,
           durationMs: Date.now() - chatStart,
           ok: false,
+          workspace: chatWorkspace,
         });
         return undefined;
       }
@@ -3542,7 +3642,7 @@ async function api(req, res, path) {
     }
     push();
     chatStore.update((d) => { d.threads.push({ id: newToken().slice(0, 10), userId: user.id, prompt: userText, reply, createdAt: new Date().toISOString(), mode }); if (d.threads.length > 200) d.threads = d.threads.slice(-200); return d; });
-    recordUsage(user.id, { model: "mock-local", kind: mode === "inline" ? "inline" : "chat", promptTokens: userText.length + selection.length, completionTokens: reply.length, durationMs: Date.now() - chatStart, ok: true });
+    recordUsage(user.id, { model: "mock-local", kind: mode === "inline" ? "inline" : "chat", promptTokens: userText.length + selection.length, completionTokens: reply.length, durationMs: Date.now() - chatStart, ok: true, workspace: chatWorkspace });
     return undefined;
   }
 
@@ -3770,6 +3870,14 @@ const server = createServer({ requireHostHeader: false }, (req, res) => {
       if (error instanceof RequestBodyTooLarge) {
         res.setHeader("Connection", "close");
         return sendJson(res, 413, { error: error.message, code: error.code });
+      }
+      // Kernel errors carry intentional, safe messages — map them to proper
+      // statuses instead of a generic 500 (e.g. unknown workspace id -> 404).
+      if (error instanceof WorkspaceKernelError) {
+        const notFound = error.code === "WORKSPACE_NOT_FOUND" || error.code === "MISSING_DIRECTORY";
+        const conflict = error.code === "WORKSPACE_EXISTS";
+        const status = notFound ? 404 : conflict ? 409 : 400;
+        return sendJson(res, status, { error: error.message, code: error.code });
       }
       // Never leak internal error details to the client.
       const isSyntax = error instanceof SyntaxError;
