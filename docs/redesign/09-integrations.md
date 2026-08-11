@@ -102,6 +102,8 @@ owner: redesign
 - [ ] 1d PDF 区域标注（待 SyncTeX 精确后）
 - [x] 2a AI 会话历史 API（`/api/chat/history` 列表/详情/搜索，真实 chat.json）+ 测试（2026-08-11）
 - [x] 2b `/app/sessions` 会话管理页（搜索/详情/提案文件块/复用）+ 导航 + Workbench `?prompt` 复用（2026-08-11）
-- [ ] 2c Usage 真实用量分析（token 组成/活动热力/workspace 排名/24h）
+- [x] 2c Usage token 输入/输出构成（真实 promptTokens/completionTokens）+ 测试（2026-08-11）。
+      每日调用量与按模型排名此前已有；workspace 排名 / 24h 分布需要用量记录先补
+      workspace + 小时字段（后端数据模型变更），保持真实、列入后续。
 - [ ] 3a–3d References Pack
 - [ ] 4 多 provider / 委派

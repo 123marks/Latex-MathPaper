@@ -2167,6 +2167,23 @@
 @media (max-width: 900px) {
   .sessions { grid-template-columns: 1fr; }
 }
+
+/* Usage token composition（09-integrations Epic 2c） */
+.token-comp { display: grid; gap: 10px; }
+.token-comp-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--bg-1);
+  border: 1px solid var(--ink-line);
+}
+.token-comp-prompt { background: var(--ink-cool); }
+.token-comp-completion { background: var(--amber); }
+.token-comp-legend { display: flex; gap: 20px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-soft); }
+.token-comp-legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.token-comp-legend .dot-prompt { background: var(--ink-cool); }
+.token-comp-legend .dot-completion { background: var(--amber); }
 .aside-block {
   padding: 18px;
 }

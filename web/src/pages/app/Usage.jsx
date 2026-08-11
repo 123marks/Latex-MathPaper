@@ -81,6 +81,30 @@ export default function Usage() {
 
           <section className="panel glass" style={{ marginTop: 18, padding: 22 }}>
             <div className="panel-head" style={{ marginBottom: 14 }}>
+              <h3>Token 构成</h3>
+              <span className="chip muted" style={{ fontSize: 11 }}>输入 vs 输出</span>
+            </div>
+            {(() => {
+              const comp = data.promptTokens + data.completionTokens;
+              const p = comp > 0 ? Math.round((data.promptTokens / comp) * 100) : 0;
+              const c = comp > 0 ? 100 - p : 0;
+              return (
+                <div className="token-comp">
+                  <div className="token-comp-bar">
+                    <span className="token-comp-prompt" style={{ width: `${p}%` }} />
+                    <span className="token-comp-completion" style={{ width: `${c}%` }} />
+                  </div>
+                  <div className="token-comp-legend">
+                    <span><i className="dot dot-prompt" /> 输入 {data.promptTokens.toLocaleString()}（{p}%）</span>
+                    <span><i className="dot dot-completion" /> 输出 {data.completionTokens.toLocaleString()}（{c}%）</span>
+                  </div>
+                </div>
+              );
+            })()}
+          </section>
+
+          <section className="panel glass" style={{ marginTop: 18, padding: 22 }}>
+            <div className="panel-head" style={{ marginBottom: 14 }}>
               <h3>每日调用量</h3>
               <span className="chip muted" style={{ fontSize: 11 }}>
                 tokens / day
