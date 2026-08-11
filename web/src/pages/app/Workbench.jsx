@@ -79,7 +79,10 @@ export default function Workbench() {
       text: "Provider state is checked separately. File edits are previewed before Apply.",
     },
   ]);
-  const [msg, setMsg] = useState("");
+  const [msg, setMsg] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("prompt") || "";
+  });
   const [busy, setBusy] = useState(false);
   const [provider, setProvider] = useState({
     mode: "loading",

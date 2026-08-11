@@ -100,6 +100,8 @@ owner: redesign
 - [x] 1b 编辑器行范围批注 UI + 列表面板 + 测试（2026-08-11，Workbench `AnnotationsPanel` + `LaTeXEditor` 选区回调 + `api.patch`）
 - [x] 1c 标注 → 结构化 AI 修改请求（填入 AI 输入，人工复核后走现有 Preview → Apply；标注转 proposed，解决仍人工）（2026-08-11，`composeFromAnnotations`）
 - [ ] 1d PDF 区域标注（待 SyncTeX 精确后）
-- [ ] 2a–2d 会话管理 + 用量分析
+- [x] 2a AI 会话历史 API（`/api/chat/history` 列表/详情/搜索，真实 chat.json）+ 测试（2026-08-11）
+- [x] 2b `/app/sessions` 会话管理页（搜索/详情/提案文件块/复用）+ 导航 + Workbench `?prompt` 复用（2026-08-11）
+- [ ] 2c Usage 真实用量分析（token 组成/活动热力/workspace 排名/24h）
 - [ ] 3a–3d References Pack
 - [ ] 4 多 provider / 委派

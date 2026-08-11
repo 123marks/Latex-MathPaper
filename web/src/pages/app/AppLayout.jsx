@@ -9,6 +9,7 @@ import Icon from "../../components/Icon.jsx";
 const APP_NAV = [
   { to: "/app", label: "总览", icon: "dashboard", end: true },
   { to: "/app/workbench", label: "工作台", icon: "workbench" },
+  { to: "/app/sessions", label: "会话", icon: "compose" },
   { to: "/app/api-keys", label: "模型 Key", icon: "key" },
   { to: "/app/usage", label: "API 用量", icon: "usage" },
   { to: "/app/community", label: "社区", icon: "community" },

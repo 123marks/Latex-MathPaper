@@ -26,6 +26,7 @@ import Workbench from "./pages/app/Workbench.jsx";
 import Usage from "./pages/app/Usage.jsx";
 import TeamSpace from "./pages/app/TeamSpace.jsx";
 import Magnifier from "./pages/app/Magnifier.jsx";
+import Sessions from "./pages/app/Sessions.jsx";
 import CommunityBoard from "./pages/app/CommunityBoard.jsx";
 import Account from "./pages/app/Account.jsx";
 import ApiKeys from "./pages/app/ApiKeys.jsx";
@@ -77,6 +78,7 @@ export default function App() {
           <Route path="/app" element={<Dashboard />} />
           <Route path="/app/workbench" element={<Workbench />} />
           <Route path="/app/magnifier" element={<Magnifier />} />
+          <Route path="/app/sessions" element={<Sessions />} />
           <Route path="/app/team" element={<TeamSpace />} />
           <Route path="/app/community" element={<CommunityBoard />} />
           <Route path="/app/usage" element={<Usage />} />

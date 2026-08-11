@@ -2102,6 +2102,71 @@
   font-family: var(--font-mono);
   color: var(--text);
 }
+
+/* AI 会话管理（09-integrations Epic 2b） */
+.sessions {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.session-search { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.session-search .input { flex: 1; min-width: 0; }
+.session-list { display: grid; gap: 8px; max-height: 70vh; overflow: auto; }
+.session-item {
+  text-align: left;
+  background: var(--bg-2);
+  border: 1px solid var(--ink-line-2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: grid;
+  gap: 6px;
+}
+.session-item.active { border-color: var(--amber); background: var(--amber-soft); }
+.session-item-head { display: flex; align-items: center; gap: 8px; }
+.session-time { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+.session-prompt {
+  font-size: 13px;
+  color: var(--text-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.session-files { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip.file { font-family: var(--font-mono); font-size: 10px; padding: 1px 7px; }
+.session-detail-col { min-width: 0; }
+.session-detail { display: grid; gap: 14px; }
+.session-detail-head { display: flex; align-items: center; gap: 10px; }
+.session-resume { margin-left: auto; }
+.session-block .k {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.session-text {
+  margin: 0;
+  padding: 12px;
+  background: var(--bg-1);
+  border: 1px solid var(--ink-line-2);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-soft);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 340px;
+  overflow: auto;
+}
+.session-fileblock { margin-bottom: 8px; }
+.session-fileblock summary { cursor: pointer; font-family: var(--font-mono); font-size: 12px; color: var(--ink-cool); }
+@media (max-width: 900px) {
+  .sessions { grid-template-columns: 1fr; }
+}
 .aside-block {
   padding: 18px;
 }
