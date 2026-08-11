@@ -2,8 +2,8 @@
 title: Paper OS engineering handoff
 status: active
 as_of: 2026-08-11
-baseline_commit: 1546dab
-worktree: dirty
+baseline_commit: b33bdab
+worktree: clean
 owner: next maintainer
 ---
 
@@ -21,14 +21,14 @@ Paper OS 要成为一个**本地优先、Workspace Kernel 驱动、Pack 可扩�
 
 - 日期：2026-08-11。
 - 分支：`main`。
-- `HEAD`：`1546dab`，仓库唯一历史提交。
+- `HEAD`：`b33bdab`；在初始提交 `1546dab` 之上新增 5 个领域分组提交（gitignore、docs、web+backend、desktop/release、working-memory）。
 - 根版本：`0.5.0`。
-- 工作区：dirty，存在大量用户/前序代理改动；禁止整体回滚、批量格式化或清理不明文件。
+- 工作区：clean；构建产物（`app/public`、`app/ide`、`src-tauri/target`、根 launcher 二进制、`runtimes/`）按 `.gitignore` 排除。仍禁止整体回滚、批量格式化或清理不明文件。
 - 当前主入口：根目录 `PaperOS.exe`，WinForms + WebView2 调用本地 Node 服务。
 - Tauri：已有 v2 脚手架和构建产物，仍是过渡方案。
 - 当前最新实测：T3.3 聚焦 Web AI 合同、Node 164/164、Python 25/25、Web 2316 modules、Desktop IDE build、13 keyframes/52 assets visual smoke 与 strict Edge 全部通过；`dist/visual-qa/horizon-behavior.json` 为 schema 2 / `verdict: pass` / `strict: true`，Workbench AI ready/applied/mobile 截图和 Apply trace 已写入报告。T0.3–T1.5 的计数与哈希继续保留为历史快照。
 
-这意味着：当前代码比 `HEAD` 新很多，但没有 commit/PR 可以承担审计责任。接手工作的第一目标不是继续堆功能，而是先建立可复现的验证和可审阅的变更边界。
+这意味着：本轮已把 dirty worktree 收敛为可审阅的领域分组提交，并复跑通过 Node 164/164、Python 25/25、`npm run build`（Web 2316 modules + IDE bundle）、`node --check app/server.mjs` 与 `visual-smoke`（13 keyframes/52 assets）。仍缺 PR 审阅、版本 tag 和签名安装包；接手第一目标是补齐这些发布治理，再继续 T3.6。
 
 ## 3. 产品与架构地图
 
