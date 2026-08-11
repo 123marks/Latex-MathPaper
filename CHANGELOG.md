@@ -27,6 +27,10 @@
 - T3.1 AppLayout 顶栏工作区切换（`/api/editor/projects` → 打开 Workbench）与图标化菜单按钮。
 - `tests/web-ai-locality-truthfulness.test.mjs`：跨 `web/src` 扫描并阻止“本机模型推理 / 离线 AI / 数据不出本机 / 服务器零算力”表述的回归护栏。
 - `app/hero-ide-visual-smoke.mjs`（`npm run hero-visual-smoke`）：T3.6 专用 CDP 采集脚本（有头 GPU），用于在合适环境产出 `web/public/hero-ide.png`。
+- 09-integrations Epic 1（可视化标注 → AI 提案，Agentation 思路）：`/api/editor/annotations` CRUD（工作区 `state/annotations.json` 持久化、目标/意图/优先级/状态校验），Workbench 编辑器行范围圈选 → 标注面板（意图/优先级/解决/重开/删除），「交给 AI 修改」把打开的标注组装成结构化修改请求送入既有 Preview → Apply 人审流。
+- 09-integrations Epic 2（AI 会话管理，CLI-Manager/codeg 思路）：`GET /api/chat/history` 列表/详情/搜索（真实 `chat.json`，检测 BEGIN_FILE 提案路径，详情剥离 userId）；`/app/sessions` 会话管理页（搜索、提问/回答详情、提案文件块、「在工作台复用」）+ Workbench `?prompt` 预填；Usage 页新增真实 token 输入/输出构成条。
+- 09-integrations Epic 3（References Pack，Agentero 思路）：`GET /api/editor/references` 解析工作区真实 `.bib`（平衡大括号 BibTeX 解析器）+ 扫描 `\cite` 系宏输出 citation↔source 双链与 missing 检测；Workbench 可折叠文献面板（条目卡、被引位置直达源文件、缺失引用列表）。
+- 09-integrations Epic 4a（多 provider）：`/api/account/providers` 档案新增/激活/删除（Key AES-256-GCM 加密、明文与密文均不回传），生效顺序 激活档案 > 单一配置 > 共享网关；ApiKeys 页档案管理 UI。
 
 ### Changed
 

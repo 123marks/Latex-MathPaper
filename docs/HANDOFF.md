@@ -2,7 +2,7 @@
 title: Paper OS engineering handoff
 status: active
 as_of: 2026-08-11
-baseline_commit: b33bdab
+baseline_commit: b7e8e39
 worktree: clean
 owner: next maintainer
 ---
@@ -21,7 +21,7 @@ Paper OS 要成为一个**本地优先、Workspace Kernel 驱动、Pack 可扩�
 
 - 日期：2026-08-11。
 - 分支：`main`。
-- `HEAD`：`b33bdab`；在初始提交 `1546dab` 之上新增 5 个领域分组提交（gitignore、docs、web+backend、desktop/release、working-memory）。
+- `HEAD`：`b7e8e39`；在初始提交 `1546dab` 之上共 29 个提交：领域分组基线（gitignore、docs、web+backend、desktop/release、working-memory）+ T3.x 切片 + 09-integrations Epic 1（标注→AI）、Epic 2（会话管理）、Epic 3a/3b（References）、Epic 4a（多 provider）。
 - 根版本：`0.5.0`。
 - 工作区：clean；构建产物（`app/public`、`app/ide`、`src-tauri/target`、根 launcher 二进制、`runtimes/`）按 `.gitignore` 排除。仍禁止整体回滚、批量格式化或清理不明文件。
 - 当前主入口：根目录 `PaperOS.exe`，WinForms + WebView2 调用本地 Node 服务。
