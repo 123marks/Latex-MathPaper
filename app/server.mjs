@@ -785,6 +785,20 @@ function readAccountProvider(userId) {
 // product still works before a user configures anything.
 function resolveEffectiveProvider(userId) {
   const own = readAccountProvider(userId);
+  // 09-integrations Epic 4a: an explicitly activated named profile wins.
+  const active = own?.profiles?.find?.((p) => p.id === own.activeProfileId);
+  if (active && active.apiKeyEnc) {
+    const apiKey = secretBox.decrypt(active.apiKeyEnc);
+    if (apiKey) {
+      return {
+        source: `profile:${active.name || active.id}`,
+        base_url: active.base_url || "https://api.openai.com/v1",
+        model: active.model || "gpt-4o",
+        temperature: active.temperature ?? 0.2,
+        apiKey,
+      };
+    }
+  }
   if (own && own.apiKeyEnc) {
     const apiKey = secretBox.decrypt(own.apiKeyEnc);
     if (apiKey) {
@@ -815,14 +829,28 @@ function resolveEffectiveProvider(userId) {
 // Public (safe) view of a user's gateway config — NEVER includes the key.
 function accountProviderView(userId) {
   const own = readAccountProvider(userId);
+  const activeProfileId = own?.activeProfileId || null;
+  const profiles = (own?.profiles || []).map((p) => ({
+    id: p.id,
+    name: p.name || "",
+    base_url: p.base_url || "",
+    model: p.model || "",
+    temperature: p.temperature ?? 0.2,
+    hasKey: Boolean(p.apiKeyEnc),
+    active: p.id === activeProfileId,
+    createdAt: p.createdAt || null,
+  }));
+  const activeProfile = profiles.find((p) => p.active && p.hasKey);
   if (own) {
     return {
       base_url: own.base_url || "",
       model: own.model || "",
       temperature: own.temperature ?? 0.2,
       hasKey: Boolean(own.apiKeyEnc),
-      source: own.apiKeyEnc ? "user" : "fallback",
+      source: activeProfile ? "profile" : own.apiKeyEnc ? "user" : "fallback",
       updatedAt: own.updatedAt || null,
+      profiles,
+      activeProfileId,
     };
   }
   const effective = resolveEffectiveProvider(userId);
@@ -833,6 +861,8 @@ function accountProviderView(userId) {
     hasKey: false,
     source: effective.apiKey ? "fallback" : "none",
     updatedAt: null,
+    profiles: [],
+    activeProfileId: null,
   };
 }
 
@@ -1635,6 +1665,82 @@ async function api(req, res, path) {
       return data;
     });
     audit(user, "account.provider", "key-removed");
+    return sendJson(res, 200, { provider: accountProviderView(user.id) });
+  }
+
+  // Multi-provider profiles (09-integrations Epic 4a): named provider configs
+  // per user; the activated one wins for AI calls, keys encrypted at rest.
+  if (req.method === "POST" && path === "/api/account/providers") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const body = await readBody(req);
+    const name = String(body.name || "").trim().slice(0, 60);
+    const apiKey = String(body.apiKey || "");
+    if (!name) return sendJson(res, 400, { error: "name is required" });
+    if (!apiKey) return sendJson(res, 400, { error: "apiKey is required" });
+    const existing = readAccountProvider(user.id);
+    if ((existing?.profiles?.length || 0) >= 10) {
+      return sendJson(res, 400, { error: "最多 10 个 provider 档案" });
+    }
+    const t = Number(body.temperature);
+    const profile = {
+      id: newToken().slice(0, 10),
+      name,
+      base_url: String(body.base_url || "https://api.openai.com/v1").trim().slice(0, 300),
+      model: String(body.model || "gpt-4o").trim().slice(0, 120),
+      temperature: Number.isFinite(t) ? Math.min(2, Math.max(0, t)) : 0.2,
+      apiKeyEnc: secretBox.encrypt(apiKey),
+      createdAt: new Date().toISOString(),
+    };
+    accountProviderStore.update((data) => {
+      const prev = data.providers[user.id] || {};
+      const profiles = Array.isArray(prev.profiles) ? prev.profiles : [];
+      profiles.push(profile);
+      const next = { ...prev, profiles };
+      if (!next.activeProfileId) next.activeProfileId = profile.id;
+      next.updatedAt = new Date().toISOString();
+      data.providers[user.id] = next;
+      return data;
+    });
+    audit(user, "account.provider", `profile-added:${name}`);
+    return sendJson(res, 201, { provider: accountProviderView(user.id) });
+  }
+
+  if (req.method === "POST" && path === "/api/account/providers/activate") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const body = await readBody(req);
+    const id = String(body.id || "");
+    const own = readAccountProvider(user.id);
+    if (!own?.profiles?.some((p) => p.id === id)) {
+      return sendJson(res, 404, { error: "profile not found" });
+    }
+    accountProviderStore.update((data) => {
+      const prev = data.providers[user.id];
+      prev.activeProfileId = id;
+      prev.updatedAt = new Date().toISOString();
+      return data;
+    });
+    audit(user, "account.provider", `profile-activated:${id}`);
+    return sendJson(res, 200, { provider: accountProviderView(user.id) });
+  }
+
+  if (req.method === "DELETE" && /^\/api\/account\/providers\/[\w-]+$/.test(path)) {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const id = path.split("/").pop();
+    const own = readAccountProvider(user.id);
+    if (!own?.profiles?.some((p) => p.id === id)) {
+      return sendJson(res, 404, { error: "profile not found" });
+    }
+    accountProviderStore.update((data) => {
+      const prev = data.providers[user.id];
+      prev.profiles = prev.profiles.filter((p) => p.id !== id);
+      if (prev.activeProfileId === id) prev.activeProfileId = null;
+      prev.updatedAt = new Date().toISOString();
+      return data;
+    });
+    audit(user, "account.provider", `profile-removed:${id}`);
     return sendJson(res, 200, { provider: accountProviderView(user.id) });
   }
 

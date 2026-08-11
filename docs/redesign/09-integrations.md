@@ -112,4 +112,7 @@ owner: redesign
       引用位置点击直达源文件、missing 列表 + 测试（2026-08-11）
 - [ ] 3c PDF 高亮批注 / 划词→问（依赖 PDF viewer 层，后续）
 - [ ] 3d 文献导入（DOI/arXiv 抓取 BibTeX，涉及外网，后续）
-- [ ] 4 多 provider / 委派
+- [x] 4a 多 provider 档案：`/api/account/providers` 新增/激活/删除（Key AES-256-GCM
+      加密，明文与密文均不回传），生效顺序 激活档案 > 单一配置 > 共享网关，
+      ApiKeys 页档案管理 UI + 测试（2026-08-11）
+- [ ] 4b 会话级模型选择 / 任务委派（chat 请求可临时指定档案，后续）

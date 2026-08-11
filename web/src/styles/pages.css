@@ -2239,6 +2239,39 @@
 .ref-loc:hover { border-color: var(--amber); color: var(--amber); }
 .refs-missing { font-size: 12px; color: var(--text-soft); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .ref-missing-item { display: inline-flex; gap: 4px; align-items: center; }
+
+/* Provider 档案（09-integrations Epic 4a） */
+.provider-list { display: grid; gap: 8px; }
+.provider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-1);
+  border: 1px solid var(--ink-line-2);
+  border-radius: 8px;
+}
+.provider-row.active { border-color: var(--amber); background: var(--amber-soft); }
+.provider-main { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; flex: 1; }
+.provider-main b { font-size: 13.5px; }
+.provider-model {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--amber);
+  background: rgba(212, 163, 65, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.provider-url {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
+}
+.provider-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .aside-block {
   padding: 18px;
 }
