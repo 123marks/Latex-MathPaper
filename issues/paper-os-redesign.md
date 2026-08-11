@@ -57,6 +57,7 @@ Paper OS 是本地优先的通用文档 IDE（Workspace Kernel + Packs），含�
 - [x] T1.5 Login/Register（2026-08-10）：共享 AuthPanel、AuthAside code/PDF/trace、中性文案、Segmented、开发 OAuth、离线入口和密码确认完成；Node 155/155、Web 2312 modules、8 视口 auth Edge、88.8s strict Edge、stable SHA 81651dc0… 通过
 - [x] T3.3 Web Workbench 真实 AI 面板（2026-08-11）：provider/runtime truth、真实 ActionTimeline、BEGIN_FILE preview/diff、Reject/Apply、409/rollback、workspace 深链与 390px 垂直工作流完成；Node 164/164、Web 2316 modules、strict Edge、ai-qa 77→197 bytes 写入证据通过
 - [ ] T3.6 Workbench Hero 真实产品截图：基于已验证的 T3.3 状态拍摄 web/public/hero-ide.png，替换 HeroIdeMock，并完成截图审查
+  - 2026-08-11 尝试：CDP 采集管线与 ≤300KB 尺寸已验证，但无头 Edge 下 Monaco 编辑器不合成（黑屏）、有头 Edge 调试端口未连上、本机无 Tectonic（占位 PDF + 安装横幅）。已回滚实验、保留示意图；完成路径见 docs/plans/2026-08-11-t3-6-hero-capture.md
 - [ ] P0–P6 实施与阶段验收
 
 文档交付完成不等于重设计实现完成。当前源码样例为：
