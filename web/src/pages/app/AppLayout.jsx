@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../lib/auth.jsx";
+import { api } from "../../lib/api.js";
 import CommandPalette from "../../components/CommandPalette.jsx";
 import Logo from "../../components/Logo.jsx";
 import Icon from "../../components/Icon.jsx";
@@ -18,7 +19,16 @@ export default function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [workspaces, setWorkspaces] = useState([]);
   const isAdmin = user && (user.role === "owner" || user.role === "admin");
+
+  useEffect(() => {
+    let alive = true;
+    api.get("/api/editor/projects")
+      .then((d) => { if (alive) setWorkspaces(d.projects || []); })
+      .catch(() => { /* switcher stays hidden if projects are unavailable */ });
+    return () => { alive = false; };
+  }, []);
 
   async function onLogout() {
     await logout();
@@ -76,7 +86,7 @@ export default function AppLayout() {
               onClick={() => setMenuOpen((v) => !v)}
               aria-label="菜单"
             >
-              ☰
+              <Icon name="menu" size={16} />
             </button>
             <button
               className="cmdk-trigger"
@@ -87,6 +97,21 @@ export default function AppLayout() {
             </button>
           </div>
           <div className="row" style={{ gap: 12 }}>
+            {workspaces.length > 0 && (
+              <select
+                className="workspace-switch"
+                defaultValue=""
+                aria-label="切换工作区"
+                onChange={(e) => {
+                  if (e.target.value) navigate(`/app/workbench?workspace=${encodeURIComponent(e.target.value)}`);
+                }}
+              >
+                <option value="" disabled>切换工作区…</option>
+                {workspaces.map((w) => (
+                  <option key={w.id} value={w.id}>{w.name || w.id}</option>
+                ))}
+              </select>
+            )}
             <span className={`role-badge ${user?.role}`}>{user?.role}</span>
             <span className="avatar">{initial}</span>
             <span style={{ fontSize: 14 }}>{user?.displayName || user?.username}</span>
