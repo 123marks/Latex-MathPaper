@@ -13,6 +13,35 @@ const CATEGORIES = [
   ["custom", "自定义"],
 ];
 
+const DETAIL_TABS = [
+  { id: "overview", label: "概览" },
+  { id: "perms", label: "权限与能力" },
+  { id: "mcp", label: "MCP" },
+];
+
+// Capabilities are derived from each skill's real execute mode (what the server
+// actually does), never invented. "writes" is always Preview-gated: skills emit
+// drafts/results, and any file change still goes through the editor Apply flow.
+const EXECUTE_CAPS = {
+  csv: { reads: "Workspace 内指定的 CSV 文件（相对路径）", writes: "不直接写入文件", calls: "本地 CSV 解析与统计摘要" },
+  citation: { reads: "你粘贴的 BibTeX / 引用行", writes: "不直接写入文件", calls: "引用可达性与字段核验" },
+  review: { reads: "你粘贴的论文段落", writes: "不直接写入文件", calls: "本地启发式评审批注" },
+  writing: { reads: "你粘贴的方法 / 实验段落", writes: "改写结果需你在编辑器确认 Apply", calls: "文本改写（不新增事实）" },
+  figure: { reads: "你提供的数据与图注描述", writes: "生成脚本草稿，写入前需 Apply", calls: "图表脚本生成" },
+  layout: { reads: "你提供的数据矩阵", writes: "生成表格片段，写入前需 Apply", calls: "LaTeX 表格样式生成" },
+  model: { reads: "你描述的问题 / 模型", writes: "不直接写入文件", calls: "方法建议生成" },
+};
+
+function capsFor(skill) {
+  return (
+    EXECUTE_CAPS[skill?.execute] || {
+      reads: "你提供的输入内容",
+      writes: "不直接写入文件",
+      calls: skill?.execute || "envelope",
+    }
+  );
+}
+
 export default function Market() {
   const [skills, setSkills] = useState([]);
   const [cat, setCat] = useState("all");
@@ -25,6 +54,16 @@ export default function Market() {
   const [runContext, setRunContext] = useState("");
   const [runResult, setRunResult] = useState(null);
   const [runBusy, setRunBusy] = useState(false);
+  const [detailTarget, setDetailTarget] = useState(null);
+  const [detailTab, setDetailTab] = useState("overview");
+
+  function openDetail(skill) {
+    setDetailTarget(skill);
+    setDetailTab("overview");
+  }
+  function closeDetail() {
+    setDetailTarget(null);
+  }
 
   async function load() {
     try {
@@ -152,26 +191,29 @@ export default function Market() {
               <div className="desc">{s.desc}</div>
               <div className="row spread">
                 <span className="stars">★ {s.stars} · {(s.installs || 0).toLocaleString()} 安装</span>
-                {s.installed ? (
-                  <div className="row" style={{ gap: 6 }}>
-                    <span className="chip signal" style={{ padding: "2px 10px" }}>已安装</span>
+                <div className="row" style={{ gap: 6 }}>
+                  <button className="btn btn-quiet btn-sm" onClick={() => openDetail(s)}>详情</button>
+                  {s.installed ? (
+                    <>
+                      <span className="chip signal" style={{ padding: "2px 10px" }}>已安装</span>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => openRun(s)}
+                        disabled={busy === s.id}
+                      >
+                        ▶ 运行
+                      </button>
+                    </>
+                  ) : (
                     <button
                       className="btn btn-primary btn-sm"
-                      onClick={() => openRun(s)}
+                      onClick={() => install(s.id)}
                       disabled={busy === s.id}
                     >
-                      ▶ 运行
+                      {busy === s.id ? "安装中…" : "安装"}
                     </button>
-                  </div>
-                ) : (
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => install(s.id)}
-                    disabled={busy === s.id}
-                  >
-                    {busy === s.id ? "安装中…" : "安装"}
-                  </button>
-                )}
+                  )}
+                </div>
               </div>
             </Reveal>
           ))}
@@ -267,6 +309,81 @@ export default function Market() {
                     : renderResult(runResult)}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {detailTarget && (
+        <div className="cmdk-overlay" onClick={closeDetail}>
+          <div
+            className="cmdk glass"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 680, padding: 0 }}
+          >
+            <div
+              className="row spread"
+              style={{ padding: "16px 20px", borderBottom: "1px solid var(--ink-line)", background: "var(--bg-2)" }}
+            >
+              <div>
+                <div className="kicker">技能详情</div>
+                <h3 className="display" style={{ fontSize: 22, marginTop: 4 }}>{detailTarget.name}</h3>
+                <p style={{ color: "var(--muted)", fontSize: 12.5, marginTop: 4 }}>
+                  {detailTarget.team} · v{detailTarget.ver} · ★ {detailTarget.stars} · {(detailTarget.installs || 0).toLocaleString()} 安装
+                </p>
+              </div>
+              <button className="btn btn-quiet btn-sm" onClick={closeDetail}>×</button>
+            </div>
+            <div className="market-detail-tabs">
+              {DETAIL_TABS.map((t) => (
+                <button
+                  key={t.id}
+                  className={`chip ${detailTab === t.id ? "" : "muted"}`}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => setDetailTab(t.id)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <div style={{ padding: 20, display: "grid", gap: 14 }}>
+              {detailTab === "overview" && (
+                <>
+                  <p style={{ fontSize: 13.5, color: "var(--text-soft)", lineHeight: 1.7 }}>{detailTarget.desc}</p>
+                  <label className="field">
+                    <span>系统提示（技能实际使用的指令）</span>
+                    <pre className="market-detail-pre">{detailTarget.systemPrompt || "—"}</pre>
+                  </label>
+                </>
+              )}
+              {detailTab === "perms" && (
+                <ul className="market-perms">
+                  <li><b>读取</b><span>{capsFor(detailTarget).reads}</span></li>
+                  <li><b>写入</b><span>{capsFor(detailTarget).writes}</span></li>
+                  <li><b>调用</b><span>{capsFor(detailTarget).calls}</span></li>
+                  <li className="market-perms__note">权限依据技能真实的执行模式（{detailTarget.execute || "envelope"}）推导；写入一律经编辑器 Preview → Apply。</li>
+                </ul>
+              )}
+              {detailTab === "mcp" && (
+                <div style={{ background: "var(--bg-1)", border: "1px solid var(--ink-line-2)", borderRadius: "var(--radius-sm)", padding: 16 }}>
+                  <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>
+                    此技能未声明 MCP 工具调用；运行仅使用本地能力与你配置的 provider。MCP 服务需在设置中显式启用并授权。
+                  </p>
+                </div>
+              )}
+              <div className="row" style={{ justifyContent: "flex-end", gap: 8 }}>
+                {detailTarget.installed ? (
+                  <button className="btn btn-primary btn-sm" onClick={() => { const t = detailTarget; closeDetail(); openRun(t); }}>▶ 运行</button>
+                ) : (
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => install(detailTarget.id)}
+                    disabled={busy === detailTarget.id}
+                  >
+                    {busy === detailTarget.id ? "安装中…" : "安装"}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
