@@ -22,6 +22,11 @@
 - T1.5 共享密码策略与专用 Edge smoke：10–256 位、两类字符、确认密码、无效提交禁用，以及两路由 × 四视口、键盘、reduced-motion 和零 overflow 门禁。
 - T3.3 Web Workbench AI 审查流：provider/runtime truth、真实 `ActionTimeline`、BEGIN_FILE proposal/diff、Preview → Reject/Apply、409 conflict refresh、rollback/preview-error 状态。
 - T3.3 strict Edge 证据：临时 `ai-qa` Workspace 两轮 mock-local 请求、Reject 不落盘、Apply 真实写入、1440×1200/390×844、reduced-motion、请求/响应 trace、截图 SHA-256。
+- T3.4 放大镜通用化：去 `sample-contest` 硬编码，改为 `/api/editor/projects` 工作区驱动 + `?workspace=` + `evidence` 能力门控，证据抽屉覆盖 Claim/Result/Script/Dataset/Source 并用 `EvidenceFlow` 连线。
+- T3.5 CommunityBoard 最新/热门信息流 + 真实贡献榜、Dashboard 速览卡、Market 详情抽屉（权限按真实 `execute` 推导 + 诚实 MCP 说明）、TeamSpace 7 天真实活动热力；全部仅用真实数据。
+- T3.1 AppLayout 顶栏工作区切换（`/api/editor/projects` → 打开 Workbench）与图标化菜单按钮。
+- `tests/web-ai-locality-truthfulness.test.mjs`：跨 `web/src` 扫描并阻止“本机模型推理 / 离线 AI / 数据不出本机 / 服务器零算力”表述的回归护栏。
+- `app/hero-ide-visual-smoke.mjs`（`npm run hero-visual-smoke`）：T3.6 专用 CDP 采集脚本（有头 GPU），用于在合适环境产出 `web/public/hero-ide.png`。
 
 ### Changed
 
@@ -40,6 +45,8 @@
 - Login/Register 仅共享表单 chrome；真实 useAuth 调用、redirect state 和 API payload 仍由页面持有，confirmPassword 不发送到服务端，owner/member 继续由服务端决定。
 - `/api/chat` 在真实 provider 与 mock-local 路径的首个 delta 前发送无密钥 runtime metadata；配置 provider 不再被当作本次回答来源。
 - ≤640px Workbench 改为文件树、编辑器、AI 面板的垂直工作流，保留核心文件导航和 proposal 控件。
+- 根、Tauri config、desktop package 和 Cargo 版本统一为 `0.5.0`，消除桌面版本漂移。
+- 将初始提交之上的整个 dirty worktree 收敛为按领域分组的可审阅本地提交（gitignore 构建产物、docs、web+backend、desktop/release、working-memory 等），STATUS/HANDOFF 基线随之更新为 clean。
 
 ### Fixed
 
@@ -61,6 +68,8 @@
 - provider 上游 SSE 现在跨 chunk 缓冲解析，并以 `PROVIDER_STREAM_ERROR` 明确失败边界；JSON API 响应统一 `Cache-Control: no-store`。
 - Workbench 深链在生产 bundle 中恢复读取 `?workspace=...`；AI Apply 不再因过期构建产物写入错误 Workspace。
 - 390px Workbench 根级横向溢出已关闭；AI diff 保留局部滚动，不再撑宽页面。
+- 移除 Dashboard 与 Download/Docs 中“AI 推理在本机 / 数据不出本机 / 用你电脑 CPU 跑 AI 写作”的失真表述，统一为“文件与编译在本机、模型请求按你配置的 provider 处理”。
+- TeamSpace 移除硬编码团队库计数（12/5/28/142）与虚构贡献者（Bob/Alice/Miro），改为成员/任务/已审/证据合计与按任务真实统计的贡献榜与 7 天活动热力。
 
 ### T0.5 UI primitives
 
@@ -80,7 +89,7 @@
 
 ### Known limitations
 
-- 工作区仍未形成可审计的 clean commit 基线。
+- 变更已在初始提交之上形成按领域分组的本地提交且 worktree 为 clean，但尚未 push、打 tag 或形成签名 release。
 - root/desktop/Cargo 版本存在漂移。
 - Windows ZIP 缺少 Node 生产依赖和 self-contained .NET runtime，不能称为零依赖 portable。
 - macOS/Linux 清单资产尚不存在，不能视为已发布。
