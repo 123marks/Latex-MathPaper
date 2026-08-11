@@ -2184,6 +2184,61 @@
 .token-comp-legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
 .token-comp-legend .dot-prompt { background: var(--ink-cool); }
 .token-comp-legend .dot-completion { background: var(--amber); }
+
+/* Workbench 文献面板（09-integrations Epic 3b） */
+.refs-panel { border-top: 1px solid var(--ink-line-2); background: var(--bg-2); }
+.refs-head { display: flex; align-items: center; gap: 10px; padding: 6px 12px; }
+.refs-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: 0;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px 0;
+}
+.chip.warn {
+  background: rgba(226, 109, 90, 0.12);
+  color: #e26d5a;
+  border-color: rgba(226, 109, 90, 0.4);
+}
+.refs-body { padding: 0 12px 12px; display: grid; gap: 10px; max-height: 260px; overflow: auto; }
+.refs-meta { font-family: var(--font-mono); font-size: 11px; }
+.refs-list { display: grid; gap: 8px; }
+.ref-row {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--bg-1);
+  border: 1px solid var(--ink-line-2);
+  border-radius: 6px;
+}
+.ref-main { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ref-key {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--amber);
+  background: rgba(212, 163, 65, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.ref-title { font-size: 13px; color: var(--text); }
+.ref-sub { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.ref-loc {
+  background: none;
+  border: 1px dashed var(--ink-line);
+  border-radius: 4px;
+  color: var(--ink-cool);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 1px 6px;
+  cursor: pointer;
+}
+.ref-loc:hover { border-color: var(--amber); color: var(--amber); }
+.refs-missing { font-size: 12px; color: var(--text-soft); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ref-missing-item { display: inline-flex; gap: 4px; align-items: center; }
 .aside-block {
   padding: 18px;
 }

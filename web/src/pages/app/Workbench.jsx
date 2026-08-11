@@ -729,6 +729,11 @@ export default function Workbench() {
             onCompose={composeFromAnnotations}
           />
 
+          <ReferencesPanel
+            contest={contest}
+            onOpenFile={(p) => openFile({ path: p, name: p.split("/").pop() })}
+          />
+
           <div className="statusbar">
             <span className="seg branch">⎇ main</span>
             <span className="seg">LaTeX</span>
@@ -777,6 +782,121 @@ export default function Workbench() {
 
 const ANNO_INTENTS = [["edit", "改写"], ["fix", "修复"], ["question", "疑问"], ["todo", "待办"]];
 const ANNO_PRIORITIES = [["low", "低"], ["normal", "中"], ["high", "高"]];
+
+// 09-integrations Epic 3b: workspace bibliography panel. Entries and citation
+// locations come from the server's real .bib/.tex scan; nothing is fabricated.
+function ReferencesPanel({ contest, onOpenFile }) {
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setData(null);
+    setOpen(false);
+  }, [contest]);
+
+  async function load() {
+    try {
+      setLoading(true);
+      setError("");
+      setData(await api.get(`/api/editor/references?workspace=${encodeURIComponent(contest)}`));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && !data && !loading) load();
+  }
+
+  return (
+    <div className="refs-panel">
+      <div className="refs-head">
+        <button className="refs-toggle" onClick={toggle}>
+          <b>文献</b>
+          {data ? (
+            <>
+              <span className="chip muted">{data.entries.length} 条</span>
+              {data.missing.length > 0 && <span className="chip warn">缺失 {data.missing.length}</span>}
+            </>
+          ) : null}
+          <span className="muted">{open ? "收起 ▾" : "展开 ▸"}</span>
+        </button>
+        {open && (
+          <button className="btn btn-quiet btn-sm" onClick={load} disabled={loading}>刷新</button>
+        )}
+      </div>
+      {open && (
+        loading ? (
+          <div className="spinner" />
+        ) : error ? (
+          <div className="alert error">{error}</div>
+        ) : !data ? null : (
+          <div className="refs-body">
+            {data.bibFiles.length === 0 ? (
+              <div className="empty">工作区里还没有 .bib 文件。把 references.bib 放进 paper/ 即可在这里管理。</div>
+            ) : (
+              <>
+                <div className="refs-meta muted">{data.bibFiles.join(" · ")}</div>
+                <div className="refs-list">
+                  {data.entries.map((e) => (
+                    <div key={`${e.file}:${e.key}`} className="ref-row">
+                      <div className="ref-main">
+                        <code className="ref-key">{e.key}</code>
+                        <span className="ref-title">{e.title || "（无标题）"}</span>
+                      </div>
+                      <div className="ref-sub">
+                        <span>{e.author || "—"}</span>
+                        <span>{e.venue}{e.venue && e.year ? " · " : ""}{e.year}</span>
+                        <span className={`chip ${e.citedCount > 0 ? "" : "muted"}`}>
+                          {e.citedCount > 0 ? `被引用 ${e.citedCount} 处` : "未被引用"}
+                        </span>
+                        {(data.citations[e.key] || []).slice(0, 4).map((loc, i) => (
+                          <button
+                            key={`${loc.file}:${loc.line}:${i}`}
+                            className="ref-loc"
+                            onClick={() => onOpenFile(loc.file)}
+                            title={`${loc.file}:${loc.line}`}
+                          >
+                            {loc.file.split("/").pop()}:{loc.line}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {data.missing.length > 0 && (
+                  <div className="refs-missing">
+                    <b>引用了但 .bib 里没有:</b>
+                    {data.missing.map((m) => (
+                      <span key={m.key} className="ref-missing-item">
+                        <code className="ref-key">{m.key}</code>
+                        {m.locations.slice(0, 2).map((loc, i) => (
+                          <button
+                            key={`${loc.file}:${loc.line}:${i}`}
+                            className="ref-loc"
+                            onClick={() => onOpenFile(loc.file)}
+                          >
+                            {loc.file.split("/").pop()}:{loc.line}
+                          </button>
+                        ))}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )
+      )}
+    </div>
+  );
+}
 
 function AnnotationsPanel({ active, selection, annotations, onAdd, onStatus, onDelete, onCompose }) {
   const [note, setNote] = useState("");
