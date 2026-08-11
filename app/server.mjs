@@ -154,6 +154,80 @@ function aggregateUsage(records, days = 30) {
   };
 }
 
+// Pragmatic BibTeX parser (09-integrations Epic 3a): balanced-brace scan good
+// enough for common entries; @comment/@preamble/@string are skipped.
+function parseBibTeX(text) {
+  const src = String(text || "");
+  const entries = [];
+  let i = 0;
+  while (i < src.length && entries.length < 500) {
+    const at = src.indexOf("@", i);
+    if (at === -1) break;
+    let j = at + 1;
+    while (j < src.length && /[a-zA-Z]/.test(src[j])) j += 1;
+    const type = src.slice(at + 1, j).toLowerCase();
+    while (j < src.length && /\s/.test(src[j])) j += 1;
+    if (src[j] !== "{") { i = at + 1; continue; }
+    let depth = 1;
+    let k = j + 1;
+    while (k < src.length && depth > 0) {
+      if (src[k] === "{") depth += 1;
+      else if (src[k] === "}") depth -= 1;
+      k += 1;
+    }
+    const body = src.slice(j + 1, k - 1);
+    i = k;
+    if (type === "comment" || type === "preamble" || type === "string") continue;
+    const comma = body.indexOf(",");
+    if (comma === -1) continue;
+    const key = body.slice(0, comma).trim();
+    if (!key) continue;
+    const fields = {};
+    let p = comma + 1;
+    while (p < body.length) {
+      while (p < body.length && /[\s,]/.test(body[p])) p += 1;
+      let q = p;
+      while (q < body.length && /[a-zA-Z_-]/.test(body[q])) q += 1;
+      const name = body.slice(p, q).toLowerCase();
+      if (!name) break;
+      while (q < body.length && /\s/.test(body[q])) q += 1;
+      if (body[q] !== "=") break;
+      q += 1;
+      while (q < body.length && /\s/.test(body[q])) q += 1;
+      let value = "";
+      if (body[q] === "{") {
+        let d = 1;
+        let r = q + 1;
+        while (r < body.length && d > 0) {
+          if (body[r] === "{") d += 1;
+          else if (body[r] === "}") d -= 1;
+          if (d > 0) value += body[r];
+          r += 1;
+        }
+        p = r;
+      } else if (body[q] === '"') {
+        let r = q + 1;
+        while (r < body.length && body[r] !== '"') { value += body[r]; r += 1; }
+        p = r + 1;
+      } else {
+        let r = q;
+        while (r < body.length && body[r] !== ",") { value += body[r]; r += 1; }
+        p = r;
+      }
+      fields[name] = value.replace(/[{}]/g, "").replace(/\s+/g, " ").trim();
+    }
+    entries.push({
+      key,
+      type,
+      title: fields.title || "",
+      author: fields.author || "",
+      year: fields.year || "",
+      venue: fields.journal || fields.booktitle || fields.publisher || "",
+    });
+  }
+  return entries;
+}
+
 function defaultSkills() {
   return [
     { id: "sci-figure", cat: "figure", name: "SCI Figure Studio", desc: "出版级科学图表,自动按 Nature 风格与配色出图,带图注主张。", team: "Paper OS Studio", ver: "1.4.2", installs: 12800, stars: "4.8",
@@ -1878,6 +1952,79 @@ async function api(req, res, path) {
     }
     const tree = walk(rootPath, "", 0);
     return sendJson(res, 200, { workspace: workspaceId, tree, truncated });
+  }
+
+  // References Pack (09-integrations Epic 3a): parse the workspace's real .bib
+  // files and cross-link them with \cite… usage across .tex sources.
+  if (req.method === "GET" && path === "/api/editor/references") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const url = new URL(req.url, `http://localhost:${port}`);
+    const workspaceId = queryWorkspaceId(url);
+    let rootPath;
+    try { rootPath = workspaceRoot(workspaceId); } catch { return sendJson(res, 404, { error: "Workspace not found" }); }
+    if (!existsSync(rootPath)) return sendJson(res, 404, { error: "Workspace not found" });
+    const SKIP = new Set(["__pycache__", "node_modules", ".git", "submission-package", "build", ".tectonic", "state"]);
+    let budget = WALKER_MAX_ENTRIES;
+    let truncated = false;
+    const bibFiles = [];
+    const texFiles = [];
+    (function collect(dir, rel, depth) {
+      if (depth > WALKER_MAX_DEPTH) { truncated = true; return; }
+      let names;
+      try { names = readdirSync(dir); } catch { return; }
+      for (const name of names.sort()) {
+        if (SKIP.has(name)) continue;
+        if (budget <= 0) { truncated = true; return; }
+        const relPath = rel ? `${rel}/${name}` : name;
+        const entry = workspaceEntry(workspaceId, relPath);
+        if (!entry) continue;
+        budget -= 1;
+        if (entry.stat.isDirectory()) collect(entry.absolute, relPath, depth + 1);
+        else if (/\.bib$/i.test(name)) bibFiles.push(relPath);
+        else if (/\.tex$/i.test(name)) texFiles.push(relPath);
+      }
+    })(rootPath, "", 0);
+
+    const entries = [];
+    for (const rel of bibFiles.slice(0, 20)) {
+      if (entries.length >= 500) break;
+      try {
+        const text = readFileSync(workspacePath(workspaceId, rel), "utf-8");
+        for (const parsed of parseBibTeX(text)) {
+          if (entries.length >= 500) break;
+          entries.push({ ...parsed, file: rel });
+        }
+      } catch { /* unreadable .bib is skipped, not fatal */ }
+    }
+
+    const citations = {};
+    const citeRe = /\\(?:no)?(?:cite|citep|citet|parencite|textcite|autocite|footcite)\*?(?:\[[^\]]*\]){0,2}\{([^}]+)\}/g;
+    for (const rel of texFiles.slice(0, 80)) {
+      let text = "";
+      try { text = readFileSync(workspacePath(workspaceId, rel), "utf-8"); } catch { continue; }
+      const lines = text.split(/\r?\n/);
+      for (let ln = 0; ln < lines.length; ln += 1) {
+        citeRe.lastIndex = 0;
+        let m;
+        while ((m = citeRe.exec(lines[ln])) !== null) {
+          for (const rawKey of m[1].split(",")) {
+            const key = rawKey.trim();
+            if (!key) continue;
+            const list = (citations[key] = citations[key] || []);
+            if (list.length < 200) list.push({ file: rel, line: ln + 1 });
+          }
+        }
+      }
+    }
+
+    const known = new Set(entries.map((e) => e.key));
+    const missing = Object.keys(citations)
+      .filter((k) => !known.has(k))
+      .sort()
+      .map((key) => ({ key, locations: citations[key].slice(0, 20) }));
+    const withCounts = entries.map((e) => ({ ...e, citedCount: (citations[e.key] || []).length }));
+    return sendJson(res, 200, { workspace: workspaceId, bibFiles, entries: withCounts, citations, missing, truncated });
   }
 
   if (req.method === "GET" && path === "/api/editor/file") {
