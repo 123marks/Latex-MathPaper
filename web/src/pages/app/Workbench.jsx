@@ -96,6 +96,8 @@ export default function Workbench() {
   const [installPct, setInstallPct] = useState(0);
   const [pdfUrl, setPdfUrl] = useState(null);
   const [compiling, setCompiling] = useState(false);
+  const [annotations, setAnnotations] = useState([]);
+  const [annoSel, setAnnoSel] = useState(null);
   const { subscribe: wsSubscribe } = usePaperOSWS();
 
   async function loadTree() {
@@ -107,6 +109,57 @@ export default function Workbench() {
     }
   }
   useEffect(() => { loadTree(); }, [contest]); // eslint-disable-line
+
+  // Visual review annotations (09-integrations Epic 1b).
+  async function loadAnnotations() {
+    try {
+      const d = await api.get(`/api/editor/annotations?workspace=${encodeURIComponent(contest)}`);
+      setAnnotations(d.annotations || []);
+    } catch (e) {
+      setLog((l) => [`[annotations] ${e.message}`, ...l].slice(0, 50));
+    }
+  }
+  useEffect(() => { loadAnnotations(); }, [contest]); // eslint-disable-line
+
+  async function addAnnotation({ note, intent, priority }) {
+    if (!active || !annoSel) return;
+    try {
+      const d = await api.post("/api/editor/annotations", {
+        workspace: contest,
+        target: {
+          kind: "editor-range",
+          path: active.path,
+          startLine: annoSel.startLine,
+          endLine: annoSel.endLine,
+          excerpt: annoSel.excerpt,
+        },
+        note,
+        intent,
+        priority,
+      });
+      setAnnotations((xs) => [...xs, d.annotation]);
+    } catch (e) {
+      setLog((l) => [`[annotations] ${e.message}`, ...l].slice(0, 50));
+    }
+  }
+
+  async function updateAnnotation(id, patch) {
+    try {
+      const d = await api.patch(`/api/editor/annotations/${id}?workspace=${encodeURIComponent(contest)}`, patch);
+      setAnnotations((xs) => xs.map((a) => (a.id === id ? d.annotation : a)));
+    } catch (e) {
+      setLog((l) => [`[annotations] ${e.message}`, ...l].slice(0, 50));
+    }
+  }
+
+  async function deleteAnnotation(id) {
+    try {
+      await api.del(`/api/editor/annotations/${id}?workspace=${encodeURIComponent(contest)}`);
+      setAnnotations((xs) => xs.filter((a) => a.id !== id));
+    } catch (e) {
+      setLog((l) => [`[annotations] ${e.message}`, ...l].slice(0, 50));
+    }
+  }
 
   async function loadEngine() {
     try {
@@ -580,6 +633,7 @@ export default function Workbench() {
                   setEditor(v);
                   if (active) setOpenTabs((tabs) => tabs.map((t) => (t.path === active.path ? { ...t, dirty: true } : t)));
                 }}
+                onSelectionChange={setAnnoSel}
                 language="latex"
                 height="100%"
               />
@@ -642,6 +696,15 @@ export default function Workbench() {
             </div>
           </div>
 
+          <AnnotationsPanel
+            active={active}
+            selection={annoSel}
+            annotations={annotations}
+            onAdd={addAnnotation}
+            onStatus={(id, status) => updateAnnotation(id, { status })}
+            onDelete={deleteAnnotation}
+          />
+
           <div className="statusbar">
             <span className="seg branch">⎇ main</span>
             <span className="seg">LaTeX</span>
@@ -685,6 +748,82 @@ export default function Workbench() {
       </div>
     </div>
     </>
+  );
+}
+
+const ANNO_INTENTS = [["edit", "改写"], ["fix", "修复"], ["question", "疑问"], ["todo", "待办"]];
+const ANNO_PRIORITIES = [["low", "低"], ["normal", "中"], ["high", "高"]];
+
+function AnnotationsPanel({ active, selection, annotations, onAdd, onStatus, onDelete }) {
+  const [note, setNote] = useState("");
+  const [intent, setIntent] = useState("edit");
+  const [priority, setPriority] = useState("normal");
+  const fileAnnotations = active
+    ? annotations.filter((a) => a.target?.path === active.path)
+    : [];
+  const canAdd = Boolean(active && selection && note.trim());
+
+  function submit(event) {
+    event.preventDefault();
+    if (!canAdd) return;
+    onAdd({ note: note.trim(), intent, priority });
+    setNote("");
+  }
+
+  return (
+    <div className="annotations">
+      <div className="annotations-head">
+        <b>标注</b>
+        <span className="muted">
+          {active ? `${active.path} · ${fileAnnotations.length}` : "打开文件后可在编辑器选区上标注"}
+        </span>
+      </div>
+      {active && (
+        <form className="annotation-new" onSubmit={submit}>
+          <span className="annotation-range">
+            {selection ? `行 ${selection.startLine}${selection.endLine !== selection.startLine ? `–${selection.endLine}` : ""}` : "先在编辑器选中行"}
+          </span>
+          <input
+            className="input"
+            placeholder="批注：这段要怎么改…"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+          <select value={intent} onChange={(e) => setIntent(e.target.value)} aria-label="意图">
+            {ANNO_INTENTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+          <select value={priority} onChange={(e) => setPriority(e.target.value)} aria-label="优先级">
+            {ANNO_PRIORITIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+          <button className="btn btn-primary btn-sm" disabled={!canAdd}>加批注</button>
+        </form>
+      )}
+      <div className="annotation-list">
+        {fileAnnotations.length === 0 ? (
+          <div className="annotation-empty">本文件暂无标注。</div>
+        ) : (
+          fileAnnotations.map((a) => (
+            <div key={a.id} className={`annotation-item status-${a.status}`}>
+              <span className="annotation-loc">
+                L{a.target.startLine}{a.target.endLine !== a.target.startLine ? `–${a.target.endLine}` : ""}
+              </span>
+              <span className={`chip anno-intent anno-intent-${a.intent}`}>{a.intent}</span>
+              <span className={`chip anno-pri anno-pri-${a.priority}`}>{a.priority}</span>
+              <span className="annotation-note">{a.note}</span>
+              <span className={`annotation-status annotation-status-${a.status}`}>{a.status}</span>
+              <span className="annotation-actions">
+                {a.status === "resolved" ? (
+                  <button className="btn btn-quiet btn-sm" onClick={() => onStatus(a.id, "open")}>重开</button>
+                ) : (
+                  <button className="btn btn-quiet btn-sm" onClick={() => onStatus(a.id, "resolved")}>解决</button>
+                )}
+                <button className="btn btn-quiet btn-sm" onClick={() => onDelete(a.id)}>删除</button>
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
 

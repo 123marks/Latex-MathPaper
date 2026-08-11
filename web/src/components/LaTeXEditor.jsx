@@ -92,12 +92,34 @@ function registerLatex(monaco) {
   });
 }
 
-export default function LaTeXEditor({ value, onChange, language = "latex", height = "100%" }) {
+export default function LaTeXEditor({ value, onChange, onSelectionChange, language = "latex", height = "100%" }) {
   function handleBeforeMount(monaco) {
     registerLatex(monaco);
   }
-  function handleMount(_editor, monaco) {
+  function handleMount(editor, monaco) {
     registerLatex(monaco);
+    if (typeof onSelectionChange === "function") {
+      editor.onDidChangeCursorSelection((event) => {
+        const sel = event.selection;
+        const model = editor.getModel();
+        const startLine = sel.startLineNumber;
+        const endLine = sel.endLineNumber;
+        let excerpt = "";
+        try {
+          excerpt = model
+            ? model.getValueInRange({
+                startLineNumber: startLine,
+                startColumn: 1,
+                endLineNumber: endLine,
+                endColumn: model.getLineMaxColumn(endLine),
+              })
+            : "";
+        } catch {
+          excerpt = "";
+        }
+        onSelectionChange({ startLine, endLine, excerpt: excerpt.slice(0, 400) });
+      });
+    }
   }
   return (
     <Editor

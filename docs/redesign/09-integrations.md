@@ -97,7 +97,7 @@ owner: redesign
 ## 6. 进度追踪
 
 - [x] 1a 标注数据模型 + 服务端 CRUD + 存储 + 测试（2026-08-11，`/api/editor/annotations`，`tests/annotations-api.test.mjs`）
-- [ ] 1b 编辑器行范围批注 UI + 列表面板 + 测试
+- [x] 1b 编辑器行范围批注 UI + 列表面板 + 测试（2026-08-11，Workbench `AnnotationsPanel` + `LaTeXEditor` 选区回调 + `api.patch`）
 - [ ] 1c 标注 → AI 提案 → Preview → Apply + 状态流转
 - [ ] 2a–2d 会话管理 + 用量分析
 - [ ] 3a–3d References Pack
