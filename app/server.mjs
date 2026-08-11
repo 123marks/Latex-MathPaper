@@ -3082,6 +3082,41 @@ async function api(req, res, path) {
   // ===========================================================
   // AI Chat: stream from configured OpenAI-compatible provider
   // ===========================================================
+  // AI session history (09-integrations Epic 2a): list/search the caller's own
+  // recorded chat threads; ?id= returns one thread's full prompt + reply.
+  if (req.method === "GET" && path === "/api/chat/history") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const url = new URL(req.url, `http://localhost:${port}`);
+    const threadId = url.searchParams.get("id");
+    const q = String(url.searchParams.get("q") || "").trim().toLowerCase();
+    const own = chatStore.read().threads.filter((t) => t.userId === user.id);
+    if (threadId) {
+      const thread = own.find((t) => t.id === threadId);
+      if (!thread) return sendJson(res, 404, { error: "thread not found" });
+      const { userId, ...safe } = thread;
+      return sendJson(res, 200, { thread: safe });
+    }
+    const fileBlocksOf = (text) => {
+      const re = /BEGIN_FILE:\s*([^\r\n]+)/g;
+      const paths = [];
+      let m;
+      while ((m = re.exec(String(text || ""))) !== null) paths.push(m[1].trim());
+      return paths;
+    };
+    let threads = own.slice().reverse();
+    if (q) threads = threads.filter((t) => `${t.prompt} ${t.reply}`.toLowerCase().includes(q));
+    const summary = threads.slice(0, 100).map((t) => ({
+      id: t.id,
+      mode: t.mode,
+      createdAt: t.createdAt,
+      prompt: String(t.prompt || "").slice(0, 200),
+      replyPreview: String(t.reply || "").replace(/\s+/g, " ").trim().slice(0, 200),
+      fileBlocks: fileBlocksOf(t.reply),
+    }));
+    return sendJson(res, 200, { threads: summary, total: own.length });
+  }
+
   if (req.method === "POST" && path === "/api/chat") {
     const user = requireUser(req, res);
     if (!user) return undefined;
