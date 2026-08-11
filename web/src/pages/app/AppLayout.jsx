@@ -76,7 +76,7 @@ export default function AppLayout() {
           </>
         )}
 
-        <div className="side-foot">v0.5.0 · Horizon · 本地优先</div>
+        <div className="side-foot">{`v${__APP_VERSION__} · Horizon · 本地优先`}</div>
       </aside>
 
       <div className="main">

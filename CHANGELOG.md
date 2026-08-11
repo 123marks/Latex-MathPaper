@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+暂无未发布变更。
+
+## [0.6.0] - 2026-08-12
+
 ### Added
 
 - 企业级文档治理：当前状态、工程交接、开发、测试、运维、追溯和 ADR 索引。
@@ -31,6 +35,10 @@
 - 09-integrations Epic 2（AI 会话管理，CLI-Manager/codeg 思路）：`GET /api/chat/history` 列表/详情/搜索（真实 `chat.json`，检测 BEGIN_FILE 提案路径，详情剥离 userId）；`/app/sessions` 会话管理页（搜索、提问/回答详情、提案文件块、「在工作台复用」）+ Workbench `?prompt` 预填；Usage 页新增真实 token 输入/输出构成条。
 - 09-integrations Epic 3（References Pack，Agentero 思路）：`GET /api/editor/references` 解析工作区真实 `.bib`（平衡大括号 BibTeX 解析器）+ 扫描 `\cite` 系宏输出 citation↔source 双链与 missing 检测；Workbench 可折叠文献面板（条目卡、被引位置直达源文件、缺失引用列表）。
 - 09-integrations Epic 4a（多 provider）：`/api/account/providers` 档案新增/激活/删除（Key AES-256-GCM 加密、明文与密文均不回传），生效顺序 激活档案 > 单一配置 > 共享网关；ApiKeys 页档案管理 UI。
+- 09-integrations Epic 4b（会话级模型选择）：chat 请求可带 `profileId` 临时指定档案（未知 id 优雅回退激活链），Workbench AI 输入区档案下拉；本地 mock OpenAI 服务端到端验证按请求路由。
+- 用量归因：usage 记录新增 `workspace` 字段（chat 由 Workbench 传当前工作区、skill 从 context 读取），聚合输出按工作区 token 排名与 24h 小时桶；Usage 页新增「24h 分布」「按工作区」面板（旧记录如实归入「未标注」）。
+- 09-integrations Epic 3d（DOI 导入）：`POST /api/editor/references/import` 接受裸 DOI / doi.org 链接，content negotiation 抓取 BibTeX 并追加进 `.bib`（按条目 key 去重 409；离线/上游失败如实 502/404）；文献面板内置导入框。
+- Workbench 文件树全面文件夹管理：真实层级（可折叠缩进）、新建文件/文件夹（嵌套路径）、内联重命名/移动（标签页与活动缓冲区跟随，文件夹子项一并迁移）、确认后删除文件或整个文件夹；服务端新增 `POST /api/editor/folder`。
 
 ### Changed
 
@@ -54,6 +62,7 @@
 
 ### Fixed
 
+- API 错误包装器把 `WorkspaceKernelError` 映射为诚实状态码：未知工作区 404（`WORKSPACE_NOT_FOUND`）、重名 409、非法 id/路径越界 400——修复 tree/file/compile 等路由此前对未知工作区返回笼统 500 的问题。
 - 视觉冒烟从已退役的 Aurora fallback 断言切换到当前 Horizon WebGL、reduced-motion、failure fallback 和 App 接线契约。
 - Windows 打包在 launcher 文件集不完整时现在会失败，不再生成误导性的 EXE 启动说明。
 - 指针视差不再在页面挂载后常驻 RAF，仅在指针输入后按需运行并在稳定或卸载时停止。

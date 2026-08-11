@@ -1,11 +1,18 @@
+import { readFileSync } from "node:fs";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+
+// Single source of truth for the shown product version: the root package.json.
+const rootPkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
 
 // Build the React app directly into app/public so the existing Node server
 // (app/server.mjs) and the Windows launcher keep serving static files with no
 // new runtime step. Relative base keeps assets working on any local port.
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __APP_VERSION__: JSON.stringify(rootPkg.version),
+  },
   // Absolute base so hashed assets resolve on deep client routes (/app/account)
   // served via the server's SPA history fallback.
   base: "/",

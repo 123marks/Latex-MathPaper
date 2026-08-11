@@ -3,10 +3,23 @@ import Reveal from "../components/Reveal.jsx";
 
 const RELEASES = [
   {
+    ver: "v0.6.0",
+    date: "2026-08-12",
+    title: "会话管理、文献引用与多 Provider",
+    latest: true,
+    items: [
+      "可视化标注:编辑器圈选行范围加批注,一键交给 AI 生成修改提案(Preview → Apply)",
+      "AI 会话管理:/app/sessions 搜索历史对话、查看提案文件块、一键复用到工作台",
+      "References Pack:解析工作区 .bib,citation↔source 双链、缺失引用检测、DOI 一键导入",
+      "多 Provider 档案:多个网关配置加密保存、一键切换,聊天可按次指定模型",
+      "文件树管理:新建文件/文件夹、重命名/移动、删除,真实层级展示",
+      "用量分析:token 输入/输出构成、24h 分布、按工作区排名",
+    ],
+  },
+  {
     ver: "v0.5.0",
     date: "2026-07-08",
     title: "事务化 Apply 与账户中心",
-    latest: true,
     items: [
       "EditTransaction:AI 修改以事务化 Apply 落盘,批量改动要么全部成功、要么整体回滚",
       "Ctrl+P 快速打开:模糊匹配工作区内任意文件",

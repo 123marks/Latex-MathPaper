@@ -3,14 +3,14 @@ title: Paper OS current status
 status: active
 as_of: 2026-08-11
 branch: main
-baseline_commit: b7e8e39
+baseline_commit: 2f6bbd5
 worktree: clean
-product_version: 0.5.0
+product_version: 0.6.0
 ---
 
 # Paper OS 当前状态
 
-本页是 2026-08-11 对当前工作区的审计快照。T0.2–T1.5、T3.x 与 09-integrations Epic 1–4a（标注→AI、会话管理、References、多 provider）已在初始提交 `1546dab` 之上分组提交（`cd248a9`..`b7e8e39`，共 29 个），工作区现为 clean。它仍不是发布证明：没有 PR、tag 或签名安装包。任何接手者都应先运行本页的基线命令，再相信能力声明。
+本页是 2026-08-12 对当前工作区的审计快照。T0.2–T1.5、T3.x、09-integrations Epic 1–4b（标注→AI、会话管理、References+DOI、多 provider+会话级选择）、错误码映射/用量归因、文件树文件夹管理与 0.6.0 版本对齐均已在初始提交 `1546dab` 之上分组提交，工作区为 clean。它仍不是发布证明：没有 PR、tag 或签名安装包。任何接手者都应先运行本页的基线命令，再相信能力声明。
 
 ## 状态口径
 
@@ -26,10 +26,10 @@ product_version: 0.5.0
 | 项目 | 当前事实 |
 | --- | --- |
 | 产品方向 | 本地优先、Workspace Kernel + Packs 的通用文档 IDE |
-| 当前分支/提交 | `main` / `b7e8e39`（在 `1546dab` 之上共 29 个提交，含 09-integrations Epic 1–4a） |
+| 当前分支/提交 | `main` / `2f6bbd5` + 0.6.0 发布提交（在 `1546dab` 之上，含 09-integrations Epic 1–4b、文件夹管理与版本对齐） |
 | 工作区 | clean；重设计与文档实现已提交，构建产物按 `.gitignore` 排除 |
-| 根版本 | `package.json` 为 `0.5.0` |
-| 桌面版本 | 根、Tauri config、desktop package、Cargo 均为 `0.5.0`（2026-08-11 统一） |
+| 根版本 | `package.json` 为 `0.6.0` |
+| 桌面版本 | 根、Tauri config、desktop package、Cargo 均为 `0.6.0`（2026-08-12 随 0.6.0 发布统一 bump），Web UI 版本号由 Vite `define` 注入单一来源 |
 | 当前 Windows 入口 | 根目录 `PaperOS.exe`，WinForms + WebView2 + 本地 Node 服务 |
 | Tauri | 已有脚手架和构建产物，但不是 README 声明的稳定主入口 |
 | Windows 发布产物 | ZIP 和 `.sha256` 存在；ZIP 排除 `app/node_modules`，launcher 依赖系统 .NET 8 Desktop Runtime，不是 self-contained/零依赖 portable |
@@ -292,8 +292,8 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 
 ## 已知风险
 
-1. **尚无 PR / tag / 签名发布**：重设计、文档与 09-integrations Epic 1–4a 已在 `1546dab` 之上分组提交（`cd248a9`..`b7e8e39`），dirty worktree 风险已消除；仍缺少 PR 审阅、版本 tag 和签名安装包，结果尚未绑定 tag/release。
-2. **发布版本治理**：根、Tauri config、desktop package、Cargo 已统一为 `0.5.0`（2026-08-11）；仍需在打 tag/release 时同步 bump。
+1. **尚无 PR / tag / 签名发布**：重设计、文档、09-integrations Epic 1–4b、文件夹管理与 0.6.0 版本对齐均已在 `1546dab` 之上分组提交，dirty worktree 风险已消除；仍缺少 PR 审阅、git tag 和签名安装包，结果尚未绑定 tag/release。
+2. **发布版本治理**：根、Tauri config、desktop package、Cargo 已统一 bump 为 `0.6.0`（2026-08-12），Web UI 版本号改由 Vite `define` 从根 `package.json` 注入；打 tag 仍待执行。
 3. **发布声明超前**：Windows ZIP 缺少 Node 生产依赖和 self-contained .NET runtime；macOS/Linux 清单与实际产物不一致；原生代码签名未完成。
 4. **桌面部署依赖**：WinForms/Tauri 都启动外部 Node；WinForms 还依赖系统 .NET 8 Desktop Runtime，尚未证明零依赖 sidecar 交付。
 5. **桌面 WebView CSP**：Tauri config 当前为 `csp: null`。

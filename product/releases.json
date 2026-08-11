@@ -1,19 +1,19 @@
 {
-  "version": "0.5.0",
+  "version": "0.6.0",
   "channel": "stable",
-  "publishedAt": "2026-07-20",
+  "publishedAt": "2026-08-12",
   "notes": [
-    "EditTransaction 事务化 Apply：预览带 mtime、冲突 409、失败回滚",
-    "每用户 API Key 加密存储（AES-256-GCM），账户中心与会话管理",
-    "Ctrl+P 快速打开、Ctrl+Shift+S 全部保存、可关闭的脏标签",
-    "登录限流、安全响应头（CSP 等）、请求体上限等安全加固"
+    "可视化标注 → AI 修改提案：编辑器圈选行范围加批注，一键交给 AI 走 Preview → Apply",
+    "AI 会话管理：搜索历史对话、查看提案文件块、一键复用；多 Provider 档案与会话级模型选择",
+    "References Pack：解析工作区 .bib、citation↔source 双链、缺失引用检测、DOI 一键导入",
+    "文件树文件夹管理：新建/重命名/移动/删除；用量分析新增 token 构成、24h 分布与按工作区排名"
   ],
   "assets": [
     {
       "os": "windows",
       "label": "Windows 10 / 11 · x64",
       "ext": ".zip",
-      "file": "dist/release/PaperOS-0.5.0-windows-x64.zip",
+      "file": "dist/release/PaperOS-0.6.0-windows-x64.zip",
       "minimum": "Windows 10 1809+"
     },
     {

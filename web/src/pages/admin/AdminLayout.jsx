@@ -86,7 +86,7 @@ export default function AdminLayout() {
           <Link to="/app" className="admin-backapp">
             ← 返回工作台
           </Link>
-          <div className="admin-version">v0.5.0 · Horizon</div>
+          <div className="admin-version">{`v${__APP_VERSION__} · Horizon`}</div>
         </div>
       </aside>
 
