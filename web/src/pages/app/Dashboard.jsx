@@ -38,7 +38,7 @@ export default function Dashboard() {
     <>
       <div className="page-head">
         <h1>欢迎回来，{user?.displayName || user?.username}</h1>
-        <p>本地文档运行时总览：编译与 AI 推理都在你的机器上执行，数据不出本机。</p>
+        <p>本地文档运行时总览：Workspace 文件与编译在你的机器上；模型请求按你配置的 provider 处理。</p>
       </div>
       {error && <div className="alert error">{error}</div>}
       <div className="grid">

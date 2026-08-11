@@ -101,6 +101,24 @@ export default function TeamSpace() {
     return m;
   }, [data.members]);
 
+  // Real derived metrics only; the board must never show fabricated counts.
+  const evidenceTotal = useMemo(
+    () => (data.tasks || []).reduce((sum, t) => sum + (Number(t.ev) || 0), 0),
+    [data.tasks],
+  );
+
+  const contributions = useMemo(() => {
+    const counts = {};
+    for (const t of data.tasks || []) {
+      const who = t.assignee || "未分配";
+      counts[who] = (counts[who] || 0) + 1;
+    }
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [data.tasks]);
+
   return (
     <>
       <div className="page-head">
@@ -239,35 +257,41 @@ export default function TeamSpace() {
         </div>
 
         <aside className="team-library">
-          <h4 style={{ margin: 0, marginBottom: 10 }}>团队库</h4>
+          <h4 style={{ margin: 0, marginBottom: 10 }}>团队概览</h4>
           <div className="lib-item">
             <span style={{ color: "var(--amber)" }}>◆</span>
-            <span>常用模板</span>
-            <span className="v">12</span>
+            <span>成员</span>
+            <span className="v">{data.members?.length || 0}</span>
           </div>
           <div className="lib-item">
             <span style={{ color: "var(--amber)" }}>◆</span>
-            <span>已发布技能</span>
-            <span className="v">5</span>
+            <span>任务</span>
+            <span className="v">{data.tasks?.length || 0}</span>
           </div>
           <div className="lib-item">
             <span style={{ color: "var(--amber)" }}>◆</span>
-            <span>最近论断</span>
-            <span className="v">28</span>
+            <span>已审</span>
+            <span className="v">{grouped.done?.length || 0}</span>
           </div>
           <div className="lib-item">
             <span style={{ color: "var(--amber)" }}>◆</span>
-            <span>共享引用</span>
-            <span className="v">142</span>
+            <span>证据合计</span>
+            <span className="v">{evidenceTotal}</span>
           </div>
-          <h4 style={{ margin: "14px 0 10px" }}>本周贡献</h4>
-          {["Bob", "Alice", "Miro"].map((n, i) => (
-            <div className="lib-item" key={n}>
-              <span style={{ color: "var(--amber)" }}>★</span>
-              <span>{n}</span>
-              <span className="v">{42 - i * 11}</span>
+          <h4 style={{ margin: "14px 0 10px" }}>任务贡献</h4>
+          {contributions.length === 0 ? (
+            <div className="lib-item">
+              <span style={{ color: "var(--muted)" }}>暂无任务</span>
             </div>
-          ))}
+          ) : (
+            contributions.map((c) => (
+              <div className="lib-item" key={c.name}>
+                <span style={{ color: "var(--amber)" }}>★</span>
+                <span>{c.name}</span>
+                <span className="v">{c.count}</span>
+              </div>
+            ))
+          )}
         </aside>
       </div>
     </>
