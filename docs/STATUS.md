@@ -10,7 +10,7 @@ product_version: 0.5.0
 
 # Paper OS 当前状态
 
-本页是 2026-08-11 对当前工作区的审计快照。T0.2–T1.5 与 T3.3 的实现和文档已在初始提交 `1546dab` 之上按领域分组提交（`cd248a9`..`b33bdab`），工作区现为 clean。它仍不是发布证明：没有 PR、tag 或签名安装包，版本漂移尚未修复。任何接手者都应先运行本页的基线命令，再相信能力声明。
+本页是 2026-08-11 对当前工作区的审计快照。T0.2–T1.5 与 T3.3 的实现和文档已在初始提交 `1546dab` 之上按领域分组提交（`cd248a9`..`b33bdab`），工作区现为 clean。它仍不是发布证明：没有 PR、tag 或签名安装包。任何接手者都应先运行本页的基线命令，再相信能力声明。
 
 ## 状态口径
 
@@ -29,7 +29,7 @@ product_version: 0.5.0
 | 当前分支/提交 | `main` / `b33bdab`（在 `1546dab` 之上新增 5 个领域分组提交） |
 | 工作区 | clean；重设计与文档实现已提交，构建产物按 `.gitignore` 排除 |
 | 根版本 | `package.json` 为 `0.5.0` |
-| 桌面版本 | Tauri config 为 `0.5.0`，desktop package/Cargo 仍为 `0.4.0`，存在版本漂移 |
+| 桌面版本 | 根、Tauri config、desktop package、Cargo 均为 `0.5.0`（2026-08-11 统一） |
 | 当前 Windows 入口 | 根目录 `PaperOS.exe`，WinForms + WebView2 + 本地 Node 服务 |
 | Tauri | 已有脚手架和构建产物，但不是 README 声明的稳定主入口 |
 | Windows 发布产物 | ZIP 和 `.sha256` 存在；ZIP 排除 `app/node_modules`，launcher 依赖系统 .NET 8 Desktop Runtime，不是 self-contained/零依赖 portable |
@@ -293,7 +293,7 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 ## 已知风险
 
 1. **尚无 PR / tag / 签名发布**：重设计与文档实现已在 `1546dab` 之上按领域分组提交（`cd248a9`..`b33bdab`），dirty worktree 风险已消除；仍缺少 PR 审阅、版本 tag 和签名安装包，结果尚未绑定 tag/release。
-2. **版本漂移**：根、Tauri config、desktop package、Cargo 版本不一致。
+2. **发布版本治理**：根、Tauri config、desktop package、Cargo 已统一为 `0.5.0`（2026-08-11）；仍需在打 tag/release 时同步 bump。
 3. **发布声明超前**：Windows ZIP 缺少 Node 生产依赖和 self-contained .NET runtime；macOS/Linux 清单与实际产物不一致；原生代码签名未完成。
 4. **桌面部署依赖**：WinForms/Tauri 都启动外部 Node；WinForms 还依赖系统 .NET 8 Desktop Runtime，尚未证明零依赖 sidecar 交付。
 5. **桌面 WebView CSP**：Tauri config 当前为 `csp: null`。
