@@ -1,0 +1,124 @@
+name: Release
+
+# Build the web + IDE bundles and produce per-platform Paper OS artifacts.
+# Windows produces the native launcher (PaperOS.exe) + a portable zip. macOS and
+# Linux produce portable tarballs that run the Node server (Tectonic is fetched
+# on first launch inside the app). Tag a release (v*) to attach artifacts.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install web deps
+        run: npm --prefix web install
+      - name: Build web + IDE
+        run: npm run build
+      - name: Upload built runtime
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime
+          path: |
+            app/public/**
+            app/ide/**
+
+  windows:
+    needs: build-web
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - run: npm --prefix web install
+      - run: npm run build
+      - name: Build native launcher
+        run: ./build-launcher.ps1
+        shell: pwsh
+      - name: Package portable zip
+        run: npm run package:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paperos-windows
+          path: dist/release/*
+
+  macos:
+    needs: build-web
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm --prefix web install
+      - run: npm run build
+      - name: Package portable tarball
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          STAGE="dist/stage/PaperOS-$VER-macos-universal"
+          mkdir -p "$STAGE" dist/release
+          cp -r app "$STAGE"/app
+          rm -rf "$STAGE"/app/data "$STAGE"/app/node_modules
+          cp paperctl.py package.json "$STAGE"/ 2>/dev/null || true
+          cp -r product templates "$STAGE"/ 2>/dev/null || true
+          printf 'Paper OS %s (macOS)\nRequires Node.js 20+. Run: node app/server.mjs then open http://127.0.0.1:3719/\n' "$VER" > "$STAGE"/START.txt
+          tar -czf "dist/release/PaperOS-$VER-macos-universal.tar.gz" -C dist/stage "PaperOS-$VER-macos-universal"
+          shasum -a 256 "dist/release/PaperOS-$VER-macos-universal.tar.gz" > "dist/release/PaperOS-$VER-macos-universal.tar.gz.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paperos-macos
+          path: dist/release/*
+
+  linux:
+    needs: build-web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm --prefix web install
+      - run: npm run build
+      - name: Package portable tarball
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          STAGE="dist/stage/PaperOS-$VER-linux-x86_64"
+          mkdir -p "$STAGE" dist/release
+          cp -r app "$STAGE"/app
+          rm -rf "$STAGE"/app/data "$STAGE"/app/node_modules
+          cp paperctl.py package.json "$STAGE"/ 2>/dev/null || true
+          cp -r product templates "$STAGE"/ 2>/dev/null || true
+          printf 'Paper OS %s (Linux)\nRequires Node.js 20+. Run: node app/server.mjs then open http://127.0.0.1:3719/\n' "$VER" > "$STAGE"/START.txt
+          tar -czf "dist/release/PaperOS-$VER-linux-x86_64.tar.gz" -C dist/stage "PaperOS-$VER-linux-x86_64"
+          sha256sum "dist/release/PaperOS-$VER-linux-x86_64.tar.gz" > "dist/release/PaperOS-$VER-linux-x86_64.tar.gz.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paperos-linux
+          path: dist/release/*
+
+  publish:
+    needs: [windows, macos, linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*

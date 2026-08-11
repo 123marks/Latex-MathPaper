@@ -3,97 +3,142 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Threading;
+using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.WinForms;
 
-namespace MathModelingPaperOS.Launcher;
+namespace PaperOS.Launcher;
 
 internal static class Program
 {
     private const int DefaultPort = 3719;
-    private const uint MbIconError = 0x00000010;
-    private const uint MbIconInformation = 0x00000040;
-
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern int MessageBoxW(IntPtr hWnd, string text, string caption, uint type);
 
     [STAThread]
-    private static int Main()
+    private static void Main()
     {
+        ApplicationConfiguration.Initialize();
+        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+
         string root = AppContext.BaseDirectory;
+        // Prefer repo root when running from published folder beside app/
+        if (!File.Exists(Path.Combine(root, "app", "server.mjs")))
+        {
+            string parent = Directory.GetParent(root)?.FullName ?? root;
+            if (File.Exists(Path.Combine(parent, "app", "server.mjs"))) root = parent;
+        }
+
         string server = Path.Combine(root, "app", "server.mjs");
         if (!File.Exists(server))
         {
-            ShowMessage(
-                "app/server.mjs was not found. Run this launcher from the Math Modeling Paper OS folder.",
-                MbIconError);
-            return 2;
+            MessageBox.Show(
+                "找不到 app/server.mjs。请把 PaperOS.exe 放在项目根目录运行。",
+                "Paper OS",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+            return;
         }
 
         string? node = FindOnPath("node.exe");
         if (node is null)
         {
-            ShowMessage(
-                "Node.js 20+ is required. Install Node.js or use the portable folder on a machine with Node available.",
-                MbIconError);
-            return 2;
+            MessageBox.Show(
+                "需要 Node.js 20+。请先安装 Node 后再启动 Paper OS。",
+                "Paper OS",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+            return;
         }
+
         string nodeVersion = ReadNodeVersion(node);
         if (!NodeVersionSupported(nodeVersion))
         {
-            ShowMessage(
-                $"Node.js 20+ is required. Detected: {nodeVersion}. Install Node.js 20+ and restart Math Modeling Paper OS.",
-                MbIconError);
-            return 2;
+            MessageBox.Show(
+                $"需要 Node.js 20+，当前: {nodeVersion}",
+                "Paper OS",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+            return;
         }
 
         int port = ResolvePort();
-        string url = $"http://127.0.0.1:{port}";
         Process? serverProcess = null;
-
         try
         {
             if (!IsPaperOsHealthy(port))
             {
                 serverProcess = StartServer(node, root, port);
-                WaitForServerHealth(port, TimeSpan.FromSeconds(18));
+                WaitForServerHealth(port, TimeSpan.FromSeconds(20));
             }
 
-            OpenBrowser(url);
-            ShowMessage(
-                $"Math Modeling Paper OS is running at {url}.\n\nNode: {nodeVersion}\n\nClose this window to stop the local service started by this launcher.",
-                MbIconInformation);
-            return 0;
+            string ideUrl = $"http://127.0.0.1:{port}/ide/";
+            Application.Run(new IdeForm(ideUrl, serverProcess));
         }
         catch (Exception ex)
         {
-            ShowMessage(ex.Message, MbIconError);
-            return 1;
-        }
-        finally
-        {
+            MessageBox.Show(ex.Message, "Paper OS", MessageBoxButtons.OK, MessageBoxIcon.Error);
             if (serverProcess is { HasExited: false })
             {
-                serverProcess.Kill(entireProcessTree: true);
+                try { serverProcess.Kill(entireProcessTree: true); } catch { /* */ }
             }
         }
     }
 
-    private static void ShowMessage(string message, uint icon)
+    private sealed class IdeForm : Form
     {
-        MessageBoxW(IntPtr.Zero, message, "Math Modeling Paper OS", icon);
+        private readonly string _url;
+        private readonly Process? _server;
+        private readonly WebView2 _webView = new() { Dock = DockStyle.Fill };
+
+        public IdeForm(string url, Process? server)
+        {
+            _url = url;
+            _server = server;
+            Text = "Paper OS";
+            Width = 1440;
+            Height = 900;
+            MinimumSize = new Size(1100, 720);
+            StartPosition = FormStartPosition.CenterScreen;
+            BackColor = Color.FromArgb(12, 12, 15);
+            Controls.Add(_webView);
+            Load += async (_, _) => await InitWebView();
+            FormClosed += (_, _) =>
+            {
+                if (_server is { HasExited: false })
+                {
+                    try { _server.Kill(entireProcessTree: true); } catch { /* */ }
+                }
+            };
+        }
+
+        private async Task InitWebView()
+        {
+            try
+            {
+                var env = await CoreWebView2Environment.CreateAsync(null, Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PaperOS", "WebView2"));
+                await _webView.EnsureCoreWebView2Async(env);
+                _webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
+                _webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+                _webView.CoreWebView2.Settings.AreDevToolsEnabled = true;
+                _webView.CoreWebView2.Navigate(_url);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "WebView2 初始化失败。请安装 Microsoft Edge WebView2 Runtime。\n\n" + ex.Message,
+                    "Paper OS",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                Close();
+            }
+        }
     }
 
     private static int ResolvePort()
     {
         string? raw = Environment.GetEnvironmentVariable("PAPER_OS_PORT");
-        if (int.TryParse(raw, out int configuredPort) && configuredPort > 0)
-        {
-            return configuredPort;
-        }
-        if (!IsPortOpen(DefaultPort) || IsPaperOsHealthy(DefaultPort))
-        {
-            return DefaultPort;
-        }
+        if (int.TryParse(raw, out int configuredPort) && configuredPort > 0) return configuredPort;
+        if (!IsPortOpen(DefaultPort) || IsPaperOsHealthy(DefaultPort)) return DefaultPort;
         return FindFreePort();
     }
 
@@ -108,13 +153,9 @@ internal static class Program
             CreateNoWindow = true,
         };
         startInfo.Environment["PAPER_OS_PORT"] = port.ToString();
-
+        startInfo.Environment["PAPER_OS_DESKTOP"] = "1";
         Process? process = Process.Start(startInfo);
-        if (process is null)
-        {
-            throw new InvalidOperationException("Failed to start the local server.");
-        }
-        return process;
+        return process ?? throw new InvalidOperationException("无法启动本地服务。");
     }
 
     private static string ReadNodeVersion(string node)
@@ -127,7 +168,6 @@ internal static class Program
                 Arguments = "--version",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError = true,
                 CreateNoWindow = true,
             };
             using Process? process = Process.Start(startInfo);
@@ -136,18 +176,13 @@ internal static class Program
             process.WaitForExit(3000);
             return string.IsNullOrWhiteSpace(output) ? "unknown" : output;
         }
-        catch
-        {
-            return "unknown";
-        }
+        catch { return "unknown"; }
     }
 
     private static bool NodeVersionSupported(string version)
     {
         if (string.IsNullOrWhiteSpace(version) || !version.StartsWith("v", StringComparison.OrdinalIgnoreCase))
-        {
             return false;
-        }
         string majorText = version.TrimStart('v').Split('.')[0];
         return int.TryParse(majorText, out int major) && major >= 20;
     }
@@ -167,9 +202,9 @@ internal static class Program
         while (watch.Elapsed < timeout)
         {
             if (IsPaperOsHealthy(port)) return;
-            Thread.Sleep(350);
+            Thread.Sleep(300);
         }
-        throw new TimeoutException("The local Paper OS server did not become healthy in time.");
+        throw new TimeoutException("本地 Paper OS 服务启动超时。");
     }
 
     private static bool IsPortOpen(int port)
@@ -183,39 +218,21 @@ internal static class Program
             client.EndConnect(result);
             return true;
         }
-        catch
-        {
-            return false;
-        }
+        catch { return false; }
     }
 
     private static bool IsPaperOsHealthy(int port)
     {
         try
         {
-            using HttpClient client = new()
-            {
-                Timeout = TimeSpan.FromMilliseconds(900),
-            };
+            using HttpClient client = new() { Timeout = TimeSpan.FromMilliseconds(900) };
             using HttpResponseMessage response = client.GetAsync($"http://127.0.0.1:{port}/api/health").GetAwaiter().GetResult();
             if (!response.IsSuccessStatusCode) return false;
             string body = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
             return body.Contains("\"ok\": true", StringComparison.OrdinalIgnoreCase)
-                && body.Contains("\"name\": \"Math Modeling Paper OS\"", StringComparison.OrdinalIgnoreCase);
+                && body.Contains("Paper OS", StringComparison.OrdinalIgnoreCase);
         }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static void OpenBrowser(string url)
-    {
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = url,
-            UseShellExecute = true,
-        });
+        catch { return false; }
     }
 
     private static string? FindOnPath(string executable)
