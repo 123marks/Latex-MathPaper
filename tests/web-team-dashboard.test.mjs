@@ -60,3 +60,11 @@ test("TeamSpace shows only real derived metrics, never fabricated counts or peop
   assert.match(teamSource, /const evidenceTotal = useMemo/);
   assert.match(teamSource, /data\.tasks/);
 });
+
+test("TeamSpace 7-day activity heatmap is built only from real task.createdAt", () => {
+  assert.match(teamSource, /const activity = useMemo/);
+  assert.match(teamSource, /t\.createdAt/);
+  assert.match(teamSource, /近 7 天活动/);
+  assert.match(teamSource, /className="heat-cell"/);
+  assert.match(teamSource, /data-level=\{Math\.min\(4, cell\.count\)\}/);
+});

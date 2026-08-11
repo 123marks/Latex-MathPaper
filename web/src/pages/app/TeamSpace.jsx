@@ -119,6 +119,33 @@ export default function TeamSpace() {
       .slice(0, 5);
   }, [data.tasks]);
 
+  // 7-day contribution heatmap from real task.createdAt only (empty when no
+  // recent activity; never backfilled or invented).
+  const activity = useMemo(() => {
+    const days = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i -= 1) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      days.push(d.toISOString().slice(0, 10));
+    }
+    const dayset = new Set(days);
+    const byPerson = new Map();
+    for (const t of data.tasks || []) {
+      const day = String(t.createdAt || "").slice(0, 10);
+      if (!dayset.has(day)) continue;
+      const who = t.assignee || "未分配";
+      if (!byPerson.has(who)) byPerson.set(who, {});
+      const row = byPerson.get(who);
+      row[day] = (row[day] || 0) + 1;
+    }
+    const grid = [...byPerson.entries()].map(([name, counts]) => ({
+      name,
+      cells: days.map((day) => ({ day, count: counts[day] || 0 })),
+    }));
+    return { days, grid };
+  }, [data.tasks]);
+
   return (
     <>
       <div className="page-head">
@@ -294,6 +321,38 @@ export default function TeamSpace() {
           )}
         </aside>
       </div>
+
+      <section className="panel team-activity">
+        <div className="panel-head">
+          <h3>近 7 天活动</h3>
+          <span className="chip muted">按任务创建时间</span>
+        </div>
+        {activity.grid.length === 0 ? (
+          <div className="empty" style={{ fontSize: 13 }}>近 7 天暂无任务活动。创建任务后会在此累积真实贡献热力。</div>
+        ) : (
+          <div className="activity-heatmap">
+            <div className="heat-head">
+              <span className="heat-name" />
+              {activity.days.map((day) => (
+                <span key={day} className="heat-daylabel">{day.slice(5)}</span>
+              ))}
+            </div>
+            {activity.grid.map((row) => (
+              <div className="heat-row" key={row.name}>
+                <span className="heat-name" title={row.name}>{row.name}</span>
+                {row.cells.map((cell) => (
+                  <span
+                    key={cell.day}
+                    className="heat-cell"
+                    data-level={Math.min(4, cell.count)}
+                    title={`${cell.day} · ${row.name} · ${cell.count} 个任务`}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </>
   );
 }
