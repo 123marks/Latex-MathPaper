@@ -201,10 +201,17 @@ test("releases manifest lists platforms and reports unavailable downloads", asyn
     assert.equal(win.status, 404);
     assert.equal((await win.json()).code, "ASSET_NOT_READY");
   }
-  // macOS artifact is not built on this machine -> friendly not-ready 404.
+  // macOS: the portable tar.gz may or may not have been packaged on this
+  // machine. Either way the endpoint must stay honest — a real stream with a
+  // checksum, or a friendly not-ready 404. Never a fabricated success.
   const mac = await fetch(`http://127.0.0.1:${port}/api/download/macos`);
-  assert.equal(mac.status, 404);
-  assert.equal((await mac.json()).code, "ASSET_NOT_READY");
+  if (mac.status === 200) {
+    assert.ok((mac.headers.get("x-checksum-sha256") || "").length >= 64);
+    await mac.arrayBuffer(); // drain the stream
+  } else {
+    assert.equal(mac.status, 404);
+    assert.equal((await mac.json()).code, "ASSET_NOT_READY");
+  }
   // Unknown platform -> 404 UNKNOWN_OS.
   const unknown = await fetch(`http://127.0.0.1:${port}/api/download/haiku`);
   assert.equal(unknown.status, 404);

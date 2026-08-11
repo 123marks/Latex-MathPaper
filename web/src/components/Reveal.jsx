@@ -8,6 +8,7 @@ export default function Reveal({
   delay = 0,
   y = 18,
   className,
+  style,
   once = true,
 }) {
   const reduced = useReducedMotion();
@@ -23,6 +24,7 @@ export default function Reveal({
   return (
     <motion.div
       className={className}
+      style={style}
       {...motionProps}
     >
       {children}

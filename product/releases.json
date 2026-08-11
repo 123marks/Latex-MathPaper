@@ -18,17 +18,17 @@
     },
     {
       "os": "macos",
-      "label": "Apple Silicon + Intel",
-      "ext": ".dmg",
-      "file": "dist/release/PaperOS-macos-universal.dmg",
-      "minimum": "macOS 12+"
+      "label": "便携版 · 需要 Node.js 20+",
+      "ext": ".tar.gz",
+      "file": "dist/release/PaperOS-0.6.0-portable-node.tar.gz",
+      "minimum": "macOS 12+ · 非签名原生 App"
     },
     {
       "os": "linux",
-      "label": "x64 · glibc 2.31+",
-      "ext": ".AppImage",
-      "file": "dist/release/PaperOS-linux-x86_64.AppImage",
-      "minimum": "Ubuntu 20.04+"
+      "label": "便携版 · 需要 Node.js 20+",
+      "ext": ".tar.gz",
+      "file": "dist/release/PaperOS-0.6.0-portable-node.tar.gz",
+      "minimum": "glibc 2.31+ · 非原生 AppImage"
     }
   ]
 }

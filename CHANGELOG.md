@@ -11,9 +11,15 @@
 - 已存 `pdf-region` 标注在 PDF 页面上回显为叠加框：按页过滤、百分比定位（缩放无关）、悬停显示备注、resolved 状态转绿。
 - arXiv 导入（3d-2）：文献导入入口同时识别 arXiv ID / `arXiv:` 前缀 / abs|pdf 链接，经 arXiv Atom API 生成 `@misc` 条目（无版本号 key 跨版本去重 409，未知 ID 404、离线 502）。
 
+- Dashboard 重做为控制中枢：工作区行卡直接打开、运行时体检（含 Tectonic 与修复提示）、最近 5 条 AI 会话一键复用、7 天用量迷你面板——全部来自真实端点。
+- 管理台补齐 mars-admin 式两大能力（真实数据）：服务监控 `GET /api/admin/monitor`（进程 RSS/heap、系统内存/CPU/宿主时长、各数据文件体积、Workspace 数；Windows 无 load average 如实不展示）与在线会话 `GET/DELETE /api/admin/sessions`（仅 token 前缀、强制下线即刻生效、保护当前会话）；审计日志客户端分页（50/页）、Key 概览搜索与「只看已配置」。
+- macOS / Linux 便携包：`npm run package:portable` 产出 `PaperOS-<v>-portable-node.tar.gz`（Node 服务 + 构建产物 + start.sh，诚实标注「需要 Node.js 20+ · 非签名原生 App」）；`releases.json` macos/linux 资产指向该文件，下载端点按磁盘存在性与 SHA-256 如实提供。
+- About / HowTo 重写为当前产品的真实叙事（IDE 优先六步上手、设计谱系、本地优先声明），配色统一 Horizon amber；`Reveal` 组件支持透传 style。
+
 ### Changed
 
 - 开始拆分 `app/server.mjs` 单体（STATUS 风险 #6）：纯函数域抽到 `app/lib/`——`usage.mjs`（定价/聚合）、`bibtex.mjs`（BibTeX 解析）、`annotations.mjs`（标注词汇与目标校验），行为零变化并新增直接单元测试。
+- 发布清单测试改为动态一致性断言：每个平台的下载端点必须与 `available` 状态一致（真流 + SHA-256 校验头，或诚实的 `ASSET_NOT_READY` 404），不再硬编码平台可用性。
 
 ## [0.6.0] - 2026-08-12
 
