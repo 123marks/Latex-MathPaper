@@ -1,0 +1,185 @@
+/* =================================================================
+   Paper OS v2 — Horizon Atelier · Design Tokens
+   Style: deep charcoal base + warm amber accent + editorial serif
+   ================================================================= */
+
+:root {
+  color-scheme: dark;
+
+  /* ---------- Base (deep charcoal, never pure black) ---------- */
+  --bg-0: #08080a;
+  --bg-1: #0a0a0c;
+  --bg-2: #0f0f12;
+  --bg-3: #141417;
+  --bg-app: #0d0d10;
+
+  /* warm tints layered over the charcoal to avoid plastic-feeling flatness */
+  --ink-line: rgba(232, 227, 218, 0.08);
+  --ink-line-2: rgba(232, 227, 218, 0.14);
+
+  /* ---------- Text (cool-warm off-white, never #fff) ---------- */
+  --text: #e8e3da;
+  --text-soft: #c4beb1;
+  --muted: #a59f95;
+  --faint: #6f6a62;
+
+  /* ---------- Brand: warm amber family ---------- */
+  --amber: #d4a341;
+  --amber-bright: #e2b564;
+  --amber-deep: #a87a26;
+  --amber-soft: rgba(212, 163, 65, 0.14);
+  --amber-glow: rgba(212, 163, 65, 0.4);
+
+  /* Vermilion accent for important emphasis / errors */
+  --vermilion: #c44747;
+  --vermilion-soft: rgba(196, 71, 71, 0.16);
+
+  /* Signal jade for success / online / published */
+  --signal: #4d9978;
+  --signal-2: #6db594;
+  --signal-soft: rgba(77, 153, 120, 0.16);
+
+  /* Cool ink for code accents */
+  --ink-cool: #7e9bb8;
+
+  --accent: var(--amber);
+  --accent-bright: var(--amber-bright);
+  --accent-deep: var(--amber-deep);
+
+  /* ---------- Gradients (the Horizon Glow signature) ---------- */
+  --grad-horizon: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(212, 163, 65, 0.06) 35%,
+    rgba(212, 163, 65, 0.22) 65%,
+    rgba(196, 71, 71, 0.16) 85%,
+    transparent 100%
+  );
+  --grad-amber: linear-gradient(135deg, #d4a341 0%, #e2b564 50%, #d4a341 100%);
+  --grad-vermilion: linear-gradient(135deg, #c44747 0%, #d4a341 100%);
+  --grad-quill: conic-gradient(
+    from 180deg,
+    rgba(212, 163, 65, 0.0) 0%,
+    rgba(212, 163, 65, 0.4) 30%,
+    rgba(232, 181, 100, 0.6) 50%,
+    rgba(196, 71, 71, 0.5) 70%,
+    rgba(212, 163, 65, 0.0) 100%
+  );
+
+  /* ---------- Glass material (sparingly used) ---------- */
+  --glass: rgba(232, 227, 218, 0.04);
+  --glass-2: rgba(232, 227, 218, 0.07);
+  --glass-3: rgba(232, 227, 218, 0.10);
+  --glass-border: rgba(232, 227, 218, 0.10);
+  --glass-border-2: rgba(232, 227, 218, 0.16);
+  --blur: 20px;
+  --blur-lg: 36px;
+
+  /* ---------- Shadows + glows ---------- */
+  --shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.85);
+  --shadow-lg: 0 50px 120px -40px rgba(0, 0, 0, 0.9);
+  --shadow-sm: 0 10px 30px -18px rgba(0, 0, 0, 0.7);
+  --glow-amber: 0 0 0 1px rgba(212, 163, 65, 0.4),
+    0 12px 40px -12px rgba(212, 163, 65, 0.45);
+  --ring: 0 0 0 3px rgba(212, 163, 65, 0.32);
+
+  /* ---------- Type ---------- */
+  --font-display: "Playfair Display", "Source Han Serif SC", "Songti SC", "Noto Serif SC",
+    "Times New Roman", serif;
+  --font-display-it: "Playfair Display", "Source Han Serif SC", "Noto Serif SC", serif;
+  --font-sans: "Inter", "Inter Tight", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", "IBM Plex Mono", ui-monospace, "Consolas",
+    monospace;
+  --font-math: "STIX Two Math", "Latin Modern Math", "Cambria Math", "Times New Roman", serif;
+
+  --radius-xl: 28px;
+  --radius: 20px;
+  --radius-sm: 14px;
+  --radius-xs: 9px;
+  --radius-pill: 999px;
+
+  --maxw: 1240px;
+  --nav-h: 64px;
+  --ide-rail: 260px;
+  --ide-right: 360px;
+  --ide-status: 28px;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* =================================================================
+     v2 REDESIGN additions — see docs/redesign/01-design-system.md
+     (additive only; do not remove the tokens above)
+     ================================================================= */
+
+  /* elevated surface + stronger hairline + info semantic */
+  --bg-elev: #17171b;
+  --ink-line-3: rgba(232, 227, 218, 0.2);
+  --info: #5b8fb0;
+  --info-soft: rgba(91, 143, 176, 0.16);
+
+  /* type scale (modular ~1.25) */
+  --fs-hero: clamp(48px, 7vw, 92px);
+  --fs-h1: clamp(34px, 4.5vw, 52px);
+  --fs-h2: clamp(26px, 3vw, 36px);
+  --fs-h3: 22px;
+  --fs-lead: 19px;
+  --fs-body: 15px;
+  --fs-sm: 13px;
+  --fs-xs: 11.5px;
+
+  /* spacing scale (8pt baseline) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+  --sp-9: 96px;
+  --sp-10: 128px;
+
+  /* z-index scale (kill magic numbers) */
+  --z-bg: -3;
+  --z-grain: -2;
+  --z-content: 1;
+  --z-nav: 100;
+  --z-dropdown: 200;
+  --z-overlay: 900;
+  --z-modal: 1000;
+  --z-toast: 1100;
+  --z-tooltip: 1200;
+
+  /* cinematic chrome shadow for floating product screenshots */
+  --shadow-chrome: 0 40px 120px -30px rgba(0, 0, 0, 0.9),
+    0 8px 30px -12px rgba(212, 163, 65, 0.18);
+
+  /* gold-foil gradient for hero emphasis words (animated with foilShimmer) */
+  --grad-foil: linear-gradient(
+    100deg,
+    #b8801f 0%,
+    #f0d38a 25%,
+    #e2b564 50%,
+    #f0d38a 75%,
+    #b8801f 100%
+  );
+
+  /* motion durations */
+  --dur-1: 0.15s;
+  --dur-2: 0.25s;
+  --dur-3: 0.4s;
+  --dur-4: 0.7s;
+  --dur-5: 1.1s;
+
+  /* chart categorical palette (warm, low-saturation, dark-legible) */
+  --chart-1: #d4a341;
+  --chart-2: #6db594;
+  --chart-3: #7e9bb8;
+  --chart-4: #c98a5a;
+  --chart-5: #b48ead;
+  --chart-6: #c44747;
+  --chart-grid: rgba(232, 227, 218, 0.08);
+  --chart-axis: var(--muted);
+}

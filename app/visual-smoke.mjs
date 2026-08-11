@@ -1,134 +1,133 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 
-const html = await readFile("app/public/index.html", "utf-8");
-const css = await readFile("app/public/styles.css", "utf-8");
-const js = await readFile("app/public/app.js", "utf-8");
-
-const htmlMarkers = [
-  "Model Gateway for Competition Papers",
-  "Official Site",
-  "Signal relay",
-  "Provider relay",
-  "Research OS",
-  "Application Workbench",
-  "Local Runtime",
-  "MathModelingPaperOS.exe",
-  "runtimeUrl",
-  "motion-backplane",
-  "gateway-console",
-  "gateway-map",
-  "gateway-node",
-  "route-beam",
-  "live-pulse",
-  "model-orbit",
-  "map-grid",
-  "traffic-lane",
-  "request-stream",
-  "relay-matrix",
-  "signal-ledger",
-  "stage-runway",
-  "Package Submission",
-  "Workflow Intelligence",
-  "Contest Onboard",
-  "Enter App",
-  'data-view="home"',
-  "viewToggle",
-  "Back to Official Site",
-  "ops-ribbon",
-  "paper-health",
-  "throughput-board",
-  "tool-drawer",
-  "drawer-status",
-  "drawer-tabs",
-  "data-drawer-tab",
-  "data-drawer-panel",
-  'aria-pressed="false"',
-  'aria-selected="true"',
-  "viewport-fit=cover",
-];
-
-const cssMarkers = [
-  "@keyframes ambientSweep",
-  "@keyframes particleDrift",
-  "@keyframes rotateHalo",
-  "@keyframes trafficFlow",
-  "@keyframes streamPulse",
-  "@keyframes orbitDash",
-  "@keyframes tickerMove",
-  "@keyframes trackRun",
-  "@keyframes matrixRoute",
-  "@keyframes runtimeOrbit",
-  "@keyframes ribbonSweep",
-  "@keyframes throughputSweep",
-  "@keyframes drawerSignal",
-  "@keyframes drawerPanelIn",
-  "@keyframes mapSweep",
-  "@keyframes beamTravel",
-  "@keyframes ledgerBeat",
-  "@keyframes statusSpark",
-  "@media (prefers-reduced-motion: reduce)",
-  "@media (max-width: 1320px)",
-  "@media (max-width: 760px)",
-  'body[data-view="home"] .app-shell',
-  'body[data-view="app"] .official-site',
-  "min-height: 44px",
-  "touch-action: manipulation",
-  "transform",
-  "opacity",
-];
-
-const jsMarkers = [
-  "setView",
-  "setDrawerTab",
-  "renderStages",
-  "renderBlueprint",
-  "package-submission",
-  "loadSummary",
-  "loadIntelligence",
-];
+// Audit the Paper OS v2 "Horizon Atelier" design-system source plus the
+// produced build. Enforces the warm-amber identity (NOT purple-blue AI
+// clichés), the liquid-glass material, the persistent-motion contract, the
+// Quill Circle brand mark, and the editorial Playfair typography.
+const styleFiles = ["tokens.css", "base.css", "components.css", "pages.css"];
+const parts = await Promise.all(
+  styleFiles.map((file) => readFile(`web/src/styles/${file}`, "utf-8")),
+);
+const css = parts.join("\n");
+const indexHtml = await readFile("app/public/index.html", "utf-8");
+const horizonBackground = await readFile("web/src/components/HorizonBackground.jsx", "utf-8");
+const appSource = await readFile("web/src/App.jsx", "utf-8");
+const siteHeader = await readFile("web/src/components/SiteHeader.jsx", "utf-8");
+const brandLogo = await readFile("web/src/components/Logo.jsx", "utf-8");
 
 function assertIncludes(label, content, markers) {
-  const missing = markers.filter((marker) => !content.includes(marker));
+  const missing = markers.filter((m) => !content.includes(m));
   if (missing.length) {
     throw new Error(`${label} missing markers: ${missing.join(", ")}`);
   }
 }
 
-assertIncludes("HTML", html, htmlMarkers);
-assertIncludes("CSS", css, cssMarkers);
-assertIncludes("JS", js, jsMarkers);
+// ----- Horizon Atelier palette: deep charcoal + warm amber -----
+assertIncludes("palette", css, [
+  "color-scheme: dark",
+  "--bg-1:",
+  "--amber:",
+  "--amber-bright:",
+  "--vermilion:",
+  "--signal:",
+  "--grad-amber:",
+  "--grad-horizon:",
+]);
 
-const keyframes = [...css.matchAll(/@keyframes\s+[a-zA-Z0-9_-]+/g)].map((match) => match[0]);
+// ----- Editorial typography: Playfair display + Inter body + JetBrains mono -----
+assertIncludes("typography", css, [
+  "--font-display:",
+  "--font-sans:",
+  "--font-mono:",
+  "Playfair Display",
+  "Inter",
+  "JetBrains Mono",
+]);
+
+// ----- Brand mark: Quill Circle (the v2 visual signature) -----
+assertIncludes("quill-circle", css, [
+  ".quill-circle",
+  "conic-gradient",
+  "@keyframes quillSpin",
+  ".quill-mark",
+  ".quill-glyph",
+  ".quill-mark-glyph",
+]);
+assertIncludes("brand-logo-in-use", siteHeader, ["Logo", "Paper OS"]);
+assertIncludes("brand-logo-svg", brandLogo, ["svg", "Paper OS", "linearGradient"]);
+
+// ----- Signature Horizon Glow -----
+assertIncludes("horizon-glow", css, [
+  ".horizon",
+  "@keyframes horizonPulse",
+]);
+
+// ----- Liquid-glass material -----
+assertIncludes("liquid-glass", css, [
+  "backdrop-filter",
+  ".glass",
+  ".glass-frost",
+]);
+
+// ----- Persistent motion system -----
+assertIncludes("motion", css, [
+  "@keyframes horizonPulse",
+  "@keyframes quillSpin",
+  "@keyframes shimmer",
+  "@keyframes floatY",
+  "@keyframes pulseDot",
+  "@keyframes spinSlow",
+  "@keyframes marquee",
+  "@keyframes foilShimmer",
+  "@keyframes marchAnts",
+]);
+
+// ----- Accessibility + responsiveness -----
+assertIncludes("responsive/a11y", css, [
+  "@media (prefers-reduced-motion: reduce)",
+  "@media (max-width: 1080px)",
+  "@media (max-width: 880px)",
+  "@media (max-width: 640px)",
+  ":focus-visible",
+]);
+
+// ----- The active WebGL horizon keeps a static accessibility/failure fallback -----
+assertIncludes("webgl-horizon", horizonBackground, [
+  "ogl",
+  "Renderer",
+  "Program",
+  "prefers-reduced-motion",
+  "bg-fallback",
+]);
+assertIncludes("horizon-in-use", appSource, ["HorizonBackground", "<HorizonBackground />"]);
+
+// ----- SPA shell + assets -----
+assertIncludes("spa shell", indexHtml, ['id="root"', "assets/"]);
+
+const assets = await readdir("app/public/assets");
+if (!assets.some((f) => f.endsWith(".css"))) throw new Error("built CSS asset missing");
+if (!assets.some((f) => f.endsWith(".js"))) throw new Error("built JS asset missing");
+if (!assets.some((f) => f.endsWith(".woff2"))) throw new Error("self-hosted fonts missing from build");
+
+const keyframes = [...css.matchAll(/@keyframes\s+[a-zA-Z0-9_-]+/g)].map((m) => m[0]);
 if (keyframes.length < 8) {
   throw new Error(`expected persistent motion system, found ${keyframes.length} keyframes`);
 }
 
-const sectionCount = [...html.matchAll(/<section\b/g)].length;
-if (sectionCount < 6) {
-  throw new Error(`expected landing + app section hierarchy, found ${sectionCount} sections`);
-}
-
+// ----- Anti-slop: avoid the AI-purple-blue cliché, and definitely NO jade/aurora palette -----
 const badPatterns = [
-  "linear-gradient(135deg, #667eea",
-  "linear-gradient(135deg, #7c3aed",
-  "font-family: Inter",
+  "#667eea",
+  "#7c3aed",
+  "font-family: Inter", // Inter is no longer the body font; variable-Inter is fine
   "font-family: Roboto",
-  "bounce",
-  "elastic",
+  "--jade:", // old palette must be fully replaced
+  "--grad-aurora:",
 ];
-const presentBadPatterns = badPatterns.filter((pattern) => css.includes(pattern) || html.includes(pattern));
-if (presentBadPatterns.length) {
-  throw new Error(`AI-slop pattern(s) detected: ${presentBadPatterns.join(", ")}`);
+const present = badPatterns.filter((p) => css.includes(p));
+if (present.length) {
+  throw new Error(`AI-slop or legacy palette detected: ${present.join(", ")}`);
 }
 
-if (html.includes("LaTeX-first Contest Studio") || html.includes("Turn problem files, data, AI")) {
-  throw new Error("old static hero copy is still present");
-}
-
-if (html.includes("flow-node")) {
-  throw new Error("old flow-node preview is still present");
-}
-
-console.log("Visual implementation smoke OK");
-console.log(`Sections: ${sectionCount}`);
+console.log("Visual implementation smoke OK (Horizon Atelier)");
 console.log(`Keyframes: ${keyframes.length}`);
+console.log(`Built assets: ${assets.length} files`);

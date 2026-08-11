@@ -1,0 +1,503 @@
+/* =================================================================
+   Paper OS v2 — Base: Horizon Glow, Quill Circle, ambient motion
+   ================================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-1);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-synthesis-weight: none;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ----- static brand light-field, shown only if the GPU layer fails ----- */
+body::before,
+.bg-fallback {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 50% at 16% 100%, rgba(212, 163, 65, 0.16), transparent 62%),
+    radial-gradient(60% 45% at 88% 100%, rgba(196, 71, 71, 0.12), transparent 60%),
+    linear-gradient(
+      180deg,
+      var(--bg-0) 0%,
+      var(--bg-0) 52%,
+      rgba(212, 163, 65, 0.05) 74%,
+      rgba(212, 163, 65, 0.14) 90%,
+      rgba(196, 71, 71, 0.16) 100%
+    );
+}
+.bg-video,
+.bg-scrim {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.bg-video {
+  z-index: calc(var(--z-bg) + 1);
+  object-fit: cover;
+  opacity: 0.18;
+}
+
+.bg-scrim {
+  z-index: calc(var(--z-bg) + 2);
+  background: linear-gradient(
+    180deg,
+    rgba(8, 8, 10, 0.32) 0%,
+    rgba(8, 8, 10, 0.44) 62%,
+    rgba(18, 12, 10, 0.28) 100%
+  );
+}
+
+/* horizon-glow used as a standalone element on hero / CTA sections */
+.horizon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 36vh;
+  pointer-events: none;
+  background: var(--grad-horizon);
+  filter: blur(2px);
+  animation: horizonPulse 14s ease-in-out infinite;
+  z-index: 0;
+}
+.horizon::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(232, 181, 100, 0.7) 50%,
+    transparent
+  );
+  filter: blur(0.6px);
+}
+
+/* very faint grain to avoid plastic dark surfaces */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 0.95  0 0 0 0 0.85  0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* a few global element defaults */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  color: inherit;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: var(--radius-xs);
+}
+
+::selection {
+  background: rgba(212, 163, 65, 0.28);
+  color: #fff8ee;
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 163, 65, 0.18);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 163, 65, 0.34);
+  background-clip: content-box;
+}
+
+/* ============================================================
+   Quill Circle — the brand mark, also used as a loading/AI state
+   ============================================================ */
+.quill-circle {
+  position: relative;
+  width: var(--size, 120px);
+  height: var(--size, 120px);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  isolation: isolate;
+}
+.quill-circle::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(212, 163, 65, 0.0) 0%,
+    rgba(212, 163, 65, 0.7) 30%,
+    rgba(232, 181, 100, 0.9) 50%,
+    rgba(196, 71, 71, 0.7) 70%,
+    rgba(212, 163, 65, 0.0) 100%
+  );
+  filter: blur(0.4px);
+  animation: quillSpin 18s linear infinite;
+  mask: radial-gradient(circle, transparent 64%, black 66%, black 78%, transparent 80%);
+  -webkit-mask: radial-gradient(circle, transparent 64%, black 66%, black 78%, transparent 80%);
+}
+.quill-circle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--grad-amber);
+  opacity: 0.9;
+  filter: blur(0.6px);
+  mask: radial-gradient(circle, black 30%, transparent 60%);
+  -webkit-mask: radial-gradient(circle, black 30%, transparent 60%);
+}
+.quill-glyph {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display-it);
+  font-style: italic;
+  font-weight: 400;
+  font-size: calc(var(--size, 120px) * 0.42);
+  line-height: 1;
+  color: #f6e6c2;
+  text-shadow: 0 0 14px rgba(232, 181, 100, 0.6);
+  letter-spacing: -0.02em;
+}
+
+/* small inline quill for nav and footers */
+.quill-mark {
+  position: relative;
+  width: var(--size, 28px);
+  height: var(--size, 28px);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+.quill-mark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px dashed rgba(212, 163, 65, 0.5);
+  animation: none;
+}
+.quill-mark-core {
+  width: calc(var(--size, 28px) * 0.43);
+  height: calc(var(--size, 28px) * 0.43);
+  border-radius: 3px;
+  background: var(--grad-amber);
+  box-shadow: 0 0 10px rgba(232, 181, 100, 0.65);
+}
+.quill-mark-glyph {
+  font-family: var(--font-display-it);
+  font-style: italic;
+  font-size: 15px;
+  color: #f6e6c2;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 0 8px rgba(232, 181, 100, 0.5);
+}
+.quill-mark--loading::before {
+  animation: quillSpin 12s linear infinite;
+}
+.quill-mark--thinking::before {
+  animation: quillSpin 8s linear infinite;
+}
+
+/* Reusable document-trust motifs (docs/redesign/01 §8). */
+.action-timeline {
+  container-type: inline-size;
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.action-timeline__item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) max-content;
+  align-items: start;
+  gap: 10px;
+  min-height: 52px;
+  padding: 4px 0 12px;
+}
+.action-timeline__item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 28px;
+  bottom: 0;
+  left: 11.5px;
+  width: 1px;
+  background: var(--ink-line-2);
+}
+.action-timeline__item--done:not(:last-child)::after {
+  background: color-mix(in srgb, var(--signal) 72%, var(--ink-line-2));
+}
+.action-timeline__index {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--ink-line-2);
+  border-radius: 50%;
+  background: var(--bg-1);
+  color: var(--muted);
+  font: 500 10px/1 var(--font-mono);
+}
+.action-timeline__item--done .action-timeline__index {
+  border-color: color-mix(in srgb, var(--signal) 72%, transparent);
+  color: var(--signal);
+}
+.action-timeline__item--running .action-timeline__index {
+  border-color: color-mix(in srgb, var(--amber) 70%, transparent);
+  color: var(--amber-bright);
+}
+.action-timeline__copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding-top: 2px;
+}
+.action-timeline__title {
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 550;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.action-timeline__description,
+.action-timeline-empty {
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.action-timeline__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  color: var(--faint);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.action-timeline__item--done .action-timeline__status {
+  color: var(--signal);
+}
+.action-timeline__item--running .action-timeline__status {
+  color: var(--amber-bright);
+}
+.action-timeline-empty {
+  padding: 10px 0;
+}
+
+.evidence-flow {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.evidence-flow__path {
+  fill: none;
+  stroke: color-mix(in srgb, var(--amber) 60%, transparent);
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 5 5;
+}
+.evidence-flow__path--animated {
+  animation: marchAnts 2.8s linear infinite;
+}
+.evidence-flow__anchor {
+  fill: var(--bg-1);
+  stroke: color-mix(in srgb, var(--amber-bright) 74%, transparent);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.count-up {
+  font-variant-numeric: tabular-nums;
+}
+
+@container (max-width: 360px) {
+  .action-timeline__item {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+  .action-timeline__status {
+    grid-column: 2;
+    margin-top: -4px;
+  }
+}
+
+
+/* ============================================================
+   Persistent motion
+   ============================================================ */
+@keyframes horizonPulse {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: scaleX(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1.02);
+  }
+}
+@keyframes quillSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes shimmer {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(120%);
+  }
+}
+@keyframes floatY {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes spinSlow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes risein {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pulseDot {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.4;
+  }
+}
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes foilShimmer {
+  to {
+    background-position: 220% center;
+  }
+}
+@keyframes marchAnts {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+/* Traceable badge — very slow rotating seal (docs/redesign/01 §8.3) */
+.trace-badge-spin {
+  animation: spinSlow 40s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .horizon {
+    animation: none;
+  }
+  .quill-circle::before,
+  .quill-mark::before,
+  .trace-badge-spin,
+  .evidence-flow__path--animated {
+    animation: none;
+  }
+}

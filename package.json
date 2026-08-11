@@ -1,15 +1,25 @@
 {
-  "name": "math-modeling-paper-os",
-  "version": "0.2.0",
+  "name": "paper-os",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node app/server.mjs",
+    "ide:build": "node apps/desktop/build-ide.mjs",
+    "web:install": "npm --prefix web install",
+    "web:dev": "npm --prefix web run dev",
+    "web:build": "npm --prefix web run build",
+    "build": "npm --prefix web run build && npm run ide:build",
+    "package:win": "node scripts/package-release.mjs",
     "smoke": "node app/smoke.mjs",
     "visual-smoke": "node app/visual-smoke.mjs",
+    "home-hero-visual-smoke": "node app/home-hero-visual-smoke.mjs",
+    "public-pages-visual-smoke": "node app/public-pages-visual-smoke.mjs",
+    "auth-visual-smoke": "node app/auth-visual-smoke.mjs",
     "dom-ui-smoke": "node app/dom-ui-smoke.mjs",
     "headed-visual-smoke": "node app/headed-visual-smoke.mjs",
-    "browser-visual-smoke": "node app/browser-visual-smoke.mjs",
+    "browser-visual-smoke": "node app/browser-visual-smoke.mjs --strict",
+    "browser-visual-smoke:optional": "node app/browser-visual-smoke.mjs",
     "runtime-timeout-smoke": "node app/runtime-timeout-smoke.mjs"
   },
   "engines": {

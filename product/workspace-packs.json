@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "defaultPack": "general",
+  "packs": [
+    {
+      "id": "general",
+      "name": "General workspace",
+      "description": "Open an existing folder with editing, search, and AI assistance.",
+      "capabilities": ["files", "search", "ai"]
+    },
+    {
+      "id": "latex",
+      "name": "LaTeX document",
+      "description": "Create an article or report with local compilation and PDF preview.",
+      "template": "templates/workspaces/latex",
+      "capabilities": ["files", "search", "ai", "latex", "pdf", "bibliography"]
+    },
+    {
+      "id": "markdown",
+      "name": "Markdown notes",
+      "description": "Create a lightweight long-form writing and notes workspace.",
+      "template": "templates/workspaces/markdown",
+      "capabilities": ["files", "search", "ai", "markdown"]
+    },
+    {
+      "id": "math-modeling",
+      "name": "Mathematical modeling",
+      "description": "Competition stages, evidence ledgers, paperctl tasks, scripts, figures, LaTeX, and submission checks.",
+      "adapter": "legacy-contest",
+      "capabilities": ["files", "search", "paperctl", "ai", "latex", "pdf", "bibliography", "evidence", "stages", "figures", "submission"]
+    }
+  ]
+}

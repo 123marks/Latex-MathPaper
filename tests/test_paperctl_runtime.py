@@ -437,12 +437,14 @@ END_FILE
                 exit_code = paperctl.package_app(args)
 
             self.assertEqual(exit_code, 0)
-            self.assertTrue((output_dir / "MathModelingPaperOS.cmd").exists())
-            if (paperctl.ROOT / "MathModelingPaperOS.exe").exists():
-                self.assertTrue((output_dir / "MathModelingPaperOS.exe").exists())
-                self.assertTrue((output_dir / "MathModelingPaperOS.dll").exists())
-                self.assertTrue((output_dir / "MathModelingPaperOS.deps.json").exists())
-                self.assertTrue((output_dir / "MathModelingPaperOS.runtimeconfig.json").exists())
+            self.assertTrue((output_dir / "build-launcher.ps1").exists())
+            if (paperctl.ROOT / "PaperOS.exe").exists():
+                self.assertTrue((output_dir / "PaperOS.exe").exists())
+                self.assertTrue((output_dir / "PaperOS.dll").exists())
+                self.assertTrue((output_dir / "PaperOS.deps.json").exists())
+                self.assertTrue((output_dir / "PaperOS.runtimeconfig.json").exists())
+            self.assertFalse((output_dir / "MathModelingPaperOS.cmd").exists())
+            self.assertFalse((output_dir / "MathModelingPaperOS.exe").exists())
             self.assertTrue((output_dir / "app" / "server.mjs").exists())
             self.assertTrue((output_dir / "product" / "knowledge-base.json").exists())
             self.assertTrue((output_dir / "templates" / "contest").exists())

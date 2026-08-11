@@ -1,0 +1,34 @@
+{
+  "version": "0.5.0",
+  "channel": "stable",
+  "publishedAt": "2026-07-20",
+  "notes": [
+    "EditTransaction 事务化 Apply：预览带 mtime、冲突 409、失败回滚",
+    "每用户 API Key 加密存储（AES-256-GCM），账户中心与会话管理",
+    "Ctrl+P 快速打开、Ctrl+Shift+S 全部保存、可关闭的脏标签",
+    "登录限流、安全响应头（CSP 等）、请求体上限等安全加固"
+  ],
+  "assets": [
+    {
+      "os": "windows",
+      "label": "Windows 10 / 11 · x64",
+      "ext": ".zip",
+      "file": "dist/release/PaperOS-0.5.0-windows-x64.zip",
+      "minimum": "Windows 10 1809+"
+    },
+    {
+      "os": "macos",
+      "label": "Apple Silicon + Intel",
+      "ext": ".dmg",
+      "file": "dist/release/PaperOS-macos-universal.dmg",
+      "minimum": "macOS 12+"
+    },
+    {
+      "os": "linux",
+      "label": "x64 · glibc 2.31+",
+      "ext": ".AppImage",
+      "file": "dist/release/PaperOS-linux-x86_64.AppImage",
+      "minimum": "Ubuntu 20.04+"
+    }
+  ]
+}

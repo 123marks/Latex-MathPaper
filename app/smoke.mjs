@@ -30,12 +30,18 @@ child.stderr.on("data", (data) => {
   output += data.toString();
 });
 
+let cookie = "";
 async function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController();
   const { timeout = 8000, ...fetchOptions } = options;
   const timeoutHandle = setTimeout(() => controller.abort(), timeout);
   try {
-    return await fetch(url, { ...fetchOptions, signal: controller.signal });
+    const headers = { ...(fetchOptions.headers || {}) };
+    if (cookie) headers.Cookie = cookie;
+    const res = await fetch(url, { ...fetchOptions, headers, signal: controller.signal });
+    const setc = res.headers.get("set-cookie");
+    if (setc) cookie = setc.split(";")[0];
+    return res;
   } finally {
     clearTimeout(timeoutHandle);
   }
@@ -72,6 +78,14 @@ function stopChildProcess(processHandle) {
   }
 }
 
+async function jsonStep(name, path, options = {}) {
+  const res = await step(name, () =>
+    fetchWithTimeout(`http://127.0.0.1:${port}${path}`, options),
+  );
+  if (!res.ok) throw new Error(`${name} failed: ${res.status}`);
+  return res.json();
+}
+
 try {
   let health;
   for (let attempt = 0; attempt < 12; attempt += 1) {
@@ -88,44 +102,60 @@ try {
   if (!health) throw new Error(`health failed: server did not respond\n${output}`);
   if (!health.ok) throw new Error(`health failed: ${health.status}`);
   const healthPayload = await health.json();
-  if (healthPayload.name !== "Math Modeling Paper OS") throw new Error("health.name mismatch");
-  if (healthPayload.ok !== true) throw new Error("health.ok missing");
+  if (healthPayload.name !== "Paper OS") throw new Error("health.name mismatch");
   if (healthPayload.port !== port) throw new Error("health.port mismatch");
-  const response = await step("summary", () =>
-    fetchWithTimeout(`http://127.0.0.1:${port}/api/summary`, { timeout: 15000 }),
-  );
-  if (!response) throw new Error(`summary failed: server did not respond\n${output}`);
-  if (!response.ok) throw new Error(`summary failed: ${response.status}`);
-  const summary = await response.json();
+
+  // summary + intelligence backend contract
+  const summary = await jsonStep("summary", "/api/summary", { timeout: 15000 });
   if (!Array.isArray(summary.contests)) throw new Error("summary.contests missing");
-  if (!summary.runtime?.port) throw new Error("summary.runtime.port missing");
   if (!summary.runtime?.node) throw new Error("summary.runtime.node missing");
-  const intelligence = await step("intelligence", () =>
-    fetchWithTimeout(`http://127.0.0.1:${port}/api/intelligence?stage=figure`, { timeout: 8000 }),
-  );
-  if (!intelligence.ok) throw new Error(`intelligence failed: ${intelligence.status}`);
-  const intel = await intelligence.json();
+  const intel = await jsonStep("intelligence", "/api/intelligence?stage=figure");
   if (!Array.isArray(intel.skills)) throw new Error("intelligence.skills missing");
-  const html = await step("index", () => fetchWithTimeout(`http://127.0.0.1:${port}/`, { timeout: 8000 }));
-  if (!html.ok) throw new Error(`index failed: ${html.status}`);
+
+  // SPA shell: index serves the React mount point + hashed assets
+  const html = await step("index", () =>
+    fetchWithTimeout(`http://127.0.0.1:${port}/`, { timeout: 8000 }),
+  );
   const htmlText = await html.text();
-  if (!htmlText.includes("Model Gateway for Competition Papers")) {
-    throw new Error("landing hero missing");
-  }
-  if (!htmlText.includes("Application Workbench")) throw new Error("app workbench shell missing");
-  if (!htmlText.includes("Official Site")) throw new Error("official site shell missing");
-  if (!htmlText.includes("Signal relay")) throw new Error("gateway relay shell missing");
-  if (!htmlText.includes("Local Runtime")) throw new Error("runtime landing section missing");
-  if (!htmlText.includes("MathModelingPaperOS.exe")) throw new Error("exe runtime marker missing");
-  if (!htmlText.includes('data-view="home"')) throw new Error("home/app view shell missing");
-  if (!htmlText.includes("viewToggle")) throw new Error("view toggle missing");
-  if (!htmlText.includes("Back to Official Site")) throw new Error("back to homepage control missing");
-  if (!htmlText.includes("ops-ribbon")) throw new Error("application operating ribbon missing");
-  if (!htmlText.includes("gateway-node")) throw new Error("animated gateway preview missing");
-  if (!htmlText.includes("model-orbit")) throw new Error("persistent model orbit missing");
-  if (!htmlText.includes("traffic-lane")) throw new Error("continuous traffic lane missing");
-  if (!htmlText.includes("Contest Onboard")) throw new Error("onboard panel missing");
-  if (!htmlText.includes("Package Submission")) throw new Error("submission package action missing");
+  if (!htmlText.includes('id="root"')) throw new Error("SPA root mount missing");
+  if (!htmlText.includes("assets/")) throw new Error("built assets reference missing");
+
+  // auth flow: register -> me -> logout -> me(null)
+  const username = `smoke_${Date.now()}`;
+  const reg = await jsonStep("register", "/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password: "smoke-password", displayName: "Smoke" }),
+  });
+  if (reg.user?.username !== username) throw new Error("register did not return user");
+  const me = await jsonStep("auth/me", "/api/auth/me");
+  if (me.user?.username !== username) throw new Error("session not established");
+
+  // community: create a post under session, confirm it lists with the reply
+  const created = await jsonStep("community/create", "/api/community/posts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title: "smoke title", content: "smoke content", category: "讨论" }),
+  });
+  const postId = created.post?.id;
+  if (!postId) throw new Error("community post not created");
+  await jsonStep("community/reply", `/api/community/posts/${postId}/replies`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content: "smoke reply" }),
+  });
+  const list = await jsonStep("community/list", "/api/community/posts");
+  const found = (list.posts || []).find((p) => p.id === postId);
+  if (!found || found.replies.length < 1) throw new Error("community post/reply not persisted");
+
+  await jsonStep("logout", "/api/auth/logout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  const after = await jsonStep("auth/me after logout", "/api/auth/me");
+  if (after.user !== null) throw new Error("logout did not clear session");
+
   console.log("App smoke OK");
 } catch (error) {
   console.error(output);

@@ -1,6 +1,6 @@
 product:
-  name: math-modeling-paper-os
-  version: 0.1.0
+  name: paper-os
+  version: 0.5.0
   default_template: templates/contest
   workspace_root: contests
 

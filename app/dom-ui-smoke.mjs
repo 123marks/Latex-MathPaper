@@ -80,28 +80,16 @@ try {
   if (!response?.ok) throw new Error(`index failed: ${response?.status || "no response"}\n${output}`);
   const html = await response.text();
 
-  assertIncludes("runtime HTML", html, [
-    'body data-view="home"',
-    'id="viewToggle"',
-    'aria-pressed="false"',
-    'id="enterAppBtn"',
-    'id="backHomeBtn"',
-    'class="official-site hero"',
-    'class="app-shell"',
-    "gateway-map",
-    "route-beam",
-    "signal-ledger",
-    "paper-health",
-    "tool-drawer",
-    "data-drawer-tab",
-    "data-drawer-panel",
-    "Package Submission",
+  assertIncludes("runtime HTML shell", html, [
+    'id="root"',
+    "assets/",
+    "Paper OS",
   ]);
 
   const health = await fetchWithTimeout(`http://127.0.0.1:${port}/api/health`, 8000);
   if (!health.ok) throw new Error(`health failed: ${health.status}`);
   const healthPayload = await health.json();
-  if (healthPayload.name !== "Math Modeling Paper OS" || healthPayload.port !== port) {
+  if (healthPayload.name !== "Paper OS" || healthPayload.port !== port) {
     throw new Error("health payload mismatch");
   }
 
