@@ -301,7 +301,7 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 7. **AI 真实性**：T3.3 已在 Web UI、SSE metadata、测试和交接文档中明确 mock-local；后续新增 runtime 或截图仍必须保留这层标识，不能把 configured provider 当作本次回答的事实来源。
 8. **权限模型**：Workspace CRUD、外部文件夹注册、team/admin 表面仍需完整 AuthZ/ACL 复审。
 9. **密钥生命周期**：密钥文件存在本地数据目录，轮换、迁移、备份和恢复流程尚未自动化验证。
-10. **营销表述需持续审计**：T1.4 已修正 Pricing/Enterprise 的 provider、BYOK、SSO/RBAC/SLA 边界，T1.5 已移除认证页 Team First/数学建模专用文案；其余公开页与新增功能仍不得把实时协作、同步、本机模型推理或企业合同能力写成已交付事实。
+10. **营销表述需持续审计**：T1.4 已修正 Pricing/Enterprise 的 provider、BYOK、SSO/RBAC/SLA 边界，T1.5 已移除认证页 Team First/数学建模专用文案；2026-08-11 又修正 Dashboard/Download/Docs 的“本机模型推理/离线 AI”表述，并新增 `tests/web-ai-locality-truthfulness.test.mjs` 作为跨 `web/src` 的回归护栏。其余公开页与新增功能仍不得把实时协作、同步、本机模型推理或企业合同能力写成已交付事实。
 
 ## 当前优先级
 

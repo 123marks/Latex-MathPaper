@@ -80,8 +80,8 @@ export default function Docs() {
           十分钟,从安装到<span className="serif-it" style={{ color: "var(--amber)" }}>第一份 PDF</span>。
         </h2>
         <p>
-          Paper OS 的一切都在你自己的机器上运行:编辑、编译、AI 推理。
-          跟着下面六步走完,你就拥有了一个可离线工作的 LaTeX 工作台。
+          Paper OS 的编辑与编译都在你自己的机器上运行;AI 写作则由你配置的 provider 处理。
+          跟着下面六步走完,你就拥有一个本地优先的 LaTeX 工作台。
         </p>
       </Reveal>
 

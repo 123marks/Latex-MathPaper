@@ -50,8 +50,9 @@ export default function Download() {
           把算力放回<span className="serif-it" style={{ color: "var(--amber)" }}>你自己的机器</span>。
         </h2>
         <p>
-          网页负责展示、账号与社区广场;真正的 LaTeX 编译与 AI 写作,
-          在本地桌面客户端里跑——用你电脑的 CPU,又快、又私密,也不给服务器添压力。
+          网页负责展示、账号与社区广场;真正的 LaTeX 编译在本地桌面客户端里跑——
+          用你电脑的 CPU,又快又私密。AI 写作则由你配置的 provider 处理,请求按该
+          provider 的边界发送。
         </p>
       </Reveal>
 
