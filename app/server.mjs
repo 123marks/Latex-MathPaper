@@ -517,6 +517,48 @@ function workspacePath(workspaceId, relativePath = ".", options = {}) {
   return workspaceKernel.resolvePath(workspaceId, relativePath, options);
 }
 
+// ── Visual review annotations (docs/redesign/09-integrations Epic 1a) ──
+// Stored per Workspace at state/annotations.json. General Kernel capability:
+// a note anchored to a real source range, with intent/priority/status.
+const ANNOTATION_INTENTS = new Set(["edit", "fix", "question", "todo"]);
+const ANNOTATION_PRIORITIES = new Set(["low", "normal", "high"]);
+const ANNOTATION_STATUSES = new Set(["open", "proposed", "resolved", "dismissed"]);
+
+function annotationsPath(workspaceId) {
+  return join(workspaceRoot(workspaceId), "state", "annotations.json");
+}
+
+function readAnnotations(workspaceId) {
+  try {
+    const filePath = annotationsPath(workspaceId);
+    if (!existsSync(filePath)) return [];
+    const parsed = JSON.parse(readFileSync(filePath, "utf-8"));
+    return Array.isArray(parsed?.annotations) ? parsed.annotations : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeAnnotations(workspaceId, annotations) {
+  const filePath = annotationsPath(workspaceId);
+  mkdirSync(dirname(filePath), { recursive: true });
+  writeFileSync(filePath, `${JSON.stringify({ annotations }, null, 2)}\n`, "utf-8");
+}
+
+// Only editor-range targets are accepted in Epic 1a (pdf-region/element land
+// later once SyncTeX is precise). Returns a sanitized target or null.
+function normalizeAnnotationTarget(target) {
+  if (!target || typeof target !== "object") return null;
+  const kind = String(target.kind || "editor-range");
+  if (kind !== "editor-range") return null;
+  const relPath = String(target.path || "").trim().replace(/^\/+/, "").replace(/\\/g, "/");
+  if (!relPath || relPath.includes("..") || /^[a-zA-Z]:/.test(relPath)) return null;
+  const startLine = Math.max(1, Math.floor(Number(target.startLine) || 1));
+  const endLine = Math.max(startLine, Math.floor(Number(target.endLine) || startLine));
+  const excerpt = String(target.excerpt || "").slice(0, 400);
+  return { kind, path: relPath, startLine, endLine, excerpt };
+}
+
 function workspaceEntry(workspaceId, relativePath) {
   try {
     const absolute = workspacePath(workspaceId, relativePath);
@@ -2595,6 +2637,78 @@ async function api(req, res, path) {
         status: c.status,
       })),
     });
+  }
+
+  // ── Visual review annotations CRUD (09-integrations Epic 1a) ──
+  if (req.method === "GET" && path === "/api/editor/annotations") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const url = new URL(req.url, `http://localhost:${port}`);
+    if (!url.searchParams.get("workspace") && !url.searchParams.get("contest")) {
+      return sendJson(res, 400, { error: "workspace is required" });
+    }
+    return sendJson(res, 200, { annotations: readAnnotations(queryWorkspaceId(url)) });
+  }
+
+  if (req.method === "POST" && path === "/api/editor/annotations") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const body = await readBody(req);
+    if (!body.workspace && !body.contest) return sendJson(res, 400, { error: "workspace is required" });
+    const workspaceId = bodyWorkspaceId(body);
+    try { workspaceRoot(workspaceId); } catch { return sendJson(res, 400, { error: "unknown workspace" }); }
+    const target = normalizeAnnotationTarget(body.target);
+    if (!target) return sendJson(res, 400, { error: "invalid annotation target" });
+    const note = String(body.note || "").trim().slice(0, 2000);
+    if (!note) return sendJson(res, 400, { error: "note is required" });
+    const now = new Date().toISOString();
+    const annotation = {
+      id: newToken().slice(0, 10),
+      target,
+      note,
+      intent: ANNOTATION_INTENTS.has(body.intent) ? body.intent : "edit",
+      priority: ANNOTATION_PRIORITIES.has(body.priority) ? body.priority : "normal",
+      status: "open",
+      author: user.displayName || user.username,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const annotations = readAnnotations(workspaceId);
+    annotations.push(annotation);
+    writeAnnotations(workspaceId, annotations);
+    audit(user, "annotation.create", `${workspaceId}/${target.path}:${target.startLine}-${target.endLine}`);
+    return sendJson(res, 200, { annotation });
+  }
+
+  const annotationRoute = /^\/api\/editor\/annotations\/([\w-]+)$/.exec(path);
+  if (annotationRoute && (req.method === "PATCH" || req.method === "DELETE")) {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const id = annotationRoute[1];
+    const url = new URL(req.url, `http://localhost:${port}`);
+    let body = {};
+    if (req.method === "PATCH") body = await readBody(req);
+    const hasWorkspace = url.searchParams.get("workspace") || url.searchParams.get("contest") || body.workspace || body.contest;
+    if (!hasWorkspace) return sendJson(res, 400, { error: "workspace is required" });
+    const workspaceId = queryWorkspaceId(url) || bodyWorkspaceId(body);
+    const annotations = readAnnotations(workspaceId);
+    const idx = annotations.findIndex((a) => a.id === id);
+    if (idx < 0) return sendJson(res, 404, { error: "annotation not found" });
+    if (req.method === "DELETE") {
+      annotations.splice(idx, 1);
+      writeAnnotations(workspaceId, annotations);
+      audit(user, "annotation.delete", `${workspaceId}/${id}`);
+      return sendJson(res, 200, { ok: true });
+    }
+    const current = annotations[idx];
+    if (typeof body.note === "string") current.note = body.note.trim().slice(0, 2000);
+    if (ANNOTATION_INTENTS.has(body.intent)) current.intent = body.intent;
+    if (ANNOTATION_PRIORITIES.has(body.priority)) current.priority = body.priority;
+    if (ANNOTATION_STATUSES.has(body.status)) current.status = body.status;
+    current.updatedAt = new Date().toISOString();
+    writeAnnotations(workspaceId, annotations);
+    audit(user, "annotation.update", `${workspaceId}/${id}`);
+    return sendJson(res, 200, { annotation: current });
   }
 
   // Apply strict BEGIN_FILE / END_FILE blocks from an AI response into the
