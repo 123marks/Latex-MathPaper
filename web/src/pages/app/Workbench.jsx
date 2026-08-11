@@ -1141,7 +1141,7 @@ function ReferencesPanel({ contest, onOpenFile }) {
           <div className="refs-body">
             <form className="refs-import" onSubmit={importDoi}>
               <input
-                placeholder="DOI（10.xxxx/yyy 或 doi.org 链接）→ 联网导入 BibTeX"
+                placeholder="DOI 或 arXiv ID / 链接 → 联网导入 BibTeX"
                 value={doi}
                 onChange={(e) => { setDoi(e.target.value); setImportMsg(""); }}
                 disabled={importing}

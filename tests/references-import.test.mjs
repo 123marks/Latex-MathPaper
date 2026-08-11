@@ -114,3 +114,101 @@ test("DOI import fetches BibTeX, appends once, and fails honestly offline", asyn
   process.env.PAPER_OS_DOI_BASE = "http://127.0.0.1:1";
   await json("/api/editor/references/import", { method: "POST", ...jsonBody({ workspace: workspaceId, doi: "10.1234/good2" }) }, 502);
 });
+
+const ARXIV_ATOM = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title type="html">ArXiv Query</title>
+  <entry>
+    <id>http://arxiv.org/abs/2401.10001v2</id>
+    <published>2024-01-18T12:00:00Z</published>
+    <title>Residual  Estimation
+      with Deep Nets</title>
+    <author><name>Jane Smith</name></author>
+    <author><name>Bob Lee</name></author>
+  </entry>
+</feed>`;
+
+const ARXIV_EMPTY = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title type="html">ArXiv Query</title></feed>`;
+
+test("arXiv import builds a BibTeX entry and dedupes across versions", async (t) => {
+  const port = await freePort();
+  process.env.PAPER_OS_PORT = String(port);
+  const workspaceId = `arxiv-${process.pid}-${Date.now()}`;
+  const managedRoot = join(root, "workspaces", workspaceId);
+  const stateRoot = mkdtempSync(join(tmpdir(), "paperos-arxiv-state-"));
+  const previousDataDir = process.env.PAPER_OS_DATA_DIR;
+  const previousArxivBase = process.env.PAPER_OS_ARXIV_BASE;
+  process.env.PAPER_OS_DATA_DIR = join(stateRoot, "data");
+  const { startServer, server } = await import(`../app/server.mjs?arxiv-import=${Date.now()}`);
+
+  const mockArxiv = createHttpServer((req, res) => {
+    res.writeHead(200, { "Content-Type": "application/atom+xml; charset=utf-8" });
+    res.end(req.url.includes("2401.10001") ? ARXIV_ATOM : ARXIV_EMPTY);
+  });
+  const mockPort = await freePort();
+  await new Promise((r) => mockArxiv.listen(mockPort, "127.0.0.1", r));
+  process.env.PAPER_OS_ARXIV_BASE = `http://127.0.0.1:${mockPort}`;
+
+  let cookie = "";
+  async function request(path, options = {}) {
+    const headers = { ...(options.headers || {}) };
+    if (cookie) headers.Cookie = cookie;
+    const response = await fetch(`http://127.0.0.1:${port}${path}`, { ...options, headers });
+    const setCookie = response.headers.get("set-cookie");
+    if (setCookie) cookie = setCookie.split(";")[0];
+    return response;
+  }
+  async function json(path, options = {}, expected = 200) {
+    const response = await request(path, options);
+    const payload = await response.json();
+    assert.equal(response.status, expected, `${path}: ${JSON.stringify(payload)}`);
+    return payload;
+  }
+  const jsonBody = (obj) => ({ headers: { "Content-Type": "application/json" }, body: JSON.stringify(obj) });
+
+  startServer();
+  t.after(async () => {
+    await new Promise((r) => mockArxiv.close(r));
+    if (server.listening) await new Promise((r) => server.close(r));
+    rmSync(managedRoot, { recursive: true, force: true });
+    rmSync(stateRoot, { recursive: true, force: true });
+    if (previousDataDir === undefined) delete process.env.PAPER_OS_DATA_DIR;
+    else process.env.PAPER_OS_DATA_DIR = previousDataDir;
+    if (previousArxivBase === undefined) delete process.env.PAPER_OS_ARXIV_BASE;
+    else process.env.PAPER_OS_ARXIV_BASE = previousArxivBase;
+  });
+
+  await json("/api/auth/bootstrap");
+  await json("/api/auth/local", { method: "POST", ...jsonBody({}) });
+  await json("/api/editor/projects", { method: "POST", ...jsonBody({ id: workspaceId, name: "ArXiv", pack: "latex" }) }, 201);
+
+  // Unrecognisable input -> 400.
+  await json("/api/editor/references/import", { method: "POST", ...jsonBody({ workspace: workspaceId, doi: "not-anything" }) }, 400);
+
+  // arXiv:ID form imports as an @misc entry with a versionless key.
+  const imported = await json("/api/editor/references/import", {
+    method: "POST",
+    ...jsonBody({ workspace: workspaceId, doi: "arXiv:2401.10001" }),
+  }, 201);
+  assert.equal(imported.key, "arxiv2401.10001");
+  assert.equal(imported.entry.title, "Residual Estimation with Deep Nets");
+  assert.match(imported.entry.author, /Jane Smith and Bob Lee/);
+  assert.equal(imported.entry.year, "2024");
+
+  const listed = await json(`/api/editor/references?workspace=${encodeURIComponent(workspaceId)}`);
+  assert.ok(listed.entries.some((e) => e.key === "arxiv2401.10001"));
+
+  // URL form with a version resolves to the same key -> 409 dedupe.
+  await json("/api/editor/references/import", {
+    method: "POST",
+    ...jsonBody({ workspace: workspaceId, doi: "https://arxiv.org/abs/2401.10001v2" }),
+  }, 409);
+
+  // Unknown id: feed without an entry -> 404.
+  await json("/api/editor/references/import", { method: "POST", ...jsonBody({ workspace: workspaceId, doi: "2401.99999" }) }, 404);
+
+  // Unreachable arXiv -> honest 502.
+  process.env.PAPER_OS_ARXIV_BASE = "http://127.0.0.1:1";
+  await json("/api/editor/references/import", { method: "POST", ...jsonBody({ workspace: workspaceId, doi: "2401.10001" }) }, 502);
+});

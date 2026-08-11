@@ -23,9 +23,9 @@ test("references panel styles exist", () => {
   assert.match(css, /\.ref-loc \{/);
 });
 
-test("references panel can import a DOI through the real endpoint", () => {
+test("references panel can import a DOI or arXiv id through the real endpoint", () => {
   assert.match(workbenchSource, /\/api\/editor\/references\/import/);
   assert.match(workbenchSource, /refs-import/);
-  assert.match(workbenchSource, /doi\.org 链接/);
+  assert.match(workbenchSource, /DOI 或 arXiv ID \/ 链接/);
   assert.match(css, /\.refs-import \{/);
 });

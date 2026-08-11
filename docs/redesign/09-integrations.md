@@ -123,7 +123,10 @@ owner: redesign
 - [x] 3d DOI 导入：`POST /api/editor/references/import` 接受裸 DOI / doi.org 链接，
       content negotiation 抓取 BibTeX 追加进第一个 `.bib`（无则建 `paper/references.bib`），
       按条目 key 去重（409）；离线/上游错误如实 502/404，测试用本地 mock DOI 服务
-      全链路验证；文献面板内置导入框（2026-08-11）。arXiv 后续。
+      全链路验证；文献面板内置导入框（2026-08-11）。
+- [x] 3d-2 arXiv 导入：同一入口识别 arXiv ID / arXiv: 前缀 / abs|pdf 链接，
+      经 arXiv Atom API 抓取元数据生成 `@misc` 条目（无版本号 key，跨版本去重 409；
+      未知 ID 404、离线 502），本地 mock Atom 服务全链路测试（2026-08-12）
 - [x] 4a 多 provider 档案：`/api/account/providers` 新增/激活/删除（Key AES-256-GCM
       加密，明文与密文均不回传），生效顺序 激活档案 > 单一配置 > 共享网关，
       ApiKeys 页档案管理 UI + 测试（2026-08-11）

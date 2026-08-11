@@ -297,7 +297,7 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 3. **发布声明超前**：Windows ZIP 缺少 Node 生产依赖和 self-contained .NET runtime；macOS/Linux 清单与实际产物不一致；原生代码签名未完成。
 4. **桌面部署依赖**：WinForms/Tauri 都启动外部 Node；WinForms 还依赖系统 .NET 8 Desktop Runtime，尚未证明零依赖 sidecar 交付。
 5. **桌面 WebView CSP**：Tauri config 当前为 `csp: null`。
-6. **单体维护风险**：`app/server.mjs` 和 `apps/desktop/src/ide.jsx` 均超过 3000 行。
+6. **单体维护风险**：`app/server.mjs` 和 `apps/desktop/src/ide.jsx` 均超过 3000 行。已开始拆分：纯函数域（用量定价/聚合 `lib/usage.mjs`、BibTeX 解析 `lib/bibtex.mjs`、标注词汇/目标校验 `lib/annotations.mjs`）已抽出并有直接单元测试；路由域拆分待续。
 7. **AI 真实性**：T3.3 已在 Web UI、SSE metadata、测试和交接文档中明确 mock-local；后续新增 runtime 或截图仍必须保留这层标识，不能把 configured provider 当作本次回答的事实来源。
 8. **权限模型**：Workspace CRUD、外部文件夹注册、team/admin 表面仍需完整 AuthZ/ACL 复审。
 9. **密钥生命周期**：密钥文件存在本地数据目录，轮换、迁移、备份和恢复流程尚未自动化验证。

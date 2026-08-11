@@ -23,6 +23,14 @@ import {
   workspaceIdFrom,
 } from "./lib/workspaces.mjs";
 import { readModelingStatus } from "./lib/modeling-status.mjs";
+import { estimateCost, aggregateUsage } from "./lib/usage.mjs";
+import { parseBibTeX } from "./lib/bibtex.mjs";
+import {
+  ANNOTATION_INTENTS,
+  ANNOTATION_PRIORITIES,
+  ANNOTATION_STATUSES,
+  normalizeAnnotationTarget,
+} from "./lib/annotations.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
@@ -88,20 +96,6 @@ function readSystemSettings() {
 }
 
 // Per-1k-token pricing in USD (rough defaults; tune in admin later).
-const PRICE_PER_1K = {
-  "gpt-4o": { prompt: 0.005, completion: 0.015 },
-  "gpt-4o-mini": { prompt: 0.00015, completion: 0.0006 },
-  "gpt-5.4": { prompt: 0.01, completion: 0.03 },
-  "claude-sonnet-4": { prompt: 0.003, completion: 0.015 },
-  "claude-opus-4": { prompt: 0.015, completion: 0.075 },
-  "deepseek-chat": { prompt: 0.00027, completion: 0.0011 },
-  "deepseek-reasoner": { prompt: 0.00055, completion: 0.00219 },
-  default: { prompt: 0.002, completion: 0.006 },
-};
-function estimateCost(model, promptTok, completionTok) {
-  const p = PRICE_PER_1K[model] || PRICE_PER_1K.default;
-  return (promptTok / 1000) * p.prompt + (completionTok / 1000) * p.completion;
-}
 function recordUsage(userId, { model, kind, promptTokens = 0, completionTokens = 0, durationMs = 0, ok = true, workspace = "" }) {
   const cost = estimateCost(model, promptTokens, completionTokens);
   usageStore.update((d) => {
@@ -124,126 +118,6 @@ function recordUsage(userId, { model, kind, promptTokens = 0, completionTokens =
     return d;
   });
 }
-function aggregateUsage(records, days = 30) {
-  const cutoff = Date.now() - days * 86400000;
-  const inWindow = records.filter((r) => new Date(r.at).getTime() >= cutoff);
-  const byDay = {};
-  const byModel = {};
-  const byWorkspace = {};
-  const byHour = new Array(24).fill(0);
-  let total = 0, prompt = 0, completion = 0, cost = 0;
-  for (const r of inWindow) {
-    const day = String(r.at).slice(0, 10);
-    byDay[day] = (byDay[day] || 0) + r.totalTokens;
-    byModel[r.model] = byModel[r.model] || { tokens: 0, cost: 0, requests: 0 };
-    byModel[r.model].tokens += r.totalTokens;
-    byModel[r.model].cost += r.costUsd;
-    byModel[r.model].requests += 1;
-    // Server-local hour of day; older records without workspace group honestly.
-    const hour = new Date(r.at).getHours();
-    if (hour >= 0 && hour < 24) byHour[hour] += r.totalTokens;
-    const ws = r.workspace || "未标注";
-    byWorkspace[ws] = byWorkspace[ws] || { tokens: 0, requests: 0 };
-    byWorkspace[ws].tokens += r.totalTokens;
-    byWorkspace[ws].requests += 1;
-    total += r.totalTokens;
-    prompt += r.promptTokens;
-    completion += r.completionTokens;
-    cost += r.costUsd;
-  }
-  const daily = Object.entries(byDay).sort().map(([day, tokens]) => ({ day, tokens }));
-  const models = Object.entries(byModel).map(([model, v]) => ({ model, ...v, costUsd: Number(v.cost.toFixed(6)) })).sort((a, b) => b.tokens - a.tokens);
-  const workspaces = Object.entries(byWorkspace)
-    .map(([workspace, v]) => ({ workspace, ...v }))
-    .sort((a, b) => b.tokens - a.tokens)
-    .slice(0, 20);
-  return {
-    totalRequests: inWindow.length,
-    totalTokens: total,
-    promptTokens: prompt,
-    completionTokens: completion,
-    costUsd: Number(cost.toFixed(6)),
-    daily,
-    models,
-    workspaces,
-    hours: byHour,
-  };
-}
-
-// Pragmatic BibTeX parser (09-integrations Epic 3a): balanced-brace scan good
-// enough for common entries; @comment/@preamble/@string are skipped.
-function parseBibTeX(text) {
-  const src = String(text || "");
-  const entries = [];
-  let i = 0;
-  while (i < src.length && entries.length < 500) {
-    const at = src.indexOf("@", i);
-    if (at === -1) break;
-    let j = at + 1;
-    while (j < src.length && /[a-zA-Z]/.test(src[j])) j += 1;
-    const type = src.slice(at + 1, j).toLowerCase();
-    while (j < src.length && /\s/.test(src[j])) j += 1;
-    if (src[j] !== "{") { i = at + 1; continue; }
-    let depth = 1;
-    let k = j + 1;
-    while (k < src.length && depth > 0) {
-      if (src[k] === "{") depth += 1;
-      else if (src[k] === "}") depth -= 1;
-      k += 1;
-    }
-    const body = src.slice(j + 1, k - 1);
-    i = k;
-    if (type === "comment" || type === "preamble" || type === "string") continue;
-    const comma = body.indexOf(",");
-    if (comma === -1) continue;
-    const key = body.slice(0, comma).trim();
-    if (!key) continue;
-    const fields = {};
-    let p = comma + 1;
-    while (p < body.length) {
-      while (p < body.length && /[\s,]/.test(body[p])) p += 1;
-      let q = p;
-      while (q < body.length && /[a-zA-Z_-]/.test(body[q])) q += 1;
-      const name = body.slice(p, q).toLowerCase();
-      if (!name) break;
-      while (q < body.length && /\s/.test(body[q])) q += 1;
-      if (body[q] !== "=") break;
-      q += 1;
-      while (q < body.length && /\s/.test(body[q])) q += 1;
-      let value = "";
-      if (body[q] === "{") {
-        let d = 1;
-        let r = q + 1;
-        while (r < body.length && d > 0) {
-          if (body[r] === "{") d += 1;
-          else if (body[r] === "}") d -= 1;
-          if (d > 0) value += body[r];
-          r += 1;
-        }
-        p = r;
-      } else if (body[q] === '"') {
-        let r = q + 1;
-        while (r < body.length && body[r] !== '"') { value += body[r]; r += 1; }
-        p = r + 1;
-      } else {
-        let r = q;
-        while (r < body.length && body[r] !== ",") { value += body[r]; r += 1; }
-        p = r;
-      }
-      fields[name] = value.replace(/[{}]/g, "").replace(/\s+/g, " ").trim();
-    }
-    entries.push({
-      key,
-      type,
-      title: fields.title || "",
-      author: fields.author || "",
-      year: fields.year || "",
-      venue: fields.journal || fields.booktitle || fields.publisher || "",
-    });
-  }
-  return entries;
-}
-
 function defaultSkills() {
   return [
     { id: "sci-figure", cat: "figure", name: "SCI Figure Studio", desc: "出版级科学图表,自动按 Nature 风格与配色出图,带图注主张。", team: "Paper OS Studio", ver: "1.4.2", installs: 12800, stars: "4.8",
@@ -608,12 +482,8 @@ function workspacePath(workspaceId, relativePath = ".", options = {}) {
 }
 
 // ── Visual review annotations (docs/redesign/09-integrations Epic 1a) ──
-// Stored per Workspace at state/annotations.json. General Kernel capability:
-// a note anchored to a real source range, with intent/priority/status.
-const ANNOTATION_INTENTS = new Set(["edit", "fix", "question", "todo"]);
-const ANNOTATION_PRIORITIES = new Set(["low", "normal", "high"]);
-const ANNOTATION_STATUSES = new Set(["open", "proposed", "resolved", "dismissed"]);
-
+// Vocabulary + target normalisation live in lib/annotations.mjs; only the
+// per-Workspace state/annotations.json storage glue stays here.
 function annotationsPath(workspaceId) {
   return join(workspaceRoot(workspaceId), "state", "annotations.json");
 }
@@ -633,43 +503,6 @@ function writeAnnotations(workspaceId, annotations) {
   const filePath = annotationsPath(workspaceId);
   mkdirSync(dirname(filePath), { recursive: true });
   writeFileSync(filePath, `${JSON.stringify({ annotations }, null, 2)}\n`, "utf-8");
-}
-
-// Only editor-range targets are accepted in Epic 1a (pdf-region/element land
-// later once SyncTeX is precise). Returns a sanitized target or null.
-function normalizeAnnotationTarget(target) {
-  if (!target || typeof target !== "object") return null;
-  const kind = String(target.kind || "editor-range");
-  const relPath = String(target.path || "").trim().replace(/^\/+/, "").replace(/\\/g, "/");
-  if (!relPath || relPath.includes("..") || /^[a-zA-Z]:/.test(relPath)) return null;
-  const excerpt = String(target.excerpt || "").slice(0, 400);
-  if (kind === "editor-range") {
-    const startLine = Math.max(1, Math.floor(Number(target.startLine) || 1));
-    const endLine = Math.max(startLine, Math.floor(Number(target.endLine) || startLine));
-    return { kind, path: relPath, startLine, endLine, excerpt };
-  }
-  // 09-integrations Epic 1d: a rectangle on a rendered PDF page. Coordinates
-  // are normalised to 0..1 so they survive zoom changes.
-  if (kind === "pdf-region") {
-    const pageNum = Number(target.page);
-    if (!Number.isFinite(pageNum) || pageNum < 1) return null;
-    const rect = target.rect || {};
-    const clamp01 = (v) => Math.min(1, Math.max(0, Number(v) || 0));
-    const round4 = (v) => Number(v.toFixed(4));
-    const x = clamp01(rect.x);
-    const y = clamp01(rect.y);
-    const w = Math.min(clamp01(rect.w), 1 - x);
-    const h = Math.min(clamp01(rect.h), 1 - y);
-    if (w <= 0 || h <= 0) return null;
-    return {
-      kind,
-      path: relPath,
-      page: Math.floor(pageNum),
-      rect: { x: round4(x), y: round4(y), w: round4(w), h: round4(h) },
-      excerpt,
-    };
-  }
-  return null;
 }
 
 function workspaceEntry(workspaceId, relativePath) {
@@ -2174,8 +2007,8 @@ async function api(req, res, path) {
     return sendJson(res, 200, { workspace: workspaceId, bibFiles, entries: withCounts, citations, missing, truncated });
   }
 
-  // References Pack (09-integrations Epic 3d): DOI -> BibTeX import. Requires
-  // network to doi.org (overridable base for tests); fails honestly offline.
+  // References Pack (09-integrations Epic 3d): DOI / arXiv -> BibTeX import.
+  // Requires network (bases overridable for tests); fails honestly offline.
   if (req.method === "POST" && path === "/api/editor/references/import") {
     const user = requireUser(req, res);
     if (!user) return undefined;
@@ -2186,29 +2019,69 @@ async function api(req, res, path) {
     try { rootPath = workspaceRoot(workspaceId); } catch { return sendJson(res, 404, { error: "Workspace not found" }); }
     if (!existsSync(rootPath)) return sendJson(res, 404, { error: "Workspace not found" });
 
-    // Accept a bare DOI or a doi.org URL.
-    const raw = String(body.doi || "").trim();
+    // Accept a bare DOI, a doi.org URL, an arXiv id (2401.12345[v2]),
+    // arXiv:ID, or an arxiv.org/abs|pdf URL.
+    const raw = String(body.doi || body.id || "").trim();
     const doi = raw.replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").trim();
-    if (!/^10\.\d{4,9}\/\S+$/i.test(doi)) {
-      return sendJson(res, 400, { error: "DOI 格式不正确，应为 10.xxxx/yyy 或 doi.org 链接" });
+    const isDoi = /^10\.\d{4,9}\/\S+$/i.test(doi);
+    const arxivMatch = isDoi ? null : raw.match(/(?:^|abs\/|pdf\/|arxiv:\s*)(\d{4}\.\d{4,5})(v\d+)?\/?$/i);
+    if (!isDoi && !arxivMatch) {
+      return sendJson(res, 400, { error: "无法识别：请输入 DOI（10.xxxx/yyy）、doi.org 链接、arXiv ID（如 2401.12345）或 arxiv.org 链接" });
     }
 
-    const doiBase = String(process.env.PAPER_OS_DOI_BASE || "https://doi.org").replace(/\/+$/, "");
     let bibText = "";
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 10000);
-      const resp = await fetch(`${doiBase}/${doi}`, {
-        headers: { Accept: "application/x-bibtex; charset=utf-8" },
-        redirect: "follow",
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
-      if (resp.status === 404) return sendJson(res, 404, { error: `DOI 未找到: ${doi}` });
-      if (!resp.ok) return sendJson(res, 502, { error: `doi.org 返回 ${resp.status}` });
-      bibText = (await resp.text()).trim();
-    } catch {
-      return sendJson(res, 502, { error: "无法访问 doi.org（离线或超时）。可手动把 BibTeX 粘贴进 .bib 文件。" });
+    if (isDoi) {
+      const doiBase = String(process.env.PAPER_OS_DOI_BASE || "https://doi.org").replace(/\/+$/, "");
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000);
+        const resp = await fetch(`${doiBase}/${doi}`, {
+          headers: { Accept: "application/x-bibtex; charset=utf-8" },
+          redirect: "follow",
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        if (resp.status === 404) return sendJson(res, 404, { error: `DOI 未找到: ${doi}` });
+        if (!resp.ok) return sendJson(res, 502, { error: `doi.org 返回 ${resp.status}` });
+        bibText = (await resp.text()).trim();
+      } catch {
+        return sendJson(res, 502, { error: "无法访问 doi.org（离线或超时）。可手动把 BibTeX 粘贴进 .bib 文件。" });
+      }
+    } else {
+      const baseId = arxivMatch[1];
+      const fullId = baseId + (arxivMatch[2] || "");
+      const arxivBase = String(process.env.PAPER_OS_ARXIV_BASE || "http://export.arxiv.org").replace(/\/+$/, "");
+      let atom = "";
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000);
+        const resp = await fetch(`${arxivBase}/api/query?id_list=${encodeURIComponent(fullId)}`, {
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        if (!resp.ok) return sendJson(res, 502, { error: `arXiv API 返回 ${resp.status}` });
+        atom = await resp.text();
+      } catch {
+        return sendJson(res, 502, { error: "无法访问 arXiv（离线或超时）。可手动把 BibTeX 粘贴进 .bib 文件。" });
+      }
+      const entryXml = (atom.match(/<entry>([\s\S]*?)<\/entry>/) || [])[1] || "";
+      const title = String((entryXml.match(/<title[^>]*>([\s\S]*?)<\/title>/) || [])[1] || "")
+        .replace(/\s+/g, " ").trim();
+      // An unknown id still returns a feed, but without a usable entry.
+      if (!entryXml || !title) return sendJson(res, 404, { error: `arXiv ID 未找到: ${fullId}` });
+      const authors = [...entryXml.matchAll(/<name>([^<]+)<\/name>/g)].map((m) => m[1].trim()).filter(Boolean);
+      const year = (entryXml.match(/<published>(\d{4})/) || [])[1] || "";
+      // Key uses the versionless id so re-imports of v2 dedupe against v1.
+      bibText = [
+        `@misc{arxiv${baseId},`,
+        `  title = {${title}},`,
+        `  author = {${authors.join(" and ") || "arXiv"}},`,
+        `  year = {${year}},`,
+        `  eprint = {${fullId}},`,
+        `  archivePrefix = {arXiv},`,
+        `  url = {https://arxiv.org/abs/${fullId}},`,
+        `}`,
+      ].join("\n");
     }
 
     const parsed = parseBibTeX(bibText);

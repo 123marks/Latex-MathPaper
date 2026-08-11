@@ -9,6 +9,11 @@
 - pdf.js 渲染层（09-integrations 3c-1/1d）：Workbench PDF 预览由 iframe 换成 pdfjs-dist v6 canvas 渲染（异步分包 gzip 143KB、按需 worker、SSR 安全动态加载），带缩放/页码/多页滚动与可划词文本层；「问 AI（选中文本）」把 PDF 划词内容送入 AI 输入框。
 - PDF 区域标注：查看器内拖框选区 → 归一化矩形（0–1）+ 备注写入标注系统（新 `pdf-region` 目标类型，服务端校验/钳制/四位舍入）；标注面板显示 `PDF p.N`，「交给 AI 修改」的组装提示带选区位置描述。
 - 已存 `pdf-region` 标注在 PDF 页面上回显为叠加框：按页过滤、百分比定位（缩放无关）、悬停显示备注、resolved 状态转绿。
+- arXiv 导入（3d-2）：文献导入入口同时识别 arXiv ID / `arXiv:` 前缀 / abs|pdf 链接，经 arXiv Atom API 生成 `@misc` 条目（无版本号 key 跨版本去重 409，未知 ID 404、离线 502）。
+
+### Changed
+
+- 开始拆分 `app/server.mjs` 单体（STATUS 风险 #6）：纯函数域抽到 `app/lib/`——`usage.mjs`（定价/聚合）、`bibtex.mjs`（BibTeX 解析）、`annotations.mjs`（标注词汇与目标校验），行为零变化并新增直接单元测试。
 
 ## [0.6.0] - 2026-08-12
 
