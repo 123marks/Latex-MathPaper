@@ -92,6 +92,14 @@ export default function Dashboard() {
                   </div>
                   <div className="ws-row-side">
                     <code className="ws-id">{p.id}</code>
+                    <a
+                      className="btn btn-quiet btn-sm"
+                      href={`/api/editor/export-archive?workspace=${encodeURIComponent(p.id)}`}
+                      download
+                      title="导出整个工作区为 tar.gz 备份（排除缓存目录）"
+                    >
+                      导出
+                    </a>
                     <Link className="btn btn-quiet btn-sm" to={`/app/workbench?workspace=${encodeURIComponent(p.id)}`}>
                       打开 →
                     </Link>

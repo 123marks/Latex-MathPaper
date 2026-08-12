@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { WebSocketServer } from "ws";
 import { existsSync, readFileSync, writeFileSync, renameSync, unlinkSync, chmodSync, rmSync, mkdirSync, readdirSync, lstatSync, statSync } from "node:fs";
-import { dirname, extname, join, resolve, sep } from "node:path";
+import { basename, dirname, extname, join, resolve, sep } from "node:path";
 import { cpus, freemem, loadavg, totalmem, uptime as osUptime } from "node:os";
 import { fileURLToPath } from "node:url";
 
@@ -1694,6 +1694,58 @@ async function api(req, res, path) {
     });
     if (!reply) return sendJson(res, 404, { error: "帖子不存在" });
     return sendJson(res, 200, { reply });
+  }
+
+  // 工作区归档导出：整包 tar.gz 备份（排除缓存/依赖目录），本地优先的数据
+  // 自由。注意：/api/editor/export（无 -archive）是既有的 JSON 文件快照接口。
+  if (req.method === "GET" && path === "/api/editor/export-archive") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const url = new URL(req.url, `http://localhost:${port}`);
+    const workspaceId = queryWorkspaceId(url);
+    let rootPath;
+    try { rootPath = workspaceRoot(workspaceId); } catch { return sendJson(res, 404, { error: "Workspace not found" }); }
+    if (!existsSync(rootPath)) return sendJson(res, 404, { error: "Workspace not found" });
+
+    const tmpPath = join(dataDir, `export-${process.pid}-${Date.now()}.tar.gz`);
+    try {
+      await new Promise((resolveTar, rejectTar) => {
+        const child = spawn("tar", [
+          "-czf", tmpPath,
+          "--exclude", "node_modules",
+          "--exclude", ".git",
+          "--exclude", "build",
+          "--exclude", ".tectonic",
+          "--exclude", "__pycache__",
+          "-C", dirname(rootPath),
+          basename(rootPath),
+        ], { windowsHide: true, stdio: ["ignore", "ignore", "pipe"] });
+        let stderr = "";
+        child.stderr.on("data", (chunk) => { stderr += chunk; });
+        child.on("error", rejectTar);
+        child.on("exit", (code) => (code === 0 ? resolveTar() : rejectTar(new Error(`tar exit ${code}: ${stderr.slice(0, 200)}`))));
+      });
+      const size = statSync(tmpPath).size;
+      if (size > 512 * 1024 * 1024) {
+        return sendJson(res, 413, { error: "工作区超过 512MB，请手动打包" });
+      }
+      const buf = readFileSync(tmpPath);
+      const stamp = new Date().toISOString().slice(0, 10);
+      res.writeHead(200, {
+        "Content-Type": "application/gzip",
+        "Content-Disposition": `attachment; filename="${workspaceId}-${stamp}.tar.gz"`,
+        "Content-Length": buf.length,
+        "X-Checksum-SHA256": createHash("sha256").update(buf).digest("hex"),
+        "Cache-Control": "no-store",
+      });
+      res.end(buf);
+      audit(user, "workspace.export", `${workspaceId} ${buf.length}B`);
+      return undefined;
+    } catch (error) {
+      return sendJson(res, 500, { error: `导出失败: ${String(error.message || error).slice(0, 200)}` });
+    } finally {
+      rmSync(tmpPath, { force: true });
+    }
   }
 
   // 全局聚合搜索（⌘K）：工作区 / 文件名 / 本人会话 / 社区帖，全部真实数据，
