@@ -28,7 +28,14 @@ export default function Sessions() {
       setLoading(false);
     }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // 深链：⌘K 搜索结果用 ?id= 直接展开对应会话详情。
+    if (typeof window !== "undefined") {
+      const id = new URLSearchParams(window.location.search).get("id");
+      if (id) openDetail(id);
+    }
+  }, []); // eslint-disable-line
 
   async function openDetail(id) {
     try {

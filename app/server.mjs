@@ -1696,6 +1696,59 @@ async function api(req, res, path) {
     return sendJson(res, 200, { reply });
   }
 
+  // 全局聚合搜索（⌘K）：工作区 / 文件名 / 本人会话 / 社区帖，全部真实数据，
+  // 带遍历上限；q 少于 2 字符时返回空组。
+  if (req.method === "GET" && path === "/api/search") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const url = new URL(req.url, `http://localhost:${port}`);
+    const q = String(url.searchParams.get("q") || "").trim().toLowerCase();
+    if (q.length < 2) return sendJson(res, 200, { workspaces: [], files: [], sessions: [], posts: [] });
+
+    let registered = [];
+    try { registered = workspaceKernel.listWorkspaces(); } catch { registered = []; }
+    const workspaces = registered
+      .filter((w) => `${w.id} ${w.name || ""}`.toLowerCase().includes(q))
+      .slice(0, 6)
+      .map((w) => ({ id: w.id, name: w.name || w.id, pack: w.pack }));
+
+    const files = [];
+    const SKIP = new Set(["__pycache__", "node_modules", ".git", "submission-package", "build", ".tectonic", "state", ".paperos"]);
+    for (const w of registered.slice(0, 12)) {
+      if (files.length >= 12) break;
+      let budget = 400;
+      (function walkNames(dir, rel, depth) {
+        if (depth > 6 || files.length >= 12 || budget <= 0) return;
+        let names;
+        try { names = readdirSync(dir); } catch { return; }
+        for (const name of names.sort()) {
+          if (SKIP.has(name)) continue;
+          if (files.length >= 12 || budget <= 0) return;
+          budget -= 1;
+          const relPath = rel ? `${rel}/${name}` : name;
+          const entry = workspaceEntry(w.id, relPath);
+          if (!entry) continue;
+          if (entry.stat.isDirectory()) walkNames(entry.absolute, relPath, depth + 1);
+          else if (relPath.toLowerCase().includes(q)) files.push({ workspace: w.id, path: relPath });
+        }
+      })(w.root, "", 0);
+    }
+
+    const sessions = chatStore.read().threads
+      .filter((t) => t.userId === user.id && `${t.prompt} ${t.reply}`.toLowerCase().includes(q))
+      .slice(-6)
+      .reverse()
+      .map((t) => ({ id: t.id, prompt: String(t.prompt || "").slice(0, 80), workspace: t.workspace || "" }));
+
+    const posts = postsStore.read().posts
+      .filter((p) => `${p.title || ""} ${p.content || ""}`.toLowerCase().includes(q))
+      .slice(-6)
+      .reverse()
+      .map((p) => ({ id: p.id, title: p.title || "(无标题)" }));
+
+    return sendJson(res, 200, { workspaces, files, sessions, posts });
+  }
+
   // ---- admin console ----
   if (req.method === "GET" && path === "/api/admin/metrics") {
     if (!requireAdmin(req, res)) return undefined;

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.jsx";
 import Icon from "./Icon.jsx";
 
@@ -9,8 +10,30 @@ export default function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
+  const [hits, setHits] = useState(null); // /api/search 聚合结果
 
   const isAdmin = user && (user.role === "owner" || user.role === "admin");
+
+  // 内容聚合：≥2 字符时防抖查询工作区/文件/会话/社区帖。
+  useEffect(() => {
+    if (!open || !user || q.trim().length < 2) {
+      setHits(null);
+      return undefined;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const d = await api.get(`/api/search?q=${encodeURIComponent(q.trim())}`);
+        if (!cancelled) setHits(d);
+      } catch {
+        if (!cancelled) setHits(null);
+      }
+    }, 180);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [open, user, q]);
 
   const commands = useMemo(() => {
     const go = (to) => () => {
@@ -48,9 +71,46 @@ export default function CommandPalette() {
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return commands;
-    return commands.filter((c) => `${c.label} ${c.hint}`.toLowerCase().includes(s));
-  }, [q, commands]);
+    const statics = s
+      ? commands.filter((c) => `${c.label} ${c.hint}`.toLowerCase().includes(s))
+      : commands;
+    if (!hits) return statics;
+    const go = (to) => () => {
+      navigate(to);
+      setOpen(false);
+    };
+    const dynamic = [
+      ...(hits.workspaces || []).map((w) => ({
+        id: `ws-${w.id}`,
+        label: `工作区 · ${w.name}`,
+        hint: w.pack || "workspace",
+        icon: "workbench",
+        run: go(`/app/workbench?workspace=${encodeURIComponent(w.id)}`),
+      })),
+      ...(hits.files || []).map((f) => ({
+        id: `file-${f.workspace}-${f.path}`,
+        label: `文件 · ${f.path}`,
+        hint: f.workspace,
+        icon: "content",
+        run: go(`/app/workbench?workspace=${encodeURIComponent(f.workspace)}&file=${encodeURIComponent(f.path)}`),
+      })),
+      ...(hits.sessions || []).map((t) => ({
+        id: `chat-${t.id}`,
+        label: `会话 · ${t.prompt}`,
+        hint: t.workspace || "AI",
+        icon: "compose",
+        run: go(`/app/sessions?id=${encodeURIComponent(t.id)}`),
+      })),
+      ...(hits.posts || []).map((p) => ({
+        id: `post-${p.id}`,
+        label: `社区 · ${p.title}`,
+        hint: "post",
+        icon: "community",
+        run: go("/app/community"),
+      })),
+    ];
+    return [...dynamic, ...statics];
+  }, [q, commands, hits, navigate]);
 
   useEffect(() => {
     const onKey = (e) => {

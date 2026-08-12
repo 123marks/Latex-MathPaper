@@ -114,6 +114,17 @@ export default function Workbench() {
   }
   useEffect(() => { loadTree(); }, [contest]); // eslint-disable-line
 
+  // 深链：⌘K 搜索结果用 ?file= 直接打开目标文件（仅首次生效）。
+  const openedFromUrlRef = useRef(false);
+  useEffect(() => {
+    if (openedFromUrlRef.current || typeof window === "undefined" || tree.length === 0) return;
+    const fileParam = new URLSearchParams(window.location.search).get("file");
+    if (fileParam) {
+      openedFromUrlRef.current = true;
+      openFile({ path: fileParam, name: fileParam.split("/").pop() });
+    }
+  }, [tree]); // eslint-disable-line
+
   // Visual review annotations (09-integrations Epic 1b).
   async function loadAnnotations() {
     try {
