@@ -1,0 +1,10 @@
+{
+  "note": "占位示例证据文件：把真实实验产出写到这里，正文数字必须与本文件一致。",
+  "dataset": "sample",
+  "metrics": {
+    "train": { "rmse": 0.184, "r2": 0.912 },
+    "validation": { "rmse": 0.203, "r2": 0.895 }
+  },
+  "generatedBy": "template placeholder — replace with your real pipeline output",
+  "updatedAt": null
+}

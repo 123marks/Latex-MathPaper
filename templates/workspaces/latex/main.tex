@@ -1,17 +1,25 @@
-\documentclass[11pt,a4paper]{article}
-
+\documentclass[11pt]{article}
 \usepackage[margin=2.5cm]{geometry}
-\usepackage{amsmath,amssymb,booktabs,graphicx,hyperref}
+\usepackage{amsmath}
+\usepackage{graphicx}
 
-\title{Untitled Document}
-\author{}
+\title{Your Paper Title}
+\author{Paper OS Workspace}
 \date{\today}
 
 \begin{document}
 \maketitle
 
-\section{Introduction}
+\begin{abstract}
+用一段话说明问题、方法与主要结论。写作纪律：摘要里的每个数字
+都必须能在 results/ 的证据文件或正文表格里找到出处。
+\end{abstract}
 
-Start writing here.
+\input{sections/intro}
+\input{sections/method}
+\input{sections/results}
+
+\bibliographystyle{plain}
+\bibliography{references}
 
 \end{document}

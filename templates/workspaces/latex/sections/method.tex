@@ -1,0 +1,11 @@
+\section{Method}
+
+我们把估计问题写成正则化的加权残差最小化~\cite{boyd2004}：
+\begin{equation}
+  \label{eq:objective}
+  \hat{\theta} = \arg\min_{\theta}\; \sum_{i=1}^{n} w_i\,\bigl(y_i - f(x_i;\theta)\bigr)^2
+  \;+\; \lambda\,\lVert\theta\rVert_2^2 .
+\end{equation}
+
+其中权重 $w_i$ 反映观测的可信度，正则项 $\lambda\lVert\theta\rVert_2^2$
+在设计矩阵病态时保持估计稳定。收敛性分析可参考~\cite{cover2006}。

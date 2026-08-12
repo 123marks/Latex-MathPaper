@@ -8,6 +8,9 @@ const TOC = [
   ["first-doc", "创建第一个文档"],
   ["compile", "本地编译 PDF"],
   ["ai-assist", "AI 写作与 Inline Edit"],
+  ["annotate", "标注 → AI 修改提案"],
+  ["references", "文献与 PDF 审阅"],
+  ["sessions", "会话管理与多网关"],
   ["community", "社区与技能市场"],
 ];
 
@@ -81,7 +84,7 @@ export default function Docs() {
         </h2>
         <p>
           Paper OS 的编辑与编译都在你自己的机器上运行;AI 写作则由你配置的 provider 处理。
-          跟着下面六步走完,你就拥有一个本地优先的 LaTeX 工作台。
+          跟着下面九节走完,你就拥有一个本地优先、证据可追溯的 LaTeX 工作台。
         </p>
       </Reveal>
 
@@ -184,7 +187,44 @@ latexmk -pdf main.tex`}</pre>
             </ul>
           </DocSection>
 
-          <DocSection id="community" index={5} title="社区与技能市场">
+          <DocSection id="annotate" index={5} title="标注 → AI 修改提案">
+            <p style={P_STYLE}>
+              审阅式修改的完整闭环:在编辑器里选中若干行,在下方标注面板填写意图
+              (改写 / 修复 / 疑问 / 待办)与优先级;点「交给 AI 修改」,
+              所有打开的标注会被组装成一条结构化修改请求填入 AI 输入框——
+              由你审阅后发送,AI 的文件提案仍走 Preview → Apply 人审流程。
+            </p>
+            <ul style={LIST_STYLE}>
+              <li>编译出 PDF 后,可以直接在页面上拖框做区域标注(自动换算为缩放无关的坐标)。</li>
+              <li>标注状态流转:open → proposed → resolved,已解决的区域在 PDF 上转绿。</li>
+            </ul>
+          </DocSection>
+
+          <DocSection id="references" index={6} title="文献与 PDF 审阅">
+            <p style={P_STYLE}>
+              工作台底部的「文献」面板解析工作区里的 <code>.bib</code> 文件:
+              每条文献显示作者 / 发表处 / 被引次数,点引用位置直达源码行;
+              引了却没有条目的 key 会被醒目列出。
+            </p>
+            <ul style={LIST_STYLE}>
+              <li>粘贴 DOI(<code>10.xxxx/yyy</code>)或 arXiv ID(<code>2401.12345</code>)一键导入 BibTeX,按条目 key 自动去重。</li>
+              <li>编译出的 PDF 支持划词——选中一段文字点「问 AI」,检查表述与源码是否一致。</li>
+            </ul>
+          </DocSection>
+
+          <DocSection id="sessions" index={7} title="会话管理与多网关">
+            <p style={P_STYLE}>
+              「会话」页保存你与 AI 的全部历史对话:可搜索、可查看当时的文件提案、
+              一键「在工作台复用」并自动回到当时的工作区。
+            </p>
+            <ul style={LIST_STYLE}>
+              <li>「模型 API Key」页可保存多个 Provider 档案(官方 / 中转 / 本地 vLLM),一键切换。</li>
+              <li>工作台 AI 输入框上方可为单次对话临时指定档案。</li>
+              <li>「API 用量」页给出真实的 token 输入/输出构成、24h 分布与按工作区排名。</li>
+            </ul>
+          </DocSection>
+
+          <DocSection id="community" index={8} title="社区与技能市场">
             <p style={P_STYLE}>
               到<Link to="/community" className="ulink">社区广场</Link>
               分享模板与写作经验;在

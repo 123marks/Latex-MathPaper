@@ -1,0 +1,21 @@
+\section{Results}
+
+% evidence: results/model-fit.json
+% 纪律：下表数字与 results/model-fit.json 保持一致；改数据先改证据文件。
+式~\eqref{eq:objective} 在示例数据集上的拟合结果如下：
+
+\begin{table}[h]
+  \centering
+  \caption{示例拟合指标（数据来源：results/model-fit.json，占位示例）}
+  \begin{tabular}{lrr}
+    \hline
+    指标 & 训练集 & 验证集 \\
+    \hline
+    RMSE & 0.184 & 0.203 \\
+    $R^2$ & 0.912 & 0.895 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+把真实实验产出写入 results/ 后，替换本表并保留 evidence 注释，
+「放大镜」与审阅者都能沿注释找到数字出处。
