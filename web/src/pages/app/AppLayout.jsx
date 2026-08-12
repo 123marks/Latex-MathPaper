@@ -115,7 +115,7 @@ export default function AppLayout() {
             )}
             <span className={`role-badge ${user?.role}`}>{user?.role}</span>
             <span className="avatar">{initial}</span>
-            <span style={{ fontSize: 14 }}>{user?.displayName || user?.username}</span>
+            <span className="topbar-username" style={{ fontSize: 14 }}>{user?.displayName || user?.username}</span>
             <button className="btn btn-quiet btn-sm" onClick={onLogout}>退出</button>
           </div>
         </header>

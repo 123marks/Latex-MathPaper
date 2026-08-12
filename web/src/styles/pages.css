@@ -3437,6 +3437,18 @@
   .dash-session-time { display: none; }
 }
 
+/* 顶栏窄屏收敛：390px 下不允许把文档撑宽 */
+.topbar .row { min-width: 0; }
+@media (max-width: 700px) {
+  .topbar .topbar-username { display: none; }
+  .workspace-switch { max-width: 140px; }
+}
+@media (max-width: 480px) {
+  .topbar .role-badge { display: none; }
+  .workspace-switch { max-width: 104px; }
+  .topbar .cmdk-trigger span:first-child { display: none; }
+}
+
 /* 通用分页条 */
 .pager {
   display: flex;

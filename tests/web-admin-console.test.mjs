@@ -42,6 +42,24 @@ test("audit log paginates and keys overview filters client-side", () => {
   assert.match(css, /\.pager \{/);
 });
 
+test("admin usage adds real workspace ranking and 24h distribution", () => {
+  const usageSource = read("src/pages/admin/AdminUsage.jsx");
+  const overviewSource = read("src/pages/admin/AdminOverview.jsx");
+  assert.match(usageSource, /按工作区/);
+  assert.match(usageSource, /data\.workspaces/);
+  assert.match(usageSource, /24h 分布/);
+  assert.match(usageSource, /data\.hours/);
+  assert.match(overviewSource, /消耗 Top 工作区/);
+  assert.match(overviewSource, /usage\.workspaces/);
+});
+
+test("app topbar collapses on narrow viewports instead of overflowing", () => {
+  const layoutAppSource = read("src/pages/app/AppLayout.jsx");
+  assert.match(layoutAppSource, /topbar-username/);
+  assert.match(css, /\.topbar \.topbar-username \{ display: none; \}/);
+  assert.match(css, /\.workspace-switch \{ max-width/);
+});
+
 test("dashboard is a real control hub fed by live endpoints", () => {
   assert.match(dashboardSource, /\/api\/editor\/projects/);
   assert.match(dashboardSource, /\/api\/chat\/history/);

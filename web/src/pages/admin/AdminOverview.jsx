@@ -168,7 +168,29 @@ export default function AdminOverview() {
           )}
         </section>
 
-        <section className="panel c12 glass">
+        <section className="panel c6 glass">
+          <div className="panel-head">
+            <h3>消耗 Top 工作区</h3>
+            <span className="chip muted">近 30 天</span>
+          </div>
+          {(usage?.workspaces || []).length === 0 ? (
+            <div className="empty">暂无消耗记录。</div>
+          ) : (
+            <div className="ws-rank">
+              {usage.workspaces.slice(0, 6).map((w) => (
+                <div key={w.workspace} className="ws-rank-row" title={`${w.requests} 次请求`}>
+                  <span className="ws-name">{w.workspace}</span>
+                  <span className="ws-meter">
+                    <i style={{ width: `${Math.max(2, (w.tokens / Math.max(1, usage.workspaces[0]?.tokens || 1)) * 100)}%` }} />
+                  </span>
+                  <span className="ws-val">{abbrev(w.tokens)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="panel c6 glass">
           <div className="panel-head">
             <h3>近 7 日注册</h3>
             <span className="chip muted">signups</span>

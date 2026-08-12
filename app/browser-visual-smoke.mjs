@@ -687,6 +687,11 @@ async function verifyWorkbenchAI(cdp, baseUrl, outDir, workspaceId) {
         };
       })
       .filter((item) => item.left < -1 || item.right > innerWidth + 1 || item.width > innerWidth + 1)
+      // Right-extending / over-wide elements are the actual scrollWidth
+      // culprits; off-canvas-left (hidden menus) sort last so a truncated
+      // list still shows the real offenders first.
+      .sort((a, b) => Math.max(b.right - innerWidth, b.width - innerWidth)
+        - Math.max(a.right - innerWidth, a.width - innerWidth))
       .slice(0, 12),
   }))()`);
 

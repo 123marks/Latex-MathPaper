@@ -38,6 +38,8 @@ export default function AdminUsage() {
 
   const tokenSeries = (data?.daily || []).map((d) => ({ count: d.tokens }));
   const maxUserTok = Math.max(1, ...(data?.users || []).map((u) => u.tokens));
+  const hourMax = Math.max(1, ...(data?.hours || [0]));
+  const wsMax = Math.max(1, ...(data?.workspaces || []).map((w) => w.tokens));
 
   return (
     <>
@@ -159,6 +161,46 @@ export default function AdminUsage() {
                   </tbody>
                 </table>
               )}
+            </section>
+
+            <section className="panel c7 glass">
+              <div className="panel-head">
+                <h3>按工作区</h3>
+                <span className="chip muted">tokens 排名 · 旧记录归入「未标注」</span>
+              </div>
+              {(data.workspaces || []).length === 0 ? (
+                <div className="empty">暂无消耗记录。</div>
+              ) : (
+                <div className="ws-rank">
+                  {data.workspaces.map((w) => (
+                    <div key={w.workspace} className="ws-rank-row" title={`${w.requests} 次请求`}>
+                      <span className="ws-name">{w.workspace}</span>
+                      <span className="ws-meter"><i style={{ width: `${Math.max(2, (w.tokens / wsMax) * 100)}%` }} /></span>
+                      <span className="ws-val">{abbrev(w.tokens)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="panel c5 glass">
+              <div className="panel-head">
+                <h3>24h 分布</h3>
+                <span className="chip muted">tokens / 小时 · 本机时区</span>
+              </div>
+              <div className="bars">
+                {(data.hours || []).map((tok, h) => (
+                  <div
+                    key={h}
+                    className="bar"
+                    style={{ height: `${Math.max(6, (tok / hourMax) * 100)}%` }}
+                    title={`${h}:00 – ${h}:59 · ${tok.toLocaleString()} tok`}
+                  />
+                ))}
+              </div>
+              <div className="bar-label">
+                <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span>
+              </div>
             </section>
           </div>
         </>
