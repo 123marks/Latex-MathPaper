@@ -52,7 +52,7 @@ test("Workbench wires the viewer into ask-AI and pdf-region annotations", () => 
   assert.match(workbenchSource, /onAskSelection=/);
   assert.match(workbenchSource, /kind: "pdf-region"/);
   // Annotation list and AI compose understand pdf-region targets.
-  assert.match(workbenchSource, /PDF p\.\$\{a\.target\.page\}/);
+  assert.match(workbenchSource, /PDF p\.\{a\.target\.page\}/);
   assert.match(workbenchSource, /PDF 第 \$\{a\.target\.page\} 页选区/);
 });
 

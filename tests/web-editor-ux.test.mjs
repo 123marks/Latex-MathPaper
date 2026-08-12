@@ -27,6 +27,20 @@ test("dirty buffers block accidental page close", () => {
   assert.match(workbenchSource, /dirtyRef\.current = Boolean\(dirty\) \|\| openTabs\.some\(\(t\) => t\.dirty\)/);
 });
 
+test("search, references, and annotations jump to the exact line", () => {
+  const editorSource = readFileSync(resolve("web/src/components/LaTeXEditor.jsx"), "utf8");
+  // The editor exposes its Monaco instance to the host.
+  assert.match(editorSource, /editorRef\.current = editor/);
+  // openFileAt reveals + focuses the target line with a retry.
+  assert.match(workbenchSource, /revealLineInCenter\(line\)/);
+  assert.match(workbenchSource, /setPosition\(\{ lineNumber: line, column: 1 \}\)/);
+  // All three surfaces feed it.
+  assert.match(workbenchSource, /onClick=\{\(\) => openFileAt\(file, r\.line\)\}/);
+  assert.match(workbenchSource, /onOpenFile\(loc\.file, loc\.line\)/);
+  assert.match(workbenchSource, /openFileAt\(a\.target\.path, a\.target\.startLine\)/);
+  assert.match(workbenchSource, /annotation-loc-jump/);
+});
+
 test("open tabs persist per workspace and restore before persisting", () => {
   assert.match(workbenchSource, /paperos\.tabs\.\$\{contest\}/);
   assert.match(workbenchSource, /tabsRestoredRef/);

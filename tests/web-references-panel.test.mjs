@@ -10,8 +10,8 @@ test("Workbench mounts a references panel fed by the real .bib scan", () => {
   assert.match(workbenchSource, /function ReferencesPanel\(/);
   assert.match(workbenchSource, /\/api\/editor\/references\?workspace=/);
   assert.match(workbenchSource, /<ReferencesPanel/);
-  // Citation locations open the actual source file.
-  assert.match(workbenchSource, /onOpenFile\(loc\.file\)/);
+  // Citation locations open the actual source file at the exact line.
+  assert.match(workbenchSource, /onOpenFile\(loc\.file, loc\.line\)/);
   // Missing citations (cited but absent from .bib) are surfaced, not hidden.
   assert.match(workbenchSource, /data\.missing\.length > 0/);
   assert.match(workbenchSource, /引用了但 \.bib 里没有/);

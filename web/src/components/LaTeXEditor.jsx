@@ -92,12 +92,14 @@ function registerLatex(monaco) {
   });
 }
 
-export default function LaTeXEditor({ value, onChange, onSelectionChange, language = "latex", height = "100%" }) {
+export default function LaTeXEditor({ value, onChange, onSelectionChange, editorRef, language = "latex", height = "100%" }) {
   function handleBeforeMount(monaco) {
     registerLatex(monaco);
   }
   function handleMount(editor, monaco) {
     registerLatex(monaco);
+    // Expose the Monaco instance so the host can reveal lines / focus (跳转).
+    if (editorRef) editorRef.current = editor;
     if (typeof onSelectionChange === "function") {
       editor.onDidChangeCursorSelection((event) => {
         const sel = event.selection;

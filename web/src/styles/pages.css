@@ -3741,6 +3741,14 @@
 }
 .annotation-item.status-resolved { opacity: 0.55; }
 .annotation-loc { font-family: var(--font-mono); font-size: 11px; color: var(--ink-cool); flex: 0 0 auto; }
+.annotation-loc-jump {
+  background: none;
+  border: 1px dashed transparent;
+  border-radius: 4px;
+  padding: 0 4px;
+  cursor: pointer;
+}
+.annotation-loc-jump:hover { color: var(--amber); border-color: rgba(212, 163, 65, 0.5); }
 .annotation-note { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-soft); }
 .annotation-status { font-size: 10.5px; color: var(--muted); font-family: var(--font-mono); }
 .annotation-actions { display: flex; gap: 4px; flex: 0 0 auto; }

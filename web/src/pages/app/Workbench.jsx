@@ -335,6 +335,27 @@ export default function Workbench() {
   const [renaming, setRenaming] = useState(null); // { path, value, isDir }
   const [creating, setCreating] = useState(null); // { kind: "file"|"folder", value }
 
+  // Monaco 实例引用：用于搜索/文献/标注结果的「跳转到行」。
+  const monacoRef = useRef(null);
+
+  async function openFileAt(path, line) {
+    await openFile({ path, name: path.split("/").pop() });
+    const jump = () => {
+      const ed = monacoRef.current;
+      if (!ed) return false;
+      try {
+        ed.revealLineInCenter(line);
+        ed.setPosition({ lineNumber: line, column: 1 });
+        ed.focus();
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    // 内容经 React 渲染进 Monaco 需要一拍；失败则再重试一次。
+    setTimeout(() => { if (!jump()) setTimeout(jump, 200); }, 60);
+  }
+
   // ── 真编辑器四件套：左栏全文搜索 / Ctrl+S / 关闭保护 / 标签页持久化 ──
   const [railMode, setRailMode] = useState("files"); // "files" | "search"
   const [searchQ, setSearchQ] = useState("");
@@ -865,7 +886,7 @@ export default function Workbench() {
                           key={`${r.line}-${r.text.slice(0, 24)}`}
                           className="search-hit"
                           title={`${file}:${r.line}`}
-                          onClick={() => openFile({ path: file, name: file.split("/").pop() })}
+                          onClick={() => openFileAt(file, r.line)}
                         >
                           <span className="search-hit-ln">{r.line}</span>
                           <span className="search-hit-text">{r.text.trim().slice(0, 120)}</span>
@@ -951,6 +972,7 @@ export default function Workbench() {
                   if (active) setOpenTabs((tabs) => tabs.map((t) => (t.path === active.path ? { ...t, dirty: true } : t)));
                 }}
                 onSelectionChange={setAnnoSel}
+                editorRef={monacoRef}
                 language="latex"
                 height="100%"
               />
@@ -1040,11 +1062,16 @@ export default function Workbench() {
             onStatus={(id, status) => updateAnnotation(id, { status })}
             onDelete={deleteAnnotation}
             onCompose={composeFromAnnotations}
+            onJump={(a) => {
+              if (a.target?.kind === "editor-range") openFileAt(a.target.path, a.target.startLine);
+            }}
           />
 
           <ReferencesPanel
             contest={contest}
-            onOpenFile={(p) => openFile({ path: p, name: p.split("/").pop() })}
+            onOpenFile={(p, line) => (line
+              ? openFileAt(p, line)
+              : openFile({ path: p, name: p.split("/").pop() }))}
           />
 
           <div className="statusbar">
@@ -1331,7 +1358,7 @@ function ReferencesPanel({ contest, onOpenFile }) {
                           <button
                             key={`${loc.file}:${loc.line}:${i}`}
                             className="ref-loc"
-                            onClick={() => onOpenFile(loc.file)}
+                            onClick={() => onOpenFile(loc.file, loc.line)}
                             title={`${loc.file}:${loc.line}`}
                           >
                             {loc.file.split("/").pop()}:{loc.line}
@@ -1351,7 +1378,7 @@ function ReferencesPanel({ contest, onOpenFile }) {
                           <button
                             key={`${loc.file}:${loc.line}:${i}`}
                             className="ref-loc"
-                            onClick={() => onOpenFile(loc.file)}
+                            onClick={() => onOpenFile(loc.file, loc.line)}
                           >
                             {loc.file.split("/").pop()}:{loc.line}
                           </button>
@@ -1369,7 +1396,7 @@ function ReferencesPanel({ contest, onOpenFile }) {
   );
 }
 
-function AnnotationsPanel({ active, selection, annotations, onAdd, onStatus, onDelete, onCompose }) {
+function AnnotationsPanel({ active, selection, annotations, onAdd, onStatus, onDelete, onCompose, onJump }) {
   const [note, setNote] = useState("");
   const [intent, setIntent] = useState("edit");
   const [priority, setPriority] = useState("normal");
@@ -1429,11 +1456,18 @@ function AnnotationsPanel({ active, selection, annotations, onAdd, onStatus, onD
         ) : (
           fileAnnotations.map((a) => (
             <div key={a.id} className={`annotation-item status-${a.status}`}>
-              <span className="annotation-loc">
-                {a.target.kind === "pdf-region"
-                  ? `PDF p.${a.target.page}`
-                  : `L${a.target.startLine}${a.target.endLine !== a.target.startLine ? `–${a.target.endLine}` : ""}`}
-              </span>
+              {a.target.kind === "pdf-region" ? (
+                <span className="annotation-loc">PDF p.{a.target.page}</span>
+              ) : (
+                <button
+                  type="button"
+                  className="annotation-loc annotation-loc-jump"
+                  title="跳转到对应源码行"
+                  onClick={() => onJump?.(a)}
+                >
+                  L{a.target.startLine}{a.target.endLine !== a.target.startLine ? `–${a.target.endLine}` : ""}
+                </button>
+              )}
               <span className={`chip anno-intent anno-intent-${a.intent}`}>{a.intent}</span>
               <span className={`chip anno-pri anno-pri-${a.priority}`}>{a.priority}</span>
               <span className="annotation-note">{a.note}</span>
