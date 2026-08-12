@@ -73,6 +73,7 @@ export default function Sessions() {
                 >
                   <div className="session-item-head">
                     <span className={`chip ${t.mode === "inline" ? "" : "muted"}`}>{t.mode}</span>
+                    {t.workspace && <span className="chip muted">{t.workspace}</span>}
                     <span className="session-time">{formatRelative(t.createdAt)}</span>
                   </div>
                   <div className="session-prompt">{t.prompt || "（空提问）"}</div>
@@ -99,7 +100,7 @@ export default function Sessions() {
                 <span className="session-time">{formatRelative(selected.createdAt)}</span>
                 <Link
                   className="btn btn-primary btn-sm session-resume"
-                  to={`/app/workbench?prompt=${encodeURIComponent(selected.prompt || "")}`}
+                  to={`/app/workbench?${selected.workspace ? `workspace=${encodeURIComponent(selected.workspace)}&` : ""}prompt=${encodeURIComponent(selected.prompt || "")}`}
                 >
                   在工作台复用
                 </Link>

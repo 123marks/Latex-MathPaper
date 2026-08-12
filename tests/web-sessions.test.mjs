@@ -43,7 +43,9 @@ test("Sessions page renders search and an initial empty detail", () => {
 test("Sessions reads real chat history and can reuse a prompt in the Workbench", () => {
   assert.match(sessionsSource, /\/api\/chat\/history/);
   assert.match(sessionsSource, /parseFileBlocks/);
-  assert.match(sessionsSource, /\/app\/workbench\?prompt=/);
+  // Reuse deep link carries the original workspace when the thread has one.
+  assert.match(sessionsSource, /selected\.workspace \? `workspace=\$\{encodeURIComponent\(selected\.workspace\)\}&` : ""/);
+  assert.match(sessionsSource, /t\.workspace && <span className="chip muted">\{t\.workspace\}<\/span>/);
 });
 
 test("Sessions is routed and reachable from the app nav", () => {

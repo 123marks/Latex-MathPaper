@@ -3471,6 +3471,7 @@ async function api(req, res, path) {
     const summary = threads.slice(0, 100).map((t) => ({
       id: t.id,
       mode: t.mode,
+      workspace: t.workspace || "",
       createdAt: t.createdAt,
       prompt: String(t.prompt || "").slice(0, 200),
       replyPreview: String(t.reply || "").replace(/\s+/g, " ").trim().slice(0, 200),
@@ -3585,7 +3586,7 @@ async function api(req, res, path) {
           }
           res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
           res.end();
-          chatStore.update((d) => { d.threads.push({ id: newToken().slice(0, 10), userId: user.id, prompt: userText, reply, createdAt: new Date().toISOString(), mode }); if (d.threads.length > 200) d.threads = d.threads.slice(-200); return d; });
+          chatStore.update((d) => { d.threads.push({ id: newToken().slice(0, 10), userId: user.id, prompt: userText, reply, createdAt: new Date().toISOString(), mode, workspace: chatWorkspace }); if (d.threads.length > 200) d.threads = d.threads.slice(-200); return d; });
           recordUsage(user.id, { model: usedModel, kind: mode === "inline" ? "inline" : "chat", promptTokens: promptTok, completionTokens: completionTok, durationMs: Date.now() - chatStart, ok: true, workspace: chatWorkspace });
           return undefined;
         }
@@ -3652,7 +3653,7 @@ async function api(req, res, path) {
       setTimeout(push, 12);
     }
     push();
-    chatStore.update((d) => { d.threads.push({ id: newToken().slice(0, 10), userId: user.id, prompt: userText, reply, createdAt: new Date().toISOString(), mode }); if (d.threads.length > 200) d.threads = d.threads.slice(-200); return d; });
+    chatStore.update((d) => { d.threads.push({ id: newToken().slice(0, 10), userId: user.id, prompt: userText, reply, createdAt: new Date().toISOString(), mode, workspace: chatWorkspace }); if (d.threads.length > 200) d.threads = d.threads.slice(-200); return d; });
     recordUsage(user.id, { model: "mock-local", kind: mode === "inline" ? "inline" : "chat", promptTokens: userText.length + selection.length, completionTokens: reply.length, durationMs: Date.now() - chatStart, ok: true, workspace: chatWorkspace });
     return undefined;
   }

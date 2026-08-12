@@ -136,7 +136,7 @@ export default function Dashboard() {
                   <span className="dash-session-time">{formatRelative(s.createdAt)}</span>
                   <Link
                     className="btn btn-quiet btn-sm"
-                    to={`/app/workbench?prompt=${encodeURIComponent(s.prompt)}`}
+                    to={`/app/workbench?${s.workspace ? `workspace=${encodeURIComponent(s.workspace)}&` : ""}prompt=${encodeURIComponent(s.prompt)}`}
                   >
                     复用
                   </Link>

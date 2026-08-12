@@ -63,7 +63,7 @@ test("chat history lists, details, and searches the caller's own threads", async
   // Drive one real (mock-local) chat so a thread is recorded on disk.
   const chat = await request("/api/chat", {
     method: "POST",
-    ...jsonBody({ messages: [{ role: "user", content: "update [file:paper/main.tex] 精简方法段" }], mode: "chat" }),
+    ...jsonBody({ messages: [{ role: "user", content: "update [file:paper/main.tex] 精简方法段" }], mode: "chat", workspace: "hist-ws" }),
   });
   assert.equal(chat.status, 200);
   await chat.text(); // drain the SSE stream so the thread is persisted
@@ -75,6 +75,7 @@ test("chat history lists, details, and searches the caller's own threads", async
   assert.match(row.prompt, /update \[file:paper\/main\.tex\]/);
   assert.ok(Array.isArray(row.fileBlocks));
   assert.equal(typeof row.replyPreview, "string");
+  assert.equal(row.workspace, "hist-ws"); // threads remember their workspace
 
   // Detail returns the full thread without leaking userId.
   const detail = await json(`/api/chat/history?id=${row.id}`);
