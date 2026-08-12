@@ -3432,6 +3432,7 @@
   min-width: 0;
 }
 .dash-session-time { font-family: var(--font-mono); font-size: 11px; color: var(--faint); white-space: nowrap; }
+.ws-remove:hover { color: #e26d5a; border-color: rgba(226, 109, 90, 0.5); }
 @media (max-width: 720px) {
   .dash-session-row { grid-template-columns: auto 1fr; }
   .dash-session-time { display: none; }

@@ -2477,6 +2477,18 @@ async function api(req, res, path) {
     });
   }
 
+  // ── remove a Workspace（external 解除注册 / managed 需 deleteFiles=1 删除文件夹）──
+  if (req.method === "DELETE" && /^\/api\/editor\/projects\/[\w.-]+$/.test(path)) {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const id = decodeURIComponent(path.split("/").pop());
+    const url = new URL(req.url, `http://localhost:${port}`);
+    const deleteFiles = url.searchParams.get("deleteFiles") === "1";
+    const result = workspaceKernel.removeWorkspace(id, { deleteFiles });
+    audit(user, "workspace.remove", `${id} (${result.source}${result.deletedFiles ? ", files deleted" : ", files kept"})`);
+    return sendJson(res, 200, { ok: true, ...result });
+  }
+
   // ── create a managed Workspace or register an existing folder ──
   if (req.method === "POST" && path === "/api/editor/projects") {
     const user = requireUser(req, res);

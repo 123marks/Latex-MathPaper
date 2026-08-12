@@ -39,6 +39,23 @@ export default function Dashboard() {
     api.get("/api/engine/status").then(setEngine).catch(() => {});
   }, []);
 
+  async function removeWorkspaceRow(p) {
+    const label = p.name || p.id;
+    try {
+      if (p.source === "managed") {
+        if (!window.confirm(`移除托管工作区「${label}」会删除它的磁盘文件夹（建议先导出备份）。确定删除？`)) return;
+        await api.del(`/api/editor/projects/${encodeURIComponent(p.id)}?deleteFiles=1`);
+      } else {
+        if (!window.confirm(`把「${label}」移出工作区列表？磁盘文件会原样保留。`)) return;
+        await api.del(`/api/editor/projects/${encodeURIComponent(p.id)}`);
+      }
+      const d = await api.get("/api/editor/projects");
+      setProjects(d.projects || []);
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
   const rt = summary?.runtime;
   const ok = (p) => (p?.ok ? p.detail || "可用" : "缺失");
   const workspaceCount = projects?.length ?? summary?.workspaces?.length ?? 0;
@@ -103,6 +120,16 @@ export default function Dashboard() {
                     <Link className="btn btn-quiet btn-sm" to={`/app/workbench?workspace=${encodeURIComponent(p.id)}`}>
                       打开 →
                     </Link>
+                    {p.source !== "legacy-contest" && (
+                      <button
+                        type="button"
+                        className="btn btn-quiet btn-sm ws-remove"
+                        title={p.source === "managed" ? "删除托管工作区（含磁盘文件夹）" : "移出列表（保留磁盘文件）"}
+                        onClick={() => removeWorkspaceRow(p)}
+                      >
+                        移除
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

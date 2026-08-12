@@ -265,6 +265,41 @@ export function createWorkspaceKernel({
     }
   }
 
+  // Remove a workspace from the product. Semantics follow the source:
+  //   external — drop the registry entry, files on disk stay untouched;
+  //   managed  — the folder IS the registration, so removal must delete it
+  //              (caller passes deleteFiles: true after explicit confirm);
+  //   legacy-contest — refused here (sample content, use its own tooling).
+  function removeWorkspace(id, { deleteFiles = false } = {}) {
+    const workspace = getWorkspace(id);
+    if (workspace.source === "external") {
+      const registry = readRegistry();
+      registry.workspaces = registry.workspaces.filter(
+        (entry) => safeWorkspaceId(entry.id) !== workspace.id,
+      );
+      writeJsonAtomic(registryPath, registry);
+      return { id: workspace.id, source: workspace.source, deletedFiles: false };
+    }
+    if (workspace.source === "managed") {
+      if (!deleteFiles) {
+        throw new WorkspaceKernelError(
+          "DELETE_REQUIRES_CONFIRM",
+          "Removing a managed workspace deletes its folder; pass deleteFiles after user confirmation.",
+        );
+      }
+      const target = resolve(workspace.root);
+      if (target !== join(absoluteManagedRoot, workspace.id)) {
+        throw new WorkspaceKernelError("PATH_ESCAPE", "Managed workspace root escapes the managed directory.");
+      }
+      rmSync(target, { recursive: true, force: true });
+      return { id: workspace.id, source: workspace.source, deletedFiles: true };
+    }
+    throw new WorkspaceKernelError(
+      "PACK_REQUIRES_ADAPTER",
+      "Legacy contest workspaces cannot be removed here.",
+    );
+  }
+
   function registerWorkspace({ id, name, path, pack }) {
     const workspaceId = safeWorkspaceId(id || basename(String(path || "")));
     const root = resolve(String(path || ""));
@@ -361,6 +396,7 @@ export function createWorkspaceKernel({
     listPacks: () => [...packs.values()].map((pack) => ({ ...pack })),
     listWorkspaces,
     registerWorkspace,
+    removeWorkspace,
     resolvePath,
   });
 }
