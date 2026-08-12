@@ -3311,6 +3311,43 @@
 }
 .tree-create { display: flex; gap: 4px; padding: 0 6px 8px; align-items: center; }
 .tree-toolbar .btn { font-size: 10px; padding: 2px 6px; }
+.tree-toolbar .rail-mode-on { color: var(--amber); border-color: var(--amber); }
+
+/* 工作区全文搜索结果（左栏搜索模式） */
+.search-results { display: grid; gap: 8px; padding: 0 4px; }
+.search-file { display: grid; gap: 2px; }
+.search-file-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  cursor: pointer;
+  color: var(--text-soft);
+  font-size: 11px;
+  border-radius: 4px;
+}
+.search-file-head:hover { background: rgba(212, 163, 65, 0.08); }
+.search-file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.search-file-count {
+  font-size: 9.5px;
+  color: var(--amber);
+  background: rgba(212, 163, 65, 0.1);
+  padding: 0 6px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.search-hit {
+  display: flex;
+  gap: 8px;
+  padding: 2px 6px 2px 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.search-hit:hover { background: rgba(212, 163, 65, 0.08); color: var(--text-soft); }
+.search-hit-ln { color: var(--faint); min-width: 26px; text-align: right; flex-shrink: 0; }
+.search-hit-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* pdf.js 渲染层（09-integrations 3c/1d） */
 .pdfv { display: flex; flex-direction: column; gap: 8px; width: 100%; min-width: 0; }

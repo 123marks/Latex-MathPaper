@@ -335,6 +335,84 @@ export default function Workbench() {
   const [renaming, setRenaming] = useState(null); // { path, value, isDir }
   const [creating, setCreating] = useState(null); // { kind: "file"|"folder", value }
 
+  // ── 真编辑器四件套：左栏全文搜索 / Ctrl+S / 关闭保护 / 标签页持久化 ──
+  const [railMode, setRailMode] = useState("files"); // "files" | "search"
+  const [searchQ, setSearchQ] = useState("");
+  const [searchHits, setSearchHits] = useState(null);
+  const [searching, setSearching] = useState(false);
+
+  async function runWorkspaceSearch(e) {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    const q = searchQ.trim();
+    if (!q) { setSearchHits(null); return; }
+    try {
+      setSearching(true);
+      const d = await api.get(`/api/editor/search?workspace=${encodeURIComponent(contest)}&q=${encodeURIComponent(q)}&limit=100`);
+      setSearchHits(d.results || []);
+    } catch (err) {
+      setLog((l) => [`[search] ${err.message}`, ...l].slice(0, 50));
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  // Ctrl+S 保存当前文件（捕获阶段拦截浏览器的“另存为”）。
+  const saveRef = useRef(() => {});
+  useEffect(() => {
+    const onKey = (event) => {
+      if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        saveRef.current();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
+
+  // 有未保存内容时阻止误关页面。
+  const dirtyRef = useRef(false);
+  useEffect(() => {
+    const onBeforeUnload = (event) => {
+      if (dirtyRef.current) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
+  // 标签页会话持久化（per workspace）：先恢复，再开始写入。
+  const tabsRestoredRef = useRef(false);
+  useEffect(() => {
+    if (tabsRestoredRef.current || typeof window === "undefined") return;
+    tabsRestoredRef.current = true;
+    try {
+      const raw = window.localStorage.getItem(`paperos.tabs.${contest}`);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (Array.isArray(saved.tabs) && saved.tabs.length > 0) {
+        setOpenTabs(saved.tabs
+          .filter((t) => t && t.path)
+          .map((t) => ({ path: t.path, name: t.name || t.path.split("/").pop(), dirty: false })));
+        const deepFile = new URLSearchParams(window.location.search).get("file");
+        if (!deepFile && saved.active) {
+          openFile({ path: saved.active, name: saved.active.split("/").pop() });
+        }
+      }
+    } catch { /* 损坏的本地存储直接忽略 */ }
+  }, [contest]); // eslint-disable-line
+
+  useEffect(() => {
+    if (!tabsRestoredRef.current || typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(`paperos.tabs.${contest}`, JSON.stringify({
+        tabs: openTabs.map((t) => ({ path: t.path, name: t.name })),
+        active: active?.path || "",
+      }));
+    } catch { /* 存储不可用时静默 */ }
+  }, [openTabs, active, contest]);
+
   function toggleDir(path) {
     setCollapsedDirs((prev) => {
       const next = new Set(prev);
@@ -693,6 +771,8 @@ export default function Workbench() {
 
   const dirty = active && editor !== original;
   const allFiles = flattenTree(tree);
+  saveRef.current = save;
+  dirtyRef.current = Boolean(dirty) || openTabs.some((t) => t.dirty);
   const aiPlan = aiPhase === "idle"
     ? []
     : buildExecutionPlan({
@@ -717,23 +797,88 @@ export default function Workbench() {
           <div className="row spread" style={{ padding: "0 6px 8px" }}>
             <h5 style={{ margin: 0 }}>{contest}</h5>
             <div className="row tree-toolbar" style={{ gap: 2 }}>
+              {railMode === "files" && (
+                <>
+                  <button
+                    className="btn btn-quiet btn-sm"
+                    title="新建文件（支持嵌套路径）"
+                    onClick={() => setCreating({ kind: "file", value: activeDirPrefix() })}
+                  >
+                    ＋文件
+                  </button>
+                  <button
+                    className="btn btn-quiet btn-sm"
+                    title="新建文件夹"
+                    onClick={() => setCreating({ kind: "folder", value: activeDirPrefix() })}
+                  >
+                    ＋目录
+                  </button>
+                  <button className="btn btn-quiet btn-sm" title="刷新" onClick={loadTree}>⟲</button>
+                </>
+              )}
               <button
-                className="btn btn-quiet btn-sm"
-                title="新建文件（支持嵌套路径）"
-                onClick={() => setCreating({ kind: "file", value: activeDirPrefix() })}
+                className={`btn btn-quiet btn-sm ${railMode === "search" ? "rail-mode-on" : ""}`}
+                title="在整个工作区里全文搜索"
+                onClick={() => setRailMode((m) => (m === "files" ? "search" : "files"))}
               >
-                ＋文件
+                {railMode === "files" ? "搜索" : "文件"}
               </button>
-              <button
-                className="btn btn-quiet btn-sm"
-                title="新建文件夹"
-                onClick={() => setCreating({ kind: "folder", value: activeDirPrefix() })}
-              >
-                ＋目录
-              </button>
-              <button className="btn btn-quiet btn-sm" title="刷新" onClick={loadTree}>⟲</button>
             </div>
           </div>
+          {railMode === "search" && (
+            <>
+              <form className="tree-create" onSubmit={runWorkspaceSearch}>
+                <input
+                  autoFocus
+                  placeholder="全文搜索（回车执行）…"
+                  value={searchQ}
+                  onChange={(e) => setSearchQ(e.target.value)}
+                />
+                <button className="btn btn-quiet btn-sm" disabled={searching}>{searching ? "…" : "搜"}</button>
+              </form>
+              {searching ? (
+                <div className="spinner" />
+              ) : searchHits === null ? (
+                <div className="empty" style={{ padding: 10, fontSize: 11 }}>
+                  跨文件搜索正文内容，点结果直接打开文件。
+                </div>
+              ) : searchHits.length === 0 ? (
+                <div className="empty" style={{ padding: 10, fontSize: 11 }}>没有匹配。</div>
+              ) : (
+                <div className="search-results">
+                  {[...searchHits.reduce((m, r) => {
+                    const rows = m.get(r.file) || [];
+                    rows.push(r);
+                    m.set(r.file, rows);
+                    return m;
+                  }, new Map()).entries()].map(([file, rows]) => (
+                    <div key={file} className="search-file">
+                      <div
+                        className="search-file-head"
+                        onClick={() => openFile({ path: file, name: file.split("/").pop() })}
+                      >
+                        <span className="search-file-name">{file}</span>
+                        <span className="search-file-count">{rows.length}</span>
+                      </div>
+                      {rows.map((r) => (
+                        <div
+                          key={`${r.line}-${r.text.slice(0, 24)}`}
+                          className="search-hit"
+                          title={`${file}:${r.line}`}
+                          onClick={() => openFile({ path: file, name: file.split("/").pop() })}
+                        >
+                          <span className="search-hit-ln">{r.line}</span>
+                          <span className="search-hit-text">{r.text.trim().slice(0, 120)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+          {railMode === "files" && (
+            <>
           {creating && (
             <form className="tree-create" onSubmit={(e) => { e.preventDefault(); submitCreate(); }}>
               <input
@@ -762,6 +907,8 @@ export default function Workbench() {
               onRenameCancel={() => setRenaming(null)}
               onDelete={(n) => deleteEntry(n.path, n.type === "dir")}
             />
+          )}
+            </>
           )}
         </div>
 
