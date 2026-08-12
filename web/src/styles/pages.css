@@ -3217,7 +3217,7 @@
 }
 .ide-left {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: var(--tree-w, 220px) 1fr;
   min-height: 0;
 }
 .file-tree {
@@ -3312,6 +3312,54 @@
 .tree-create { display: flex; gap: 4px; padding: 0 6px 8px; align-items: center; }
 .tree-toolbar .btn { font-size: 10px; padding: 2px 6px; }
 .tree-toolbar .rail-mode-on { color: var(--amber); border-color: var(--amber); }
+
+/* 可拖拽分栏（文件树 / AI 面板） */
+.ide { position: relative; }
+.ide-left { position: relative; }
+.pane-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: col-resize;
+  z-index: 6;
+  background: transparent;
+  transition: background 0.15s var(--ease);
+}
+.pane-handle:hover { background: rgba(212, 163, 65, 0.22); }
+.pane-handle-tree { left: calc(var(--tree-w, 220px) - 3px); }
+.pane-handle-right { right: calc(var(--ide-right) - 3px); }
+body.pane-dragging { user-select: none; cursor: col-resize; }
+body.pane-dragging .pane-handle { background: rgba(212, 163, 65, 0.3); }
+@media (max-width: 900px) {
+  .pane-handle { display: none; }
+}
+
+/* 文件树右键菜单 */
+.tree-menu {
+  position: fixed;
+  z-index: 60;
+  min-width: 168px;
+  padding: 5px;
+  background: var(--bg-2);
+  border: 1px solid var(--ink-line);
+  border-radius: 8px;
+  box-shadow: 0 16px 48px -18px rgba(0, 0, 0, 0.7);
+  display: grid;
+  gap: 1px;
+}
+.tree-menu button {
+  background: none;
+  border: 0;
+  border-radius: 5px;
+  color: var(--text-soft);
+  font-size: 12.5px;
+  text-align: left;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+.tree-menu button:hover { background: rgba(212, 163, 65, 0.1); color: var(--text); }
+.tree-menu button.danger:hover { background: rgba(226, 109, 90, 0.12); color: #e26d5a; }
 
 /* 工作区全文搜索结果（左栏搜索模式） */
 .search-results { display: grid; gap: 8px; padding: 0 4px; }

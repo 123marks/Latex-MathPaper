@@ -356,6 +356,80 @@ export default function Workbench() {
     setTimeout(() => { if (!jump()) setTimeout(jump, 200); }, 60);
   }
 
+  // ── 可拖拽分栏：文件树宽 / AI 面板宽（localStorage 持久化，含钳制）──
+  const clampPane = (v, lo, hi, fallback) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n >= lo && n <= hi ? n : fallback;
+  };
+  const [paneW, setPaneW] = useState(() => {
+    if (typeof window === "undefined") return { tree: 220, right: 360 };
+    try {
+      const saved = JSON.parse(window.localStorage.getItem("paperos.panes") || "{}");
+      return {
+        tree: clampPane(saved.tree, 160, 420, 220),
+        right: clampPane(saved.right, 280, 640, 360),
+      };
+    } catch {
+      return { tree: 220, right: 360 };
+    }
+  });
+  const paneDragRef = useRef(null); // { which, startX, startW }
+  function startPaneDrag(which, e) {
+    e.preventDefault();
+    paneDragRef.current = { which, startX: e.clientX, startW: paneW[which] };
+    const onMove = (ev) => {
+      const d = paneDragRef.current;
+      if (!d) return;
+      const delta = ev.clientX - d.startX;
+      setPaneW((w) => (d.which === "tree"
+        ? { ...w, tree: Math.min(420, Math.max(160, d.startW + delta)) }
+        : { ...w, right: Math.min(640, Math.max(280, d.startW - delta)) }));
+    };
+    const onUp = () => {
+      paneDragRef.current = null;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.body.classList.remove("pane-dragging");
+      setPaneW((w) => {
+        try { window.localStorage.setItem("paperos.panes", JSON.stringify(w)); } catch { /* 忽略存储失败 */ }
+        return w;
+      });
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    document.body.classList.add("pane-dragging");
+  }
+
+  // ── 文件树右键菜单：复用既有 创建/重命名/删除 处理器 ──
+  const [treeMenu, setTreeMenu] = useState(null); // { x, y, node|null }
+  useEffect(() => {
+    if (!treeMenu) return undefined;
+    const close = () => setTreeMenu(null);
+    const onKey = (e) => { if (e.key === "Escape") close(); };
+    window.addEventListener("click", close);
+    window.addEventListener("contextmenu", close);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("contextmenu", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [treeMenu]);
+
+  function openTreeMenu(e, node) {
+    e.preventDefault();
+    e.stopPropagation();
+    const x = Math.min(e.clientX, (window.innerWidth || 1200) - 190);
+    const y = Math.min(e.clientY, (window.innerHeight || 800) - 200);
+    setTreeMenu({ x, y, node: node || null });
+  }
+
+  function menuDirPrefix(node) {
+    if (!node) return activeDirPrefix();
+    if (node.type === "dir") return `${node.path}/`;
+    return node.path.includes("/") ? node.path.slice(0, node.path.lastIndexOf("/") + 1) : "";
+  }
+
   // ── 真编辑器四件套：左栏全文搜索 / Ctrl+S / 关闭保护 / 标签页持久化 ──
   const [railMode, setRailMode] = useState("files"); // "files" | "search"
   const [searchQ, setSearchQ] = useState("");
@@ -812,9 +886,14 @@ export default function Workbench() {
         onInstall={installTectonic}
         onRefresh={loadEngine}
       />
-      <div className="ide">
+      <div className="ide" style={{ "--tree-w": `${paneW.tree}px`, "--ide-right": `${paneW.right}px` }}>
       <div className="ide-left">
-        <div className="file-tree">
+        <div
+          className="pane-handle pane-handle-tree"
+          title="拖拽调整文件栏宽度"
+          onMouseDown={(e) => startPaneDrag("tree", e)}
+        />
+        <div className="file-tree" onContextMenu={(e) => openTreeMenu(e, null)}>
           <div className="row spread" style={{ padding: "0 6px 8px" }}>
             <h5 style={{ margin: 0 }}>{contest}</h5>
             <div className="row tree-toolbar" style={{ gap: 2 }}>
@@ -927,6 +1006,7 @@ export default function Workbench() {
               onRenameSubmit={submitRename}
               onRenameCancel={() => setRenaming(null)}
               onDelete={(n) => deleteEntry(n.path, n.type === "dir")}
+              onMenu={openTreeMenu}
             />
           )}
             </>
@@ -1094,6 +1174,11 @@ export default function Workbench() {
         </div>
       </div>
 
+      <div
+        className="pane-handle pane-handle-right"
+        title="拖拽调整 AI 面板宽度"
+        onMouseDown={(e) => startPaneDrag("right", e)}
+      />
       <AIAssistantPanel
         activePath={active?.path || ""}
         provider={provider}
@@ -1112,6 +1197,55 @@ export default function Workbench() {
         onReject={rejectProposal}
         onRefreshPreview={refreshProposalPreview}
       />
+
+      {treeMenu && (
+        <div className="tree-menu" style={{ left: treeMenu.x, top: treeMenu.y }}>
+          {treeMenu.node?.type === "file" && (
+            <button
+              type="button"
+              onClick={() => { openFile({ path: treeMenu.node.path, name: treeMenu.node.name }); setTreeMenu(null); }}
+            >
+              打开
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => { setRailMode("files"); setCreating({ kind: "file", value: menuDirPrefix(treeMenu.node) }); setTreeMenu(null); }}
+          >
+            新建文件
+          </button>
+          <button
+            type="button"
+            onClick={() => { setRailMode("files"); setCreating({ kind: "folder", value: menuDirPrefix(treeMenu.node) }); setTreeMenu(null); }}
+          >
+            新建文件夹
+          </button>
+          {treeMenu.node ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  const n = treeMenu.node;
+                  setRailMode("files");
+                  setRenaming({ path: n.path, value: n.path, isDir: n.type === "dir" });
+                  setTreeMenu(null);
+                }}
+              >
+                重命名 / 移动
+              </button>
+              <button
+                type="button"
+                className="danger"
+                onClick={() => { const n = treeMenu.node; setTreeMenu(null); deleteEntry(n.path, n.type === "dir"); }}
+              >
+                删除
+              </button>
+            </>
+          ) : (
+            <button type="button" onClick={() => { loadTree(); setTreeMenu(null); }}>刷新</button>
+          )}
+        </div>
+      )}
 
       <div className="statusbar" style={{ position: "fixed", bottom: 0, right: 0, left: "var(--ide-rail)", zIndex: 5, display: log.length ? "flex" : "none" }}>
         <span className="seg" style={{ color: "var(--text-soft)" }}>last log:</span>
@@ -1141,6 +1275,7 @@ function FileTreeView({
   onRenameSubmit,
   onRenameCancel,
   onDelete,
+  onMenu,
 }) {
   const childProps = {
     activePath,
@@ -1153,6 +1288,7 @@ function FileTreeView({
     onRenameSubmit,
     onRenameCancel,
     onDelete,
+    onMenu,
   };
   return (
     <>
@@ -1185,6 +1321,7 @@ function FileTreeView({
                 className="item dir"
                 style={{ paddingLeft: pad }}
                 onClick={() => { if (!isRenaming) onToggle(n.path); }}
+                onContextMenu={(e) => onMenu?.(e, n)}
               >
                 <span className="tree-caret">{closed ? "▸" : "▾"}</span>
                 {isRenaming ? (
@@ -1209,6 +1346,7 @@ function FileTreeView({
             className={`item ${activePath === n.path ? "active" : ""}`}
             style={{ paddingLeft: pad + 14 }}
             onClick={() => { if (!isRenaming) onOpen(n); }}
+            onContextMenu={(e) => onMenu?.(e, n)}
           >
             {isRenaming ? (
               <TreeRenameInput

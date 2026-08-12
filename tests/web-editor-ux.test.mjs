@@ -41,6 +41,27 @@ test("search, references, and annotations jump to the exact line", () => {
   assert.match(workbenchSource, /annotation-loc-jump/);
 });
 
+test("panes resize by drag with clamped, persisted widths", () => {
+  assert.match(workbenchSource, /startPaneDrag/);
+  assert.match(workbenchSource, /"--tree-w": `\$\{paneW\.tree\}px`/);
+  assert.match(workbenchSource, /Math\.min\(420, Math\.max\(160/);
+  assert.match(workbenchSource, /Math\.min\(640, Math\.max\(280/);
+  assert.match(workbenchSource, /paperos\.panes/);
+  assert.match(css, /\.pane-handle \{/);
+  assert.match(css, /grid-template-columns: var\(--tree-w, 220px\) 1fr/);
+  // Handles disappear where the layout collapses.
+  assert.match(css, /@media \(max-width: 900px\) \{\s*\.pane-handle \{ display: none; \}/);
+});
+
+test("file tree has a context menu wired to real actions", () => {
+  assert.match(workbenchSource, /openTreeMenu/);
+  assert.match(workbenchSource, /onContextMenu=\{\(e\) => onMenu\?\.\(e, n\)\}/);
+  assert.match(workbenchSource, /新建文件夹/);
+  assert.match(workbenchSource, /重命名 \/ 移动/);
+  assert.match(workbenchSource, /menuDirPrefix/);
+  assert.match(css, /\.tree-menu \{/);
+});
+
 test("open tabs persist per workspace and restore before persisting", () => {
   assert.match(workbenchSource, /paperos\.tabs\.\$\{contest\}/);
   assert.match(workbenchSource, /tabsRestoredRef/);
