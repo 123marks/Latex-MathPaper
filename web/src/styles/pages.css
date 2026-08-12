@@ -3433,6 +3433,19 @@
 }
 .dash-session-time { font-family: var(--font-mono); font-size: 11px; color: var(--faint); white-space: nowrap; }
 .ws-remove:hover { color: #e26d5a; border-color: rgba(226, 109, 90, 0.5); }
+.ws-create {
+  margin-bottom: 14px;
+  padding: 14px;
+  background: var(--bg-1);
+  border: 1px solid var(--ink-line-2);
+  border-radius: 10px;
+}
+.ws-create-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
 @media (max-width: 720px) {
   .dash-session-row { grid-template-columns: auto 1fr; }
   .dash-session-time { display: none; }

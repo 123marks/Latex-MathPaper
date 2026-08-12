@@ -152,9 +152,10 @@ export default function Docs() {
 
           <DocSection id="first-doc" index={2} title="创建第一个文档">
             <p style={P_STYLE}>
-              在工作台点击「新建工作区」,选择一个论文模板,客户端会生成{" "}
-              <code>main.tex</code> 与模块化章节文件。左侧文件树管理{" "}
-              <code>figures/</code> 与 <code>refs.bib</code>;
+              在总览页点击「新建工作区」并选择 LaTeX 类型,会生成{" "}
+              <code>main.tex</code>、模块化章节、内置真实文献的{" "}
+              <code>references.bib</code> 与证据示例;也可以「注册文件夹」
+              把本机已有的论文目录直接接入(不复制文件)。
               随时按 <span className="kbd">Ctrl+P</span>{" "}
               快速打开工作区里的任意文件,支持模糊匹配。
             </p>

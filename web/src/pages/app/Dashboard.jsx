@@ -26,18 +26,52 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [summary, setSummary] = useState(null);
   const [projects, setProjects] = useState(null);
+  const [packs, setPacks] = useState([]);
   const [sessions, setSessions] = useState(null);
   const [usage, setUsage] = useState(null);
   const [engine, setEngine] = useState(null);
   const [error, setError] = useState("");
+  // 新建 / 注册工作区表单：{ mode: "managed" | "external" } 或 null
+  const [wsForm, setWsForm] = useState(null);
+  const [wsBusy, setWsBusy] = useState(false);
+  const [wsError, setWsError] = useState("");
 
   useEffect(() => {
     api.get("/api/summary").then(setSummary).catch((e) => setError(e.message));
-    api.get("/api/editor/projects").then((d) => setProjects(d.projects || [])).catch(() => setProjects([]));
+    api.get("/api/editor/projects").then((d) => {
+      setProjects(d.projects || []);
+      setPacks((d.packs || []).filter((p) => p.adapter !== "legacy-contest"));
+    }).catch(() => setProjects([]));
     api.get("/api/chat/history").then((d) => setSessions((d.threads || []).slice(0, 5))).catch(() => setSessions([]));
     api.get("/api/usage/me?days=7").then(setUsage).catch(() => {});
     api.get("/api/engine/status").then(setEngine).catch(() => {});
   }, []);
+
+  async function submitWorkspaceForm(e) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const name = String(form.get("name") || "").trim();
+    const id = String(form.get("id") || "").trim();
+    const pack = String(form.get("pack") || "latex");
+    const path = String(form.get("path") || "").trim();
+    if (!id) { setWsError("请填写标识（字母/数字/-_.）。"); return; }
+    if (wsForm?.mode === "external" && !path) { setWsError("请填写要注册的本机文件夹绝对路径。"); return; }
+    try {
+      setWsBusy(true);
+      setWsError("");
+      const body = wsForm?.mode === "external"
+        ? { id, name: name || id, path, pack: pack || undefined }
+        : { id, name: name || id, pack };
+      await api.post("/api/editor/projects", body);
+      const d = await api.get("/api/editor/projects");
+      setProjects(d.projects || []);
+      setWsForm(null);
+    } catch (err) {
+      setWsError(err.message);
+    } finally {
+      setWsBusy(false);
+    }
+  }
 
   async function removeWorkspaceRow(p) {
     const label = p.name || p.id;
@@ -91,7 +125,64 @@ export default function Dashboard() {
           <div className="panel-head">
             <h3>工作区</h3>
             <span className="chip muted">{workspaceCount} 个</span>
+            <div className="row" style={{ gap: 8, marginLeft: "auto" }}>
+              <button
+                type="button"
+                className="btn btn-quiet btn-sm"
+                onClick={() => { setWsForm(wsForm?.mode === "managed" ? null : { mode: "managed" }); setWsError(""); }}
+              >
+                ＋ 新建
+              </button>
+              <button
+                type="button"
+                className="btn btn-quiet btn-sm"
+                onClick={() => { setWsForm(wsForm?.mode === "external" ? null : { mode: "external" }); setWsError(""); }}
+              >
+                注册文件夹
+              </button>
+            </div>
           </div>
+          {wsForm && (
+            <form className="ws-create" onSubmit={submitWorkspaceForm}>
+              {wsError && <div className="alert error" style={{ marginBottom: 10 }}>{wsError}</div>}
+              <div className="ws-create-grid">
+                <label className="field">
+                  <span>名称</span>
+                  <input name="name" placeholder="如 我的美赛论文" autoComplete="off" />
+                </label>
+                <label className="field">
+                  <span>标识 *</span>
+                  <input name="id" placeholder="如 mcm-2026（字母数字-_.）" required autoComplete="off" spellCheck={false} />
+                </label>
+                {wsForm.mode === "managed" ? (
+                  <label className="field">
+                    <span>类型（Pack）</span>
+                    <select name="pack" defaultValue="latex">
+                      {packs.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                ) : (
+                  <label className="field">
+                    <span>本机文件夹绝对路径 *</span>
+                    <input name="path" placeholder="如 C:\papers\my-thesis" required autoComplete="off" spellCheck={false} />
+                  </label>
+                )}
+              </div>
+              <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+                <button className={`btn btn-primary btn-sm ${wsBusy ? "is-running" : ""}`} disabled={wsBusy}>
+                  {wsBusy ? "处理中" : wsForm.mode === "managed" ? "创建工作区" : "注册"}
+                </button>
+                <button type="button" className="btn btn-quiet btn-sm" onClick={() => setWsForm(null)}>取消</button>
+                <span className="muted" style={{ fontSize: 12 }}>
+                  {wsForm.mode === "managed"
+                    ? "LaTeX 类型会生成结构化论文骨架（章节 / 文献 / 证据示例）。"
+                    : "注册不复制文件；之后移除也只是移出列表，不动磁盘。"}
+                </span>
+              </div>
+            </form>
+          )}
           {projects === null ? (
             <div className="spinner" />
           ) : projects.length === 0 ? (

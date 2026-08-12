@@ -70,3 +70,15 @@ test("dashboard is a real control hub fed by live endpoints", () => {
   assert.match(dashboardSource, /const workspaceCount =/);
   assert.match(dashboardSource, /const readyCount =/);
 });
+
+test("dashboard owns the full workspace lifecycle", () => {
+  // Create managed / register external through the real API, with packs from it.
+  assert.match(dashboardSource, /＋ 新建/);
+  assert.match(dashboardSource, /注册文件夹/);
+  assert.match(dashboardSource, /api\.post\("\/api\/editor\/projects", body\)/);
+  assert.match(dashboardSource, /packs\.map/);
+  // Removal with source-aware confirms; export button present.
+  assert.match(dashboardSource, /removeWorkspaceRow/);
+  assert.match(dashboardSource, /deleteFiles=1/);
+  assert.match(dashboardSource, /export-archive/);
+});
