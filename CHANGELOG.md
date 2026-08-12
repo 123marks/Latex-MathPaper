@@ -15,6 +15,11 @@
 - 管理台补齐 mars-admin 式两大能力（真实数据）：服务监控 `GET /api/admin/monitor`（进程 RSS/heap、系统内存/CPU/宿主时长、各数据文件体积、Workspace 数；Windows 无 load average 如实不展示）与在线会话 `GET/DELETE /api/admin/sessions`（仅 token 前缀、强制下线即刻生效、保护当前会话）；审计日志客户端分页（50/页）、Key 概览搜索与「只看已配置」。
 - macOS / Linux 便携包：`npm run package:portable` 产出 `PaperOS-<v>-portable-node.tar.gz`（Node 服务 + 构建产物 + start.sh，诚实标注「需要 Node.js 20+ · 非签名原生 App」）；`releases.json` macos/linux 资产指向该文件，下载端点按磁盘存在性与 SHA-256 如实提供。
 - About / HowTo 重写为当前产品的真实叙事（IDE 优先六步上手、设计谱系、本地优先声明），配色统一 Horizon amber；`Reveal` 组件支持透传 style。
+- AdminUsage 新增「按工作区」排名与「24h 分布」面板、AdminOverview 新增「消耗 Top 工作区」卡（复用既有真实聚合）。
+
+### Fixed
+
+- strict 浏览器冒烟抓到 390px 真回归：应用顶栏右侧（切换器/徽标/头像/用户名/退出）把文档撑到 559px——窄屏现按序收敛（≤700px 隐用户名、≤480px 隐徽标与 ⌘K 文案、切换器限宽），复验 overflowX 桌面/移动均 false；冒烟的溢出诊断改为右超/超宽元素优先排序，截断列表不再被 off-canvas 菜单淹没。
 
 ### Changed
 
