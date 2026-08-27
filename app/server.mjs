@@ -74,6 +74,7 @@ const teamsStore = createStore(join(dataDir, "teams.json"), { teams: [] });
 const tasksStore = createStore(join(dataDir, "tasks.json"), { tasks: [] });
 const installsStore = createStore(join(dataDir, "installs.json"), { installs: [] });
 const chatStore = createStore(join(dataDir, "chat.json"), { threads: [] });
+const licensesStore = createStore(join(dataDir, "licenses.json"), { codes: [] });
 const usageStore = createStore(join(dataDir, "usage.json"), { records: [] });
 // Per-user AI gateway config; the API key is stored encrypted (AES-256-GCM),
 // never in plaintext and never returned to any client.
@@ -581,8 +582,19 @@ function publicUser(user) {
     email: user.email || "",
     displayName: user.displayName || user.username,
     role: user.role || "member",
+    plan: user.plan || "free",
+    planExpiresAt: user.planExpiresAt || null,
     createdAt: user.createdAt,
   };
+}
+
+// 许可证/激活码（诚实的付费骨架）：管理员签发 → 用户兑换 → 计划生效。
+// 支付渠道（微信/支付宝/Stripe）需要真实商户凭据，这里不伪造对接——
+// 收款在渠道外完成后由管理员发码，是自部署产品的常见诚实做法。
+const LICENSE_PLANS = new Set(["pro", "team"]);
+function formatLicenseCode(plan) {
+  const raw = newToken().replace(/[^a-zA-Z0-9]/g, "").toUpperCase().padEnd(12, "X");
+  return `${plan.slice(0, 3).toUpperCase()}-${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}`;
 }
 
 function adminUserView(user, posts) {
@@ -1617,6 +1629,90 @@ async function api(req, res, path) {
     });
     audit(user, "account.provider", `profile-removed:${id}`);
     return sendJson(res, 200, { provider: accountProviderView(user.id) });
+  }
+
+  // 兑换激活码：设置/续期用户计划（同计划未到期则从到期日顺延）。
+  if (req.method === "POST" && path === "/api/account/redeem") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const body = await readBody(req);
+    const code = String(body.code || "").trim().toUpperCase();
+    if (!code) return sendJson(res, 400, { error: "请输入激活码" });
+    let entry = null;
+    let conflict = false;
+    licensesStore.update((data) => {
+      const found = data.codes.find((c) => c.code === code);
+      if (!found) return data;
+      if (found.redeemedBy) { conflict = true; return data; }
+      found.redeemedBy = user.id;
+      found.redeemedAt = new Date().toISOString();
+      entry = found;
+      return data;
+    });
+    if (conflict) return sendJson(res, 409, { error: "该激活码已被使用" });
+    if (!entry) return sendJson(res, 404, { error: "激活码不存在，请检查输入" });
+    let updated = null;
+    usersStore.update((data) => {
+      const target = data.users.find((u) => u.id === user.id);
+      if (!target) return data;
+      const now = Date.now();
+      const sameActivePlan = target.plan === entry.plan
+        && target.planExpiresAt
+        && new Date(target.planExpiresAt).getTime() > now;
+      const base = sameActivePlan ? new Date(target.planExpiresAt).getTime() : now;
+      target.plan = entry.plan;
+      target.planExpiresAt = new Date(base + entry.days * 86400000).toISOString();
+      updated = target;
+      return data;
+    });
+    audit(user, "account.redeem", `${entry.plan} +${entry.days}d (${code.slice(0, 8)}…)`);
+    return sendJson(res, 200, { plan: updated?.plan, planExpiresAt: updated?.planExpiresAt });
+  }
+
+  // 管理员签发激活码。
+  if (req.method === "POST" && path === "/api/admin/licenses") {
+    const actor = requireAdmin(req, res);
+    if (!actor) return undefined;
+    const body = await readBody(req);
+    const plan = String(body.plan || "pro");
+    if (!LICENSE_PLANS.has(plan)) return sendJson(res, 400, { error: "plan 只支持 pro / team" });
+    const days = Math.min(3650, Math.max(1, Math.floor(Number(body.days) || 365)));
+    const count = Math.min(50, Math.max(1, Math.floor(Number(body.count) || 1)));
+    const created = [];
+    licensesStore.update((data) => {
+      for (let i = 0; i < count; i += 1) {
+        const entry = {
+          code: formatLicenseCode(plan),
+          plan,
+          days,
+          createdBy: actor.id,
+          createdAt: new Date().toISOString(),
+          redeemedBy: null,
+          redeemedAt: null,
+        };
+        data.codes.push(entry);
+        created.push(entry);
+      }
+      return data;
+    });
+    audit(actor, "admin.license.issue", `${plan} x${count} (${days}d)`);
+    return sendJson(res, 201, { codes: created });
+  }
+
+  if (req.method === "GET" && path === "/api/admin/licenses") {
+    if (!requireAdmin(req, res)) return undefined;
+    const { users } = usersStore.read();
+    const byId = new Map(users.map((u) => [u.id, u]));
+    const codes = licensesStore.read().codes
+      .slice()
+      .reverse()
+      .map((c) => ({
+        ...c,
+        redeemedByName: c.redeemedBy
+          ? (byId.get(c.redeemedBy)?.displayName || byId.get(c.redeemedBy)?.username || "已注销用户")
+          : null,
+      }));
+    return sendJson(res, 200, { codes });
   }
 
   if (req.method === "POST" && path === "/api/account/sessions/revoke-others") {

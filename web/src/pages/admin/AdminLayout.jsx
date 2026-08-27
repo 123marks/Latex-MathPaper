@@ -18,6 +18,7 @@ const NAV = [
     items: [
       { to: "/admin/users", label: "用户管理", icon: "community" },
       { to: "/admin/keys", label: "模型 Key", icon: "key" },
+      { to: "/admin/licenses", label: "许可证", icon: "key" },
     ],
   },
   {

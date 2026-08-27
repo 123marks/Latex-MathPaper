@@ -33,7 +33,8 @@ export default defineConfig({
     sourcemap: process.env.PAPER_OS_DEV === "1",
   },
   esbuild: {
-    // Drop console/debugger from the shipped web bundle.
-    drop: process.env.PAPER_OS_DEV === "1" ? [] : ["debugger"],
+    // Anti-reverse hygiene for the shipped bundle: no sourcemaps (above),
+    // and console/debugger statements stripped. PAPER_OS_DEV=1 restores both.
+    drop: process.env.PAPER_OS_DEV === "1" ? [] : ["debugger", "console"],
   },
 });

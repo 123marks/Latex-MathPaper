@@ -30,6 +30,33 @@ export default function Account() {
   const [revokeBusy, setRevokeBusy] = useState(false);
   const [revokeMsg, setRevokeMsg] = useState("");
 
+  // 计划与激活码
+  const [redeemCode, setRedeemCode] = useState("");
+  const [redeemBusy, setRedeemBusy] = useState(false);
+  const [redeemError, setRedeemError] = useState("");
+  const [redeemMsg, setRedeemMsg] = useState("");
+
+  async function redeem(e) {
+    e.preventDefault();
+    const code = redeemCode.trim();
+    if (!code) { setRedeemError("请输入激活码。"); return; }
+    setRedeemBusy(true);
+    setRedeemError("");
+    setRedeemMsg("");
+    try {
+      const d = await api.post("/api/account/redeem", { code });
+      setOverview((o) => (o?.user
+        ? { ...o, user: { ...o.user, plan: d.plan, planExpiresAt: d.planExpiresAt } }
+        : o));
+      setRedeemCode("");
+      setRedeemMsg(`已升级到 ${d.plan}，有效期至 ${formatDate(d.planExpiresAt)}`);
+    } catch (err) {
+      setRedeemError(err.message);
+    } finally {
+      setRedeemBusy(false);
+    }
+  }
+
   const load = useCallback(async () => {
     setError("");
     try {
@@ -252,6 +279,36 @@ export default function Account() {
               >
                 {pwBusy ? "提交中" : "更新密码"}
               </button>
+            </form>
+          </section>
+
+          <section className="panel c12 glass">
+            <div className="panel-head">
+              <h3>计划与许可</h3>
+              <span className={`chip ${overview?.user?.plan && overview.user.plan !== "free" ? "signal" : "muted"}`}>
+                {overview?.user?.plan || "free"}
+                {overview?.user?.planExpiresAt ? ` · 至 ${formatDate(overview.user.planExpiresAt)}` : ""}
+              </span>
+            </div>
+            <p style={{ color: "var(--muted)", fontSize: 12.5, marginTop: 0 }}>
+              免费版已包含完整本地功能（BYOK）。购买后由管理员签发激活码，在此兑换升级；
+              同计划未到期时兑换会从到期日顺延。
+            </p>
+            {redeemError && <div className="alert error" style={{ marginBottom: 10 }}>{redeemError}</div>}
+            <form className="row wrap" style={{ gap: 10 }} onSubmit={redeem}>
+              <input
+                className="input"
+                style={{ minWidth: 260, fontFamily: "var(--font-mono)" }}
+                placeholder="如 PRO-XXXX-XXXX-XXXX"
+                value={redeemCode}
+                onChange={(e) => { setRedeemCode(e.target.value); setRedeemMsg(""); }}
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <button className={`btn btn-primary btn-sm ${redeemBusy ? "is-running" : ""}`} disabled={redeemBusy}>
+                {redeemBusy ? "兑换中" : "兑换激活码"}
+              </button>
+              {redeemMsg && <span className="chip signal">{redeemMsg}</span>}
             </form>
           </section>
 

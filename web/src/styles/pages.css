@@ -3361,6 +3361,23 @@ body.pane-dragging .pane-handle { background: rgba(212, 163, 65, 0.3); }
 .tree-menu button:hover { background: rgba(212, 163, 65, 0.1); color: var(--text); }
 .tree-menu button.danger:hover { background: rgba(226, 109, 90, 0.12); color: #e26d5a; }
 
+/* 许可证签发 */
+.license-fresh {
+  margin-top: 14px;
+  padding: 12px;
+  background: rgba(212, 163, 65, 0.06);
+  border: 1px dashed rgba(212, 163, 65, 0.35);
+  border-radius: 8px;
+}
+.license-codes {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--amber-bright, var(--amber));
+  user-select: all;
+}
+
 /* 工作区全文搜索结果（左栏搜索模式） */
 .search-results { display: grid; gap: 8px; padding: 0 4px; }
 .search-file { display: grid; gap: 2px; }
