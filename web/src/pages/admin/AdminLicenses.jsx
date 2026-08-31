@@ -14,11 +14,15 @@ export default function AdminLicenses() {
   const [fresh, setFresh] = useState([]);
   const [copied, setCopied] = useState(false);
 
+  const [channels, setChannels] = useState([]);
+
   const load = useCallback(async () => {
     try {
       setError("");
       const d = await api.get("/api/admin/licenses");
       setCodes(d.codes || []);
+      const p = await api.get("/api/admin/payments");
+      setChannels(p.providers || []);
     } catch (e) {
       setError(e.message);
     }
@@ -74,6 +78,28 @@ export default function AdminLicenses() {
           <div className="metric-sub">{total - redeemed} 待兑换</div>
         </div>
       </div>
+
+      {channels.length > 0 && (
+        <section className="panel c12 glass" style={{ marginBottom: 18 }}>
+          <div className="panel-head">
+            <h3>收款通道</h3>
+            <span className="chip muted">按真实凭据报告，可用 ≠ 已实现结算</span>
+          </div>
+          <div className="stack" style={{ gap: 10 }}>
+            {channels.map((c) => (
+              <div key={c.id} className="spread" style={{ fontSize: 13, gap: 12 }}>
+                <span>
+                  <span className={`chip ${c.available ? "signal" : "muted"}`} style={{ marginRight: 8 }}>
+                    {c.available ? "可用" : "未配置"}
+                  </span>
+                  <b>{c.name}</b>
+                </span>
+                <span style={{ color: "var(--muted)", fontSize: 12, textAlign: "right" }}>{c.note}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="panel c12 glass" style={{ marginBottom: 18 }}>
         <div className="panel-head"><h3>签发激活码</h3></div>

@@ -337,7 +337,9 @@ export default function ApiKeys() {
           <section className="panel c12 glass">
             <div className="panel-head">
               <h3>Provider 档案</h3>
-              <span className="chip muted">{profiles.length} 个 · 激活的优先生效</span>
+              <span className={`chip ${profiles.length >= (provider?.profileLimit ?? 10) ? "" : "muted"}`}>
+                {profiles.length} / {provider?.profileLimit ?? 10} 个 · 激活的优先生效
+              </span>
             </div>
             <p style={{ color: "var(--muted)", fontSize: 12.5, marginTop: 0 }}>
               为不同场景保存多个 OpenAI 兼容网关（官方 / 中转 / 本地 vLLM…），一键切换。

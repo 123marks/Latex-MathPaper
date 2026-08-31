@@ -31,3 +31,24 @@ test("licenses page is routed and in the admin nav", () => {
   assert.match(appSource, /path="\/admin\/licenses" element=\{<AdminLicenses \/>\}/);
   assert.match(layoutSource, /to: "\/admin\/licenses"/);
 });
+
+test("published plan numbers match the enforced limits", () => {
+  const pricingSource = read("src/pages/Pricing.jsx");
+  const apiKeysSource = read("src/pages/app/ApiKeys.jsx");
+  const plansSource = readFileSync(resolve("app/lib/plans.mjs"), "utf8");
+  // Single source of truth in lib/plans; pages publish the same numbers.
+  assert.match(plansSource, /free: \{ providerProfiles: 3, chatHistory: 200 \}/);
+  assert.match(plansSource, /pro: \{ providerProfiles: 10, chatHistory: 1000 \}/);
+  assert.match(pricingSource, /3 个 Provider 档案/);
+  assert.match(pricingSource, /10 个 Provider 档案/);
+  assert.match(pricingSource, /200 条/);
+  assert.match(pricingSource, /1000 条/);
+  // ApiKeys shows the live limit from the API, not a hardcoded copy.
+  assert.match(apiKeysSource, /provider\?\.profileLimit/);
+});
+
+test("admin licenses page reports payment channels honestly", () => {
+  assert.match(adminSource, /\/api\/admin\/payments/);
+  assert.match(adminSource, /收款通道/);
+  assert.match(adminSource, /可用 ≠ 已实现结算/);
+});

@@ -32,6 +32,8 @@ import {
   ANNOTATION_STATUSES,
   normalizeAnnotationTarget,
 } from "./lib/annotations.mjs";
+import { PLAN_LIMITS, effectivePlan, planLimits, trimUserThreads } from "./lib/plans.mjs";
+import { paymentProviderStatus } from "./lib/payments.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
@@ -728,6 +730,8 @@ function accountProviderView(userId) {
     createdAt: p.createdAt || null,
   }));
   const activeProfile = profiles.find((p) => p.active && p.hasKey);
+  const owner = usersStore.read().users.find((u) => u.id === userId) || null;
+  const profileLimit = planLimits(owner).providerProfiles;
   if (own) {
     return {
       base_url: own.base_url || "",
@@ -738,6 +742,7 @@ function accountProviderView(userId) {
       updatedAt: own.updatedAt || null,
       profiles,
       activeProfileId,
+      profileLimit,
     };
   }
   const effective = resolveEffectiveProvider(userId);
@@ -750,6 +755,7 @@ function accountProviderView(userId) {
     updatedAt: null,
     profiles: [],
     activeProfileId: null,
+    profileLimit,
   };
 }
 
@@ -1566,8 +1572,14 @@ async function api(req, res, path) {
     if (!name) return sendJson(res, 400, { error: "name is required" });
     if (!apiKey) return sendJson(res, 400, { error: "apiKey is required" });
     const existing = readAccountProvider(user.id);
-    if ((existing?.profiles?.length || 0) >= 10) {
-      return sendJson(res, 400, { error: "最多 10 个 provider 档案" });
+    const profileLimit = planLimits(user).providerProfiles;
+    if ((existing?.profiles?.length || 0) >= profileLimit) {
+      return sendJson(res, 400, {
+        error: `当前计划（${effectivePlan(user)}）最多 ${profileLimit} 个 provider 档案${effectivePlan(user) === "free" ? `，升级 Pro 可到 ${PLAN_LIMITS.pro.providerProfiles} 个` : ""}`,
+        code: "PLAN_LIMIT",
+        limit: profileLimit,
+        plan: effectivePlan(user),
+      });
     }
     const t = Number(body.temperature);
     const profile = {
@@ -1697,6 +1709,12 @@ async function api(req, res, path) {
     });
     audit(actor, "admin.license.issue", `${plan} x${count} (${days}d)`);
     return sendJson(res, 201, { codes: created });
+  }
+
+  // 支付通道状态（诚实骨架）：manual 可用；其余按环境凭据如实报告。
+  if (req.method === "GET" && path === "/api/admin/payments") {
+    if (!requireAdmin(req, res)) return undefined;
+    return sendJson(res, 200, { providers: paymentProviderStatus() });
   }
 
   if (req.method === "GET" && path === "/api/admin/licenses") {
@@ -3799,7 +3817,7 @@ async function api(req, res, path) {
           }
           res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
           res.end();
-          chatStore.update((d) => { d.threads.push({ id: newToken().slice(0, 10), userId: user.id, prompt: userText, reply, createdAt: new Date().toISOString(), mode, workspace: chatWorkspace }); if (d.threads.length > 200) d.threads = d.threads.slice(-200); return d; });
+          chatStore.update((d) => { d.threads.push({ id: newToken().slice(0, 10), userId: user.id, prompt: userText, reply, createdAt: new Date().toISOString(), mode, workspace: chatWorkspace }); d.threads = trimUserThreads(d.threads, user.id, planLimits(user).chatHistory); return d; });
           recordUsage(user.id, { model: usedModel, kind: mode === "inline" ? "inline" : "chat", promptTokens: promptTok, completionTokens: completionTok, durationMs: Date.now() - chatStart, ok: true, workspace: chatWorkspace });
           return undefined;
         }
@@ -3866,7 +3884,7 @@ async function api(req, res, path) {
       setTimeout(push, 12);
     }
     push();
-    chatStore.update((d) => { d.threads.push({ id: newToken().slice(0, 10), userId: user.id, prompt: userText, reply, createdAt: new Date().toISOString(), mode, workspace: chatWorkspace }); if (d.threads.length > 200) d.threads = d.threads.slice(-200); return d; });
+    chatStore.update((d) => { d.threads.push({ id: newToken().slice(0, 10), userId: user.id, prompt: userText, reply, createdAt: new Date().toISOString(), mode, workspace: chatWorkspace }); d.threads = trimUserThreads(d.threads, user.id, planLimits(user).chatHistory); return d; });
     recordUsage(user.id, { model: "mock-local", kind: mode === "inline" ? "inline" : "chat", promptTokens: userText.length + selection.length, completionTokens: reply.length, durationMs: Date.now() - chatStart, ok: true, workspace: chatWorkspace });
     return undefined;
   }

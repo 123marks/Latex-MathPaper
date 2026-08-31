@@ -8,6 +8,8 @@ import {
   ANNOTATION_STATUSES,
   normalizeAnnotationTarget,
 } from "../app/lib/annotations.mjs";
+import { PLAN_LIMITS, effectivePlan, trimUserThreads } from "../app/lib/plans.mjs";
+import { paymentProviderStatus } from "../app/lib/payments.mjs";
 
 test("estimateCost prices known models and falls back to default", () => {
   const gpt = estimateCost("gpt-4o", 1000, 1000);
@@ -50,6 +52,38 @@ test("parseBibTeX handles braces, quotes, bare values, and skips @comment", () =
   assert.equal(entries[0].author, "Q. Wu");
   assert.equal(entries[0].year, "1999");
   assert.equal(entries[0].venue, "J");
+});
+
+test("effectivePlan falls back to free on expiry or unknown plans", () => {
+  const now = Date.now();
+  assert.equal(effectivePlan(null, now), "free");
+  assert.equal(effectivePlan({ plan: "vip" }, now), "free");
+  assert.equal(effectivePlan({ plan: "pro", planExpiresAt: new Date(now + 86400000).toISOString() }, now), "pro");
+  assert.equal(effectivePlan({ plan: "pro", planExpiresAt: new Date(now - 1000).toISOString() }, now), "free");
+  assert.equal(effectivePlan({ plan: "pro" }, now), "free"); // no expiry recorded
+  assert.ok(PLAN_LIMITS.pro.chatHistory > PLAN_LIMITS.free.chatHistory);
+});
+
+test("trimUserThreads drops only the owner's oldest overflow", () => {
+  const threads = [
+    { id: "a1", userId: "a" }, { id: "b1", userId: "b" },
+    { id: "a2", userId: "a" }, { id: "a3", userId: "a" },
+  ];
+  const trimmed = trimUserThreads(threads, "a", 2);
+  assert.deepEqual(trimmed.map((t) => t.id), ["b1", "a2", "a3"]);
+  // Under the limit: untouched (same array contents).
+  assert.equal(trimUserThreads(threads, "b", 5).length, 4);
+});
+
+test("payment providers report honestly from real credentials", () => {
+  const none = paymentProviderStatus({});
+  assert.equal(none.find((p) => p.id === "manual").available, true);
+  for (const id of ["stripe", "wechat", "alipay"]) {
+    assert.equal(none.find((p) => p.id === id).available, false);
+  }
+  const withStripe = paymentProviderStatus({ STRIPE_SECRET_KEY: "sk_test_x" });
+  assert.equal(withStripe.find((p) => p.id === "stripe").available, true);
+  assert.match(withStripe.find((p) => p.id === "stripe").note, /尚未实现/);
 });
 
 test("normalizeAnnotationTarget vocabulary and sanitisation", () => {

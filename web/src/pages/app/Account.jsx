@@ -291,7 +291,8 @@ export default function Account() {
               </span>
             </div>
             <p style={{ color: "var(--muted)", fontSize: 12.5, marginTop: 0 }}>
-              免费版已包含完整本地功能（BYOK）。购买后由管理员签发激活码，在此兑换升级；
+              免费版包含全部本地功能（BYOK），容量档位见定价页（Pro：10 个 Provider 档案、
+              1000 条会话历史）。购买后由管理员签发激活码，在此兑换升级；
               同计划未到期时兑换会从到期日顺延。
             </p>
             {redeemError && <div className="alert error" style={{ marginBottom: 10 }}>{redeemError}</div>}
