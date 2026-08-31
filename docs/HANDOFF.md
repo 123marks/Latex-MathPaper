@@ -1,7 +1,7 @@
 ---
 title: Paper OS engineering handoff
 status: active
-as_of: 2026-08-12
+as_of: 2026-08-31
 baseline_commit: 2629f33
 worktree: clean
 owner: next maintainer
@@ -22,7 +22,7 @@ Paper OS 要成为一个**本地优先、Workspace Kernel 驱动、Pack 可扩�
 - 日期：2026-08-12。
 - 分支：`main`。
 - `HEAD`：`2629f33`；在初始提交 `1546dab` 之上：领域分组基线 + T3.x 切片 + 09-integrations Epic 1–4b 全部（标注→AI 含 PDF 区域、会话管理、References + DOI/arXiv 导入、多 provider + 会话级选择）+ v0.6.0 发布与本地 tag + pdf.js 渲染层 + 文件树文件夹管理 + Dashboard 控制中枢 + 管理台服务监控/在线会话 + mac/linux 便携包 + strict 冒烟抓到并修复的 390px 顶栏溢出。
-- 根版本：`0.6.0`（根、desktop、Cargo、tauri.conf 对齐；Web UI 经 Vite `define` 注入）。
+- 根版本：`0.7.0`（根、desktop、Cargo、tauri.conf 对齐；Web UI 经 Vite `define` 注入）。v0.7.0 内容：pdf.js 审阅层、DOI/arXiv 导入、真编辑器套件（全文搜索/跳行/Ctrl+S/关闭保护/标签恢复/分栏拖拽/右键菜单）、⌘K 聚合搜索、工作区全生命周期（新建/注册/导出/移除）、管理台监控与在线会话、许可证/激活码 + 计划容量门控、mac/linux 便携包。
 - 工作区：clean；构建产物（`app/public`、`app/ide`、`src-tauri/target`、根 launcher 二进制、`runtimes/`）按 `.gitignore` 排除。仍禁止整体回滚、批量格式化或清理不明文件。
 - 当前主入口：根目录 `PaperOS.exe`，WinForms + WebView2 调用本地 Node 服务。
 - Tauri：已有 v2 脚手架和构建产物，仍是过渡方案。

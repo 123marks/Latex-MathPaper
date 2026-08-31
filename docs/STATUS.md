@@ -1,11 +1,11 @@
 ---
 title: Paper OS current status
 status: active
-as_of: 2026-08-12
+as_of: 2026-08-31
 branch: main
 baseline_commit: 2629f33
 worktree: clean
-product_version: 0.6.0
+product_version: 0.7.0
 ---
 
 # Paper OS 当前状态
@@ -28,8 +28,8 @@ product_version: 0.6.0
 | 产品方向 | 本地优先、Workspace Kernel + Packs 的通用文档 IDE |
 | 当前分支/提交 | `main` / `2629f33`（在 `1546dab` 之上，含 09-integrations Epic 1–4b 全部、v0.6.0 发布 + tag、pdf.js 层、DOI/arXiv 导入、Dashboard 控制中枢、管理台监控/在线会话、mac/linux 便携包、390px 溢出修复） |
 | 工作区 | clean；重设计与文档实现已提交，构建产物按 `.gitignore` 排除 |
-| 根版本 | `package.json` 为 `0.6.0` |
-| 桌面版本 | 根、Tauri config、desktop package、Cargo 均为 `0.6.0`（2026-08-12 随 0.6.0 发布统一 bump），Web UI 版本号由 Vite `define` 注入单一来源 |
+| 根版本 | `package.json` 为 `0.7.0` |
+| 桌面版本 | 根、Tauri config、desktop package、Cargo 均为 `0.7.0`（2026-08-31 随 0.7.0 发布统一 bump），Web UI 版本号由 Vite `define` 注入单一来源 |
 | 当前 Windows 入口 | 根目录 `PaperOS.exe`，WinForms + WebView2 + 本地 Node 服务 |
 | Tauri | 已有脚手架和构建产物，但不是 README 声明的稳定主入口 |
 | Windows 发布产物 | ZIP 和 `.sha256` 存在；ZIP 排除 `app/node_modules`，launcher 依赖系统 .NET 8 Desktop Runtime，不是 self-contained/零依赖 portable |

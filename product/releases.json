@@ -1,33 +1,33 @@
 {
-  "version": "0.6.0",
+  "version": "0.7.0",
   "channel": "stable",
-  "publishedAt": "2026-08-12",
+  "publishedAt": "2026-08-31",
   "notes": [
-    "可视化标注 → AI 修改提案：编辑器圈选行范围加批注，一键交给 AI 走 Preview → Apply",
-    "AI 会话管理：搜索历史对话、查看提案文件块、一键复用；多 Provider 档案与会话级模型选择",
-    "References Pack：解析工作区 .bib、citation↔source 双链、缺失引用检测、DOI 一键导入",
-    "文件树文件夹管理：新建/重命名/移动/删除；用量分析新增 token 构成、24h 分布与按工作区排名"
+    "PDF 审阅：pdf.js 渲染层、划词问 AI、拖框区域标注与回显；文献 DOI/arXiv 一键导入",
+    "真编辑器套件：全文搜索侧栏与精确跳行、Ctrl+S、关闭保护、标签页恢复、分栏拖拽、右键菜单",
+    "⌘K 全局聚合搜索；工作区界面内新建/注册/导出备份/安全移除",
+    "许可证/激活码体系与计划容量门控；管理台新增服务监控、在线会话与许可证台账"
   ],
   "assets": [
     {
       "os": "windows",
       "label": "Windows 10 / 11 · x64",
       "ext": ".zip",
-      "file": "dist/release/PaperOS-0.6.0-windows-x64.zip",
+      "file": "dist/release/PaperOS-0.7.0-windows-x64.zip",
       "minimum": "Windows 10 1809+"
     },
     {
       "os": "macos",
       "label": "便携版 · 需要 Node.js 20+",
       "ext": ".tar.gz",
-      "file": "dist/release/PaperOS-0.6.0-portable-node.tar.gz",
+      "file": "dist/release/PaperOS-0.7.0-portable-node.tar.gz",
       "minimum": "macOS 12+ · 非签名原生 App"
     },
     {
       "os": "linux",
       "label": "便携版 · 需要 Node.js 20+",
       "ext": ".tar.gz",
-      "file": "dist/release/PaperOS-0.6.0-portable-node.tar.gz",
+      "file": "dist/release/PaperOS-0.7.0-portable-node.tar.gz",
       "minimum": "glibc 2.31+ · 非原生 AppImage"
     }
   ]
