@@ -119,7 +119,13 @@ export default function LaTeXEditor({ value, onChange, onSelectionChange, editor
         } catch {
           excerpt = "";
         }
-        onSelectionChange({ startLine, endLine, excerpt: excerpt.slice(0, 400) });
+        onSelectionChange({
+          startLine,
+          endLine,
+          line: sel.positionLineNumber,
+          column: sel.positionColumn,
+          excerpt: excerpt.slice(0, 400),
+        });
       });
     }
   }
@@ -137,7 +143,8 @@ export default function LaTeXEditor({ value, onChange, onSelectionChange, editor
         fontSize: 13,
         fontLigatures: true,
         lineHeight: 1.65,
-        minimap: { enabled: false },
+        // VS Code 式概览：字符块渲染关闭，保持低噪。
+        minimap: { enabled: true, renderCharacters: false, maxColumn: 96 },
         scrollBeyondLastLine: false,
         wordWrap: "on",
         renderLineHighlight: "gutter",

@@ -3217,7 +3217,7 @@
 }
 .ide-left {
   display: grid;
-  grid-template-columns: var(--tree-w, 220px) 1fr;
+  grid-template-columns: 44px var(--tree-w, 220px) 1fr;
   min-height: 0;
 }
 .file-tree {
@@ -3327,12 +3327,99 @@
   transition: background 0.15s var(--ease);
 }
 .pane-handle:hover { background: rgba(212, 163, 65, 0.22); }
-.pane-handle-tree { left: calc(var(--tree-w, 220px) - 3px); }
+.pane-handle-tree { left: calc(44px + var(--tree-w, 220px) - 3px); }
 .pane-handle-right { right: calc(var(--ide-right) - 3px); }
 body.pane-dragging { user-select: none; cursor: col-resize; }
 body.pane-dragging .pane-handle { background: rgba(212, 163, 65, 0.3); }
 @media (max-width: 900px) {
   .pane-handle { display: none; }
+  .activity-bar { display: none; }
+  .ide-left { grid-template-columns: var(--tree-w, 220px) 1fr; }
+}
+
+/* VS Code 式活动栏 */
+.activity-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 0;
+  background: #060608;
+  border-right: 1px solid var(--ink-line);
+}
+.activity-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: none;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 6px;
+  color: var(--faint);
+  cursor: pointer;
+  transition: color 0.15s var(--ease), background 0.15s var(--ease);
+}
+.activity-btn:hover { color: var(--text-soft); background: rgba(232, 227, 218, 0.05); }
+.activity-btn.active { color: var(--amber); background: rgba(212, 163, 65, 0.1); }
+
+/* 面包屑路径条 */
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 14px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--ink-line-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.crumb-wrap { display: inline-flex; align-items: center; gap: 2px; }
+.crumb {
+  background: none;
+  border: 0;
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+.crumb:hover { color: var(--amber); background: rgba(212, 163, 65, 0.08); }
+.crumb.current { color: var(--text-soft); font-weight: 600; padding: 1px 4px; }
+.crumb-sep { color: var(--faint); }
+
+/* 底部输出面板 */
+.output-panel {
+  border-top: 1px solid var(--ink-line);
+  background: #060608;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.output-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--ink-line-2);
+  font-size: 12px;
+  color: var(--text-soft);
+}
+.output-body {
+  margin: 0;
+  padding: 10px 14px;
+  max-height: 180px;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* 文件树右键菜单 */

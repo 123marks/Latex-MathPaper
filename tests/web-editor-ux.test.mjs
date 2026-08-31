@@ -41,6 +41,29 @@ test("search, references, and annotations jump to the exact line", () => {
   assert.match(workbenchSource, /annotation-loc-jump/);
 });
 
+test("vscode-style shell: activity bar, breadcrumbs, output panel, Ln/Col, minimap", () => {
+  const editorSource = readFileSync(resolve("web/src/components/LaTeXEditor.jsx"), "utf8");
+  // Activity bar drives rail mode and the output toggle.
+  assert.match(workbenchSource, /className="activity-bar"/);
+  assert.match(workbenchSource, /setRailMode\("search"\)/);
+  assert.match(workbenchSource, /setShowOutput\(\(v\) => !v\)/);
+  // Breadcrumbs expand the clicked directory in the tree.
+  assert.match(workbenchSource, /className="breadcrumbs"/);
+  assert.match(workbenchSource, /next\.delete\(dirPath\)/);
+  // Output panel renders the full log chronologically and can clear it.
+  assert.match(workbenchSource, /log\.slice\(\)\.reverse\(\)\.join\("\\n"\)/);
+  assert.match(workbenchSource, /setLog\(\[\]\)/);
+  // Statusbar shows the live cursor position from the selection payload.
+  assert.match(workbenchSource, /Ln \$\{annoSel\.line \?\? annoSel\.startLine\}, Col \$\{annoSel\.column \?\? 1\}/);
+  assert.match(editorSource, /column: sel\.positionColumn/);
+  assert.match(editorSource, /minimap: \{ enabled: true, renderCharacters: false/);
+  // Styles + narrow-viewport collapse.
+  assert.match(css, /\.activity-bar \{/);
+  assert.match(css, /\.output-panel \{/);
+  assert.match(css, /\.breadcrumbs \{/);
+  assert.match(css, /grid-template-columns: 44px var\(--tree-w, 220px\) 1fr/);
+});
+
 test("panes resize by drag with clamped, persisted widths", () => {
   assert.match(workbenchSource, /startPaneDrag/);
   assert.match(workbenchSource, /"--tree-w": `\$\{paneW\.tree\}px`/);

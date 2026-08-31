@@ -4,6 +4,7 @@ import { api } from "../../lib/api.js";
 import AIAssistantPanel from "../../components/workbench/AIAssistantPanel.jsx";
 import PdfViewer from "../../components/workbench/PdfViewer.jsx";
 import LaTeXEditor from "../../components/LaTeXEditor.jsx";
+import Icon from "../../components/Icon.jsx";
 import { usePaperOSWS } from "../../lib/ws.js";
 import {
   buildApplyRequest,
@@ -355,6 +356,9 @@ export default function Workbench() {
     // 内容经 React 渲染进 Monaco 需要一拍；失败则再重试一次。
     setTimeout(() => { if (!jump()) setTimeout(jump, 200); }, 60);
   }
+
+  // ── VS Code 式外壳：底部输出面板开关 ──
+  const [showOutput, setShowOutput] = useState(false);
 
   // ── 可拖拽分栏：文件树宽 / AI 面板宽（localStorage 持久化，含钳制）──
   const clampPane = (v, lo, hi, fallback) => {
@@ -888,6 +892,32 @@ export default function Workbench() {
       />
       <div className="ide" style={{ "--tree-w": `${paneW.tree}px`, "--ide-right": `${paneW.right}px` }}>
       <div className="ide-left">
+        <nav className="activity-bar" aria-label="工作台活动栏">
+          <button
+            type="button"
+            className={`activity-btn ${railMode === "files" ? "active" : ""}`}
+            title="文件"
+            onClick={() => setRailMode("files")}
+          >
+            <Icon name="content" size={18} />
+          </button>
+          <button
+            type="button"
+            className={`activity-btn ${railMode === "search" ? "active" : ""}`}
+            title="全文搜索"
+            onClick={() => setRailMode("search")}
+          >
+            <Icon name="search" size={18} />
+          </button>
+          <button
+            type="button"
+            className={`activity-btn ${showOutput ? "active" : ""}`}
+            title="输出面板（编译 / AI / 文件事件）"
+            onClick={() => setShowOutput((v) => !v)}
+          >
+            <Icon name="terminal" size={18} />
+          </button>
+        </nav>
         <div
           className="pane-handle pane-handle-tree"
           title="拖拽调整文件栏宽度"
@@ -1043,6 +1073,39 @@ export default function Workbench() {
             )}
           </div>
 
+          {active && (
+            <div className="breadcrumbs" aria-label="当前文件路径">
+              {active.path.split("/").map((seg, i, arr) => {
+                const isLast = i === arr.length - 1;
+                const dirPath = arr.slice(0, i + 1).join("/");
+                return (
+                  <span key={dirPath} className="crumb-wrap">
+                    {isLast ? (
+                      <b className="crumb current">{seg}</b>
+                    ) : (
+                      <button
+                        type="button"
+                        className="crumb"
+                        title={`在文件树中展开 ${dirPath}`}
+                        onClick={() => {
+                          setRailMode("files");
+                          setCollapsedDirs((prev) => {
+                            const next = new Set(prev);
+                            next.delete(dirPath);
+                            return next;
+                          });
+                        }}
+                      >
+                        {seg}
+                      </button>
+                    )}
+                    {!isLast && <span className="crumb-sep">›</span>}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
           <div className="editor-body">
             {active ? (
               <LaTeXEditor
@@ -1154,10 +1217,29 @@ export default function Workbench() {
               : openFile({ path: p, name: p.split("/").pop() }))}
           />
 
+          {showOutput && (
+            <div className="output-panel">
+              <div className="output-head">
+                <b>输出</b>
+                <span className="muted" style={{ fontSize: 11 }}>{log.length} 条 · 编译 / AI / 文件事件</span>
+                <span style={{ marginLeft: "auto", display: "inline-flex", gap: 6 }}>
+                  <button type="button" className="btn btn-quiet btn-sm" onClick={() => setLog([])}>清空</button>
+                  <button type="button" className="btn btn-quiet btn-sm" onClick={() => setShowOutput(false)}>收起</button>
+                </span>
+              </div>
+              <pre className="output-body">
+                {log.length === 0 ? "（暂无输出。编译、AI 请求与文件操作的日志会出现在这里。）" : log.slice().reverse().join("\n")}
+              </pre>
+            </div>
+          )}
+
           <div className="statusbar">
             <span className="seg branch">⎇ main</span>
             <span className="seg">LaTeX</span>
             <span className="seg">UTF-8</span>
+            <span className="seg">
+              {annoSel ? `Ln ${annoSel.line ?? annoSel.startLine}, Col ${annoSel.column ?? 1}` : "Ln —, Col —"}
+            </span>
             <span className="seg">
               {active ? `${editor.split("\n").length} 行` : "—"}
             </span>
