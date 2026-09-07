@@ -3364,6 +3364,64 @@ body.pane-dragging .pane-handle { background: rgba(212, 163, 65, 0.3); }
 .activity-btn:hover { color: var(--text-soft); background: rgba(232, 227, 218, 0.05); }
 .activity-btn.active { color: var(--amber); background: rgba(212, 163, 65, 0.1); }
 
+/* 文档大纲（Mimir 迁移） */
+.outline-list { display: grid; gap: 1px; padding: 0 4px; }
+.outline-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  padding: 4px 6px;
+  color: var(--text-soft);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.outline-item:hover { background: rgba(212, 163, 65, 0.08); color: var(--text); }
+.outline-item.level-3 { padding-left: 18px; }
+.outline-item.level-4 { padding-left: 30px; font-size: 11px; color: var(--muted); }
+.outline-item.level-5 { padding-left: 42px; font-size: 10.5px; color: var(--muted); }
+.outline-kind { color: var(--amber); font-size: 10px; flex-shrink: 0; }
+.outline-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.outline-line { color: var(--faint); font-size: 10px; flex-shrink: 0; }
+
+/* 公式即时预览浮层（latex-stickies 迁移） */
+.math-preview {
+  position: absolute;
+  right: 16px;
+  z-index: 8;
+  max-width: min(70%, 520px);
+  padding: 8px 14px;
+  background: rgba(14, 14, 17, 0.96);
+  border: 1px solid rgba(212, 163, 65, 0.4);
+  border-radius: 8px;
+  box-shadow: 0 12px 36px -14px rgba(0, 0, 0, 0.8);
+  color: #f2ede4;
+  font-size: 15px;
+  pointer-events: none;
+  overflow: hidden;
+}
+.math-preview.display { font-size: 17px; }
+.math-preview.error { border-color: rgba(226, 109, 90, 0.5); }
+.math-preview-error { font-family: var(--font-mono); font-size: 11px; color: #e26d5a; }
+.math-preview .katex-display { margin: 0; }
+
+/* 快照回滚下拉 */
+.snapshot-select {
+  background: var(--bg-2);
+  border: 1px solid var(--ink-line-2);
+  border-radius: 5px;
+  color: var(--text-soft);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 2px 6px;
+  max-width: 220px;
+}
+
 /* 面包屑路径条 */
 .breadcrumbs {
   display: flex;

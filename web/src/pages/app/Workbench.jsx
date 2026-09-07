@@ -29,6 +29,19 @@ const STAGED = [
   { q: "Q5", label: "论文写作", state: "todo" },
 ];
 
+// Mimir lesson: a clickable outline of \part/\chapter/\section… with line numbers.
+const OUTLINE_LEVEL = { part: 0, chapter: 1, section: 2, subsection: 3, subsubsection: 4, paragraph: 5 };
+export function buildOutline(text) {
+  const out = [];
+  const lines = String(text || "").split("\n");
+  const re = /^\s*\\(part|chapter|section|subsection|subsubsection|paragraph)\*?\s*(?:\[[^\]]*\])?\{([^}]*)\}/;
+  for (let i = 0; i < lines.length; i += 1) {
+    const m = lines[i].match(re);
+    if (m) out.push({ level: OUTLINE_LEVEL[m[1]], kind: m[1], title: m[2].trim() || "(untitled)", line: i + 1 });
+  }
+  return out;
+}
+
 function flattenTree(nodes, out = []) {
   for (const n of nodes || []) {
     if (n.type === "file") out.push(n);
@@ -245,7 +258,8 @@ export default function Workbench() {
         const lines = String(msg.text).split("\n").map((x) => "  " + x);
         setLog((l) => [...lines.filter(Boolean), ...l].slice(0, 80));
       } else if (msg.event === "done") {
-        setLog((l) => [`[compile] done exit=${msg.code} ${msg.durationMs}ms`, ...l].slice(0, 80));
+        setLog((l) => [`[compile] done exit=${msg.code} ${msg.durationMs}ms${msg.snapshotId ? " · snapshot saved" : ""}`, ...l].slice(0, 80));
+        if (msg.snapshotId) loadSnapshots(active?.path);
         if (msg.pdf) {
           const blob = base64ToBlob(msg.pdf, "application/pdf");
           if (pdfUrl) URL.revokeObjectURL(pdfUrl);
@@ -359,6 +373,49 @@ export default function Workbench() {
 
   // ── VS Code 式外壳：底部输出面板开关 ──
   const [showOutput, setShowOutput] = useState(false);
+
+  // ── 大纲 / 文献键 / 快照（Mimir · OverCite · latex-stickies 迁移）──
+  const outline = active ? buildOutline(editor) : [];
+  const [citeKeys, setCiteKeys] = useState([]);
+  useEffect(() => {
+    api.get(`/api/editor/references?workspace=${encodeURIComponent(contest)}`)
+      .then((d) => setCiteKeys((d.entries || []).map((e) => ({ key: e.key, title: e.title, author: e.author, year: e.year }))))
+      .catch(() => setCiteKeys([]));
+  }, [contest]);
+  const [snapshots, setSnapshots] = useState([]);
+  async function loadSnapshots(path) {
+    if (!path) { setSnapshots([]); return; }
+    try {
+      const d = await api.get(`/api/editor/snapshots?workspace=${encodeURIComponent(contest)}&path=${encodeURIComponent(path)}`);
+      setSnapshots(d.snapshots || []);
+    } catch { setSnapshots([]); }
+  }
+  useEffect(() => { loadSnapshots(active?.path); }, [active?.path, contest]); // eslint-disable-line
+  async function takeSnapshot() {
+    if (!active) return;
+    try {
+      await save();
+      const d = await api.post("/api/editor/snapshots", { workspace: contest, path: active.path, reason: "manual" });
+      setSnapshots(d.snapshots || []);
+      setLog((l) => [`[snapshot] saved ${active.path}`, ...l].slice(0, 80));
+    } catch (e) {
+      setLog((l) => [`[snapshot] ${e.message}`, ...l].slice(0, 80));
+    }
+  }
+  async function restoreSnapshot(id) {
+    if (!active) return;
+    if (!window.confirm("回滚到该快照？当前内容会先自动存为一份「pre-restore」快照，可再回来。")) return;
+    try {
+      const d = await api.post(`/api/editor/snapshots/${id}/restore`, { workspace: contest });
+      setEditor(d.content);
+      setOriginal(d.content);
+      setOpenTabs((tabs) => tabs.map((t) => (t.path === active.path ? { ...t, dirty: false } : t)));
+      setSnapshots(d.snapshots || []);
+      setLog((l) => [`[snapshot] restored ${d.path}`, ...l].slice(0, 80));
+    } catch (e) {
+      setLog((l) => [`[snapshot] ${e.message}`, ...l].slice(0, 80));
+    }
+  }
 
   // ── 可拖拽分栏：文件树宽 / AI 面板宽（localStorage 持久化，含钳制）──
   const clampPane = (v, lo, hi, fallback) => {
@@ -911,6 +968,14 @@ export default function Workbench() {
           </button>
           <button
             type="button"
+            className={`activity-btn ${railMode === "outline" ? "active" : ""}`}
+            title="文档大纲"
+            onClick={() => setRailMode("outline")}
+          >
+            <Icon name="team" size={18} />
+          </button>
+          <button
+            type="button"
             className={`activity-btn ${showOutput ? "active" : ""}`}
             title="输出面板（编译 / AI / 文件事件）"
             onClick={() => setShowOutput((v) => !v)}
@@ -1006,6 +1071,29 @@ export default function Workbench() {
                 </div>
               )}
             </>
+          )}
+          {railMode === "outline" && (
+            !active ? (
+              <div className="empty" style={{ padding: 10, fontSize: 11 }}>打开一个 .tex 文件后显示章节大纲。</div>
+            ) : outline.length === 0 ? (
+              <div className="empty" style={{ padding: 10, fontSize: 11 }}>本文件没有 \section 类结构。</div>
+            ) : (
+              <div className="outline-list">
+                {outline.map((o) => (
+                  <button
+                    key={`${o.line}-${o.title}`}
+                    type="button"
+                    className={`outline-item level-${o.level}`}
+                    title={`\\${o.kind} · 第 ${o.line} 行`}
+                    onClick={() => openFileAt(active.path, o.line)}
+                  >
+                    <span className="outline-kind">{o.kind === "subsubsection" ? "§§§" : o.kind === "subsection" ? "§§" : "§"}</span>
+                    <span className="outline-title">{o.title}</span>
+                    <span className="outline-line">{o.line}</span>
+                  </button>
+                ))}
+              </div>
+            )
           )}
           {railMode === "files" && (
             <>
@@ -1116,6 +1204,7 @@ export default function Workbench() {
                 }}
                 onSelectionChange={setAnnoSel}
                 editorRef={monacoRef}
+                citeKeys={citeKeys}
                 language="latex"
                 height="100%"
               />
@@ -1143,6 +1232,27 @@ export default function Workbench() {
                 <span>{engine?.tectonic?.present ? `tectonic ${engine.tectonic.detail || ""}` : "no engine"}</span>
                 <span>·</span>
                 <span>{active ? active.path : "—"}</span>
+                {active && (
+                  <>
+                    <span>·</span>
+                    <button className="pdf-btn" onClick={takeSnapshot} title="保存并为当前文件存一份快照">◎ 快照</button>
+                    {snapshots.length > 0 && (
+                      <select
+                        className="snapshot-select"
+                        defaultValue=""
+                        title="回滚到历史快照（编译成功时自动保存）"
+                        onChange={(e) => { if (e.target.value) { restoreSnapshot(e.target.value); e.target.value = ""; } }}
+                      >
+                        <option value="" disabled>回滚 · {snapshots.length} 份</option>
+                        {snapshots.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {new Date(s.createdAt).toLocaleString()} · {s.reason} · {(s.bytes / 1024).toFixed(1)}KB
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </>
+                )}
               </div>
               {pdfUrl ? (
                 <PdfViewer

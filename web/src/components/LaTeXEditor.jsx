@@ -1,4 +1,39 @@
+import { useRef, useState } from "react";
 import Editor, { loader } from "@monaco-editor/react";
+import katex from "katex";
+import "katex/dist/katex.min.css";
+
+// Find the math environment surrounding a cursor offset: $…$, $$…$$, \[…\],
+// \(…\), or equation/align-family environments. Returns { tex, display } or null.
+export function mathAtOffset(text, offset) {
+  const src = String(text || "");
+  const envs = ["equation\\*?", "align\\*?", "gather\\*?", "multline\\*?", "eqnarray\\*?"];
+  const envRe = new RegExp(`\\\\begin\\{(${envs.join("|")})\\}([\\s\\S]*?)\\\\end\\{\\1\\}`, "g");
+  let m;
+  while ((m = envRe.exec(src)) !== null) {
+    if (offset >= m.index && offset <= m.index + m[0].length) {
+      return { tex: m[2].trim(), display: true };
+    }
+  }
+  const spans = [
+    { re: /\$\$([\s\S]+?)\$\$/g, display: true },
+    { re: /\\\[([\s\S]+?)\\\]/g, display: true },
+    { re: /\\\(([\s\S]+?)\\\)/g, display: false },
+    { re: /(^|[^\\$])\$([^$\n]+?)\$/g, display: false, group: 2, lead: 1 },
+  ];
+  for (const span of spans) {
+    span.re.lastIndex = 0;
+    while ((m = span.re.exec(src)) !== null) {
+      const lead = span.lead ? m[span.lead].length : 0;
+      const start = m.index + lead;
+      const end = m.index + m[0].length;
+      if (offset >= start && offset <= end) {
+        return { tex: (span.group ? m[span.group] : m[1]).trim(), display: span.display };
+      }
+    }
+  }
+  return null;
+}
 
 // Configure Monaco workers (Vite-friendly via CDN-less @monaco-editor/react loader).
 // We use a single bundled worker; this avoids per-file worker imports in Vite.
@@ -92,7 +127,24 @@ function registerLatex(monaco) {
   });
 }
 
-export default function LaTeXEditor({ value, onChange, onSelectionChange, editorRef, language = "latex", height = "100%" }) {
+// Module-level so re-mounts never register a second \cite provider.
+let citeProviderDisposable = null;
+let citeKeysRef = { current: [] };
+
+export default function LaTeXEditor({
+  value,
+  onChange,
+  onSelectionChange,
+  editorRef,
+  citeKeys = [],
+  language = "latex",
+  height = "100%",
+}) {
+  // latex-stickies lesson: render the formula under the caret live.
+  const [mathPreview, setMathPreview] = useState(null); // { html, display, top }
+  const containerRef = useRef(null);
+  citeKeysRef.current = citeKeys;
+
   function handleBeforeMount(monaco) {
     registerLatex(monaco);
   }
@@ -100,6 +152,53 @@ export default function LaTeXEditor({ value, onChange, onSelectionChange, editor
     registerLatex(monaco);
     // Expose the Monaco instance so the host can reveal lines / focus (跳转).
     if (editorRef) editorRef.current = editor;
+
+    // OverCite lesson: complete bibliography keys inside \cite{…}. Keys come
+    // from the host's real references scan; the provider reads the ref so the
+    // list refreshes without re-registering.
+    if (!citeProviderDisposable) {
+      citeProviderDisposable = monaco.languages.registerCompletionItemProvider("latex", {
+        triggerCharacters: ["{", ","],
+        provideCompletionItems(model, position) {
+          const line = model.getLineContent(position.lineNumber).slice(0, position.column - 1);
+          const open = line.match(/\\(?:no)?(?:cite|citep|citet|parencite|textcite|autocite|footcite)\*?(?:\[[^\]]*\]){0,2}\{([^}]*)$/);
+          if (!open) return { suggestions: [] };
+          const typed = open[1].split(",").pop().trim();
+          const word = { startLineNumber: position.lineNumber, endLineNumber: position.lineNumber, startColumn: position.column - typed.length, endColumn: position.column };
+          return {
+            suggestions: (citeKeysRef.current || []).map((k) => ({
+              label: k.key,
+              kind: monaco.languages.CompletionItemKind.Reference,
+              detail: [k.author, k.year].filter(Boolean).join(" · "),
+              documentation: k.title || "",
+              insertText: k.key,
+              range: word,
+            })),
+          };
+        },
+      });
+    }
+
+    // Live math preview: recompute on cursor moves with a small debounce.
+    let timer = null;
+    editor.onDidChangeCursorPosition((event) => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        const model = editor.getModel();
+        if (!model) return;
+        const offset = model.getOffsetAt(event.position);
+        const hit = mathAtOffset(model.getValue(), offset);
+        if (!hit || !hit.tex) { setMathPreview(null); return; }
+        try {
+          const html = katex.renderToString(hit.tex, { displayMode: hit.display, throwOnError: true });
+          const top = editor.getTopForLineNumber(event.position.lineNumber) - editor.getScrollTop();
+          setMathPreview({ html, display: hit.display, top, error: null });
+        } catch (err) {
+          setMathPreview({ html: "", display: hit.display, top: 0, error: String(err?.message || "无法渲染").slice(0, 160) });
+        }
+      }, 120);
+    });
+    editor.onDidBlurEditorText(() => setMathPreview(null));
     if (typeof onSelectionChange === "function") {
       editor.onDidChangeCursorSelection((event) => {
         const sel = event.selection;
@@ -130,11 +229,26 @@ export default function LaTeXEditor({ value, onChange, onSelectionChange, editor
     }
   }
   return (
+    <div ref={containerRef} className="latex-editor-host" style={{ position: "relative", height }}>
+      {mathPreview && (
+        <div
+          className={`math-preview ${mathPreview.display ? "display" : ""} ${mathPreview.error ? "error" : ""}`}
+          style={{ top: Math.max(8, mathPreview.top + 26) }}
+          aria-live="polite"
+        >
+          {mathPreview.error ? (
+            <span className="math-preview-error">✗ {mathPreview.error}</span>
+          ) : (
+            // KaTeX output is generated from the user's own TeX by a trusted renderer.
+            <span dangerouslySetInnerHTML={{ __html: mathPreview.html }} />
+          )}
+        </div>
+      )}
     <Editor
       value={value}
       language={language}
       theme="paper-os-dark"
-      height={height}
+      height="100%"
       onChange={(v) => onChange(v ?? "")}
       beforeMount={handleBeforeMount}
       onMount={handleMount}
@@ -160,5 +274,6 @@ export default function LaTeXEditor({ value, onChange, onSelectionChange, editor
         },
       }}
     />
+    </div>
   );
 }

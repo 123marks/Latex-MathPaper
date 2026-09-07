@@ -4,7 +4,15 @@
 
 ## [Unreleased]
 
-暂无未发布变更。
+### Added
+
+- 编辑器谱系调研 `docs/redesign/10-editor-lineage-study.md`：Mimir / latex-stickies / LaTeX Editor / Pine / OverCite / KaoNotes 逐项理解、可迁移项与 Wave 路线、exe 安装包诚实边界。
+- Wave 1 迁移（全部真实数据、有测试）：
+  - `\cite{` 自动补全（OverCite 思路）：Monaco completion provider，键/作者/年份/标题来自 references 扫描，输入 `{` 或 `,` 触发。
+  - 文档大纲面板（Mimir 思路）：活动栏新增大纲，解析 `\part…\paragraph` 层级缩进显示，点击精确跳行。
+  - 公式即时预览（latex-stickies 思路）：光标停在 `$…$` / `$$…$$` / `\[…\]` / `\(…\)` / equation·align 系环境内时，编辑器右侧浮出 KaTeX 渲染；语法错误显示红色提示而非空白。
+  - 编译成功自动快照 + 回滚（Mimir 思路）：`state/snapshots/` 每文件保留 20 份；PDF 工具栏「◎ 快照」手动存、下拉选择回滚；回滚前自动存「pre-restore」安全快照。`GET/POST /api/editor/snapshots`、`POST /api/editor/snapshots/:id/restore`。
+  - 原子写入（latex-stickies 思路）：文件保存/创建/快照均 temp→rename，崩溃不留截断文件；Windows 文件占用时回退就地写入。
 
 ## [0.7.0] - 2026-08-31
 

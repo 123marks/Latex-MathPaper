@@ -481,6 +481,70 @@ function workspaceRoot(workspaceId) {
   return workspaceKernel.getWorkspace(workspaceId).root;
 }
 
+// Source snapshots (Mimir lesson): per-workspace state/snapshots/<id>.json
+// holding one file's content at a known-good moment (e.g. successful compile).
+// Capped per file so the folder never grows unbounded.
+const SNAPSHOTS_PER_FILE = 20;
+function snapshotsDir(workspaceId) {
+  return join(workspaceRoot(workspaceId), "state", "snapshots");
+}
+function listSnapshots(workspaceId, relPath = null) {
+  const dir = snapshotsDir(workspaceId);
+  if (!existsSync(dir)) return [];
+  const out = [];
+  for (const name of readdirSync(dir)) {
+    if (!name.endsWith(".json")) continue;
+    try {
+      const meta = JSON.parse(readFileSync(join(dir, name), "utf-8"));
+      if (relPath && meta.path !== relPath) continue;
+      out.push({ id: meta.id, path: meta.path, reason: meta.reason, createdAt: meta.createdAt, bytes: meta.bytes });
+    } catch { /* skip corrupt snapshot */ }
+  }
+  return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+function saveSnapshot(workspaceId, relPath, reason) {
+  const source = workspacePath(workspaceId, relPath);
+  if (!existsSync(source) || !statSync(source).isFile()) return null;
+  const content = readFileSync(source, "utf-8");
+  const dir = snapshotsDir(workspaceId);
+  mkdirSync(dir, { recursive: true });
+  const id = `${Date.now().toString(36)}-${newToken().slice(0, 6)}`;
+  const meta = { id, path: relPath, reason, createdAt: new Date().toISOString(), bytes: Buffer.byteLength(content, "utf-8"), content };
+  writeFileAtomic(join(dir, `${id}.json`), `${JSON.stringify(meta)}\n`);
+  // Prune oldest beyond the per-file cap.
+  const mine = listSnapshots(workspaceId, relPath);
+  for (const old of mine.slice(SNAPSHOTS_PER_FILE)) {
+    try { rmSync(join(dir, `${old.id}.json`), { force: true }); } catch { /* best effort */ }
+  }
+  return id;
+}
+function readSnapshot(workspaceId, id) {
+  if (!/^[a-z0-9-]+$/i.test(String(id))) return null;
+  const file = join(snapshotsDir(workspaceId), `${id}.json`);
+  if (!existsSync(file)) return null;
+  try { return JSON.parse(readFileSync(file, "utf-8")); } catch { return null; }
+}
+
+// Atomic document write (latex-stickies lesson): temp file in the same dir,
+// then rename over the target, so a crash mid-write leaves the previous
+// content intact instead of a truncated file.
+function writeFileAtomic(filePath, content) {
+  const tmp = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  writeFileSync(tmp, content, "utf-8");
+  try {
+    renameSync(tmp, filePath);
+  } catch (error) {
+    // Windows can refuse to rename over a file held open by another process;
+    // fall back to an in-place write rather than losing the save.
+    try { rmSync(tmp, { force: true }); } catch { /* best effort */ }
+    if (error?.code === "EPERM" || error?.code === "EEXIST" || error?.code === "EBUSY") {
+      writeFileSync(filePath, content, "utf-8");
+      return;
+    }
+    throw error;
+  }
+}
+
 function workspacePath(workspaceId, relativePath = ".", options = {}) {
   return workspaceKernel.resolvePath(workspaceId, relativePath, options);
 }
@@ -1810,6 +1874,47 @@ async function api(req, res, path) {
     return sendJson(res, 200, { reply });
   }
 
+  // 源码快照：列出 / 手动创建 / 回滚（回滚前先自动存一份当前内容，可再回去）。
+  if (req.method === "GET" && path === "/api/editor/snapshots") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const url = new URL(req.url, `http://localhost:${port}`);
+    const workspaceId = queryWorkspaceId(url);
+    workspaceRoot(workspaceId); // kernel error -> mapped 404
+    const relPath = String(url.searchParams.get("path") || "").replace(/^\/+/, "") || null;
+    return sendJson(res, 200, { snapshots: listSnapshots(workspaceId, relPath) });
+  }
+
+  if (req.method === "POST" && path === "/api/editor/snapshots") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const body = await readBody(req);
+    const workspaceId = bodyWorkspaceId(body);
+    const relPath = String(body.path || "").replace(/^\/+/, "");
+    if (!relPath || relPath.includes("..") || relPath.includes("\\")) return sendJson(res, 400, { error: "invalid path" });
+    const id = saveSnapshot(workspaceId, relPath, String(body.reason || "manual").slice(0, 40));
+    if (!id) return sendJson(res, 404, { error: "file not found" });
+    audit(user, "snapshot.create", `${workspaceId}/${relPath}`);
+    return sendJson(res, 201, { id, snapshots: listSnapshots(workspaceId, relPath) });
+  }
+
+  if (req.method === "POST" && /^\/api\/editor\/snapshots\/[a-z0-9-]+\/restore$/i.test(path)) {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const id = path.split("/")[4];
+    const body = await readBody(req);
+    const workspaceId = bodyWorkspaceId(body);
+    const snap = readSnapshot(workspaceId, id);
+    if (!snap) return sendJson(res, 404, { error: "snapshot not found" });
+    const target = workspacePath(workspaceId, snap.path);
+    // Safety net: the state being replaced becomes its own snapshot.
+    if (existsSync(target)) saveSnapshot(workspaceId, snap.path, "pre-restore");
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileAtomic(target, snap.content);
+    audit(user, "snapshot.restore", `${workspaceId}/${snap.path} <- ${id}`);
+    return sendJson(res, 200, { ok: true, path: snap.path, content: snap.content, snapshots: listSnapshots(workspaceId, snap.path) });
+  }
+
   // 工作区归档导出：整包 tar.gz 备份（排除缓存/依赖目录），本地优先的数据
   // 自由。注意：/api/editor/export（无 -archive）是既有的 JSON 文件快照接口。
   if (req.method === "GET" && path === "/api/editor/export-archive") {
@@ -2487,7 +2592,7 @@ async function api(req, res, path) {
     if (!existsSync(filePath) || !statSync(filePath).isFile()) {
       return sendJson(res, 404, { error: "file not found" });
     }
-    writeFileSync(filePath, content, "utf-8");
+    writeFileAtomic(filePath, content);
     audit(user, "file.save", `${workspaceId}/${relPath}`);
     return sendJson(res, 200, { ok: true, workspace: workspaceId, contest: workspaceId, path: relPath, size: Buffer.byteLength(content, "utf-8") });
   }
@@ -2507,7 +2612,7 @@ async function api(req, res, path) {
     const filePath = workspacePath(workspaceId, relPath);
     if (existsSync(filePath)) return sendJson(res, 409, { error: "file already exists" });
     mkdirSync(dirname(filePath), { recursive: true });
-    writeFileSync(filePath, content, "utf-8");
+    writeFileAtomic(filePath, content);
     audit(user, "file.create", `${workspaceId}/${relPath}`);
     return sendJson(res, 201, { ok: true, workspace: workspaceId, contest: workspaceId, path: relPath, size: Buffer.byteLength(content, "utf-8") });
   }
@@ -3121,9 +3226,16 @@ async function api(req, res, path) {
       let pdfB64 = null;
       const pdfPath = resolveCompiledPdf(activeWorkspaceRoot, relPath);
       if (pdfPath) pdfB64 = readFileSync(pdfPath).toString("base64");
+      // Mimir lesson: a successful compile is a known-good state — snapshot the
+      // compiled source so the user can roll back to it later.
+      let snapshotId = null;
+      if (code === 0) {
+        try { snapshotId = saveSnapshot(workspaceId, relPath, "compile"); } catch { snapshotId = null; }
+      }
       broadcast(channel, {
         event: "done",
         code,
+        snapshotId,
         pdf: pdfB64,
         pdfPath: pdfPath ? pdfPath.replace(activeWorkspaceRoot, "").replace(/\\/g, "/") : null,
         durationMs: Date.now() - startedAt,
