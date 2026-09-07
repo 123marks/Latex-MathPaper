@@ -73,10 +73,38 @@ function directoryNames(path) {
     .sort((left, right) => left.localeCompare(right));
 }
 
+// Mimir lesson (project import): find the real LaTeX entry file instead of
+// guessing fixed names. Conventional names win; otherwise the shallow-scanned
+// .tex files that declare \documentclass are candidates (first sorted wins).
+export function detectTexEntry(root) {
+  for (const path of ["main.tex", "paper.tex", join("paper", "main.tex")]) {
+    if (existsSync(join(root, path))) return path.replace(/\\/g, "/");
+  }
+  const candidates = [];
+  const SKIP = new Set(["node_modules", ".git", "build", ".tectonic", "state", "__pycache__"]);
+  (function scan(dir, rel, depth) {
+    if (depth > 2 || candidates.length >= 20) return;
+    let names;
+    try { names = readdirSync(dir); } catch { return; }
+    for (const name of names.sort()) {
+      if (SKIP.has(name)) continue;
+      const abs = join(dir, name);
+      const relPath = rel ? `${rel}/${name}` : name;
+      let st;
+      try { st = statSync(abs); } catch { continue; }
+      if (st.isDirectory()) { scan(abs, relPath, depth + 1); continue; }
+      if (!/\.tex$/i.test(name) || st.size > 2_000_000) continue;
+      try {
+        const head = readFileSync(abs, "utf8").slice(0, 20000);
+        if (/^\s*\\documentclass\b/m.test(head)) candidates.push(relPath);
+      } catch { /* unreadable file is not an entry */ }
+    }
+  })(root, "", 0);
+  return candidates.length ? candidates.sort()[0] : null;
+}
+
 function hasTexEntry(root) {
-  return ["main.tex", "paper.tex", join("paper", "main.tex")].some((path) =>
-    existsSync(join(root, path)),
-  );
+  return detectTexEntry(root) !== null;
 }
 
 function isMissingPathError(error) {
@@ -199,6 +227,7 @@ export function createWorkspaceKernel({
       source: entry.source,
       capabilities: [...(pack.capabilities || [])],
       hasTex: hasTexEntry(root),
+      texEntry: existsSync(root) ? detectTexEntry(root) : null,
       status: existsSync(root) ? workspaceStatus(root) : "missing",
       mtime,
     };

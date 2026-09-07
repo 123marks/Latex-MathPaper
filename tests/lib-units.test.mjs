@@ -54,6 +54,26 @@ test("parseBibTeX handles braces, quotes, bare values, and skips @comment", () =
   assert.equal(entries[0].venue, "J");
 });
 
+test("detectTexEntry prefers conventional names, else the first \\documentclass file", async () => {
+  const { detectTexEntry } = await import("../app/lib/workspaces.mjs");
+  const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const root = mkdtempSync(join(tmpdir(), "paperos-entry-"));
+  try {
+    assert.equal(detectTexEntry(root), null);
+    mkdirSync(join(root, "chapters"));
+    writeFileSync(join(root, "chapters", "ch1.tex"), "\\section{One}", "utf8");
+    assert.equal(detectTexEntry(root), null, "a chapter without \\documentclass is not an entry");
+    writeFileSync(join(root, "thesis.tex"), "% comment\n\\documentclass{book}\n\\begin{document}\\end{document}", "utf8");
+    assert.equal(detectTexEntry(root), "thesis.tex");
+    writeFileSync(join(root, "main.tex"), "\\documentclass{article}", "utf8");
+    assert.equal(detectTexEntry(root), "main.tex", "conventional name wins");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("effectivePlan falls back to free on expiry or unknown plans", () => {
   const now = Date.now();
   assert.equal(effectivePlan(null, now), "free");

@@ -246,7 +246,7 @@ export default function AIAssistantPanel({
         <label className="sr-only" htmlFor="workbench-ai-input">Message Paper OS Assistant</label>
         <textarea
           id="workbench-ai-input"
-          placeholder="Ask about the open document or request a file edit..."
+          placeholder="提问或请求修改；用 @sections/intro.tex 附带文件内容…"
           value={input}
           disabled={busy || proposalPending}
           onChange={(event) => onInput?.(event.target.value)}

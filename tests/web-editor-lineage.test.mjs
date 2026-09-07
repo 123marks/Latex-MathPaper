@@ -72,6 +72,21 @@ test("integrated terminal streams /api/editor/terminal into the bottom panel", (
   assert.match(css, /\.terminal-body \{/);
 });
 
+test("@file mentions attach real file content; describe-to-formula routes through the reviewable chat", () => {
+  // Pine: @path expands via the real file API into the outgoing message only.
+  assert.match(workbenchSource, /async function expandFileMentions/);
+  assert.match(workbenchSource, /\/api\/editor\/file\?workspace=\$\{encodeURIComponent\(contest\)\}&path=\$\{encodeURIComponent\(rel\)\}/);
+  assert.match(workbenchSource, /content: mention\.expanded/);
+  assert.match(workbenchSource, /未找到 @ 引用的文件/);
+  // latex-stickies: Ctrl+Shift+M fills the prompt; nothing is auto-inserted.
+  assert.match(workbenchSource, /event\.shiftKey && event\.key\.toLowerCase\(\) === "m"/);
+  assert.match(workbenchSource, /function describeToFormula/);
+  assert.match(workbenchSource, /只输出公式本身/);
+  assert.match(workbenchSource, /描述→公式/);
+  const panelSource = readFileSync(resolve(webRoot, "src/components/workbench/AIAssistantPanel.jsx"), "utf8");
+  assert.match(panelSource, /@sections\/intro\.tex/);
+});
+
 test("outline rail and snapshot controls are wired to real endpoints", () => {
   assert.match(workbenchSource, /railMode === "outline"/);
   assert.match(workbenchSource, /openFileAt\(active\.path, o\.line\)/);

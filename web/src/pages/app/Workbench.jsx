@@ -129,6 +129,7 @@ export default function Workbench() {
   useEffect(() => { loadTree(); }, [contest]); // eslint-disable-line
 
   // 深链：⌘K 搜索结果用 ?file= 直接打开目标文件（仅首次生效）。
+  // 否则（Mimir 导入思路）：没有恢复的标签页时，自动打开工作区探测到的入口 .tex。
   const openedFromUrlRef = useRef(false);
   useEffect(() => {
     if (openedFromUrlRef.current || typeof window === "undefined" || tree.length === 0) return;
@@ -136,7 +137,16 @@ export default function Workbench() {
     if (fileParam) {
       openedFromUrlRef.current = true;
       openFile({ path: fileParam, name: fileParam.split("/").pop() });
+      return;
     }
+    let restored = false;
+    try { restored = Boolean(JSON.parse(window.localStorage.getItem(`paperos.tabs.${contest}`) || "null")?.tabs?.length); } catch { restored = false; }
+    if (restored) { openedFromUrlRef.current = true; return; }
+    openedFromUrlRef.current = true;
+    api.get("/api/editor/projects").then((d) => {
+      const entry = (d.projects || []).find((p) => p.id === contest)?.texEntry;
+      if (entry) openFile({ path: entry, name: entry.split("/").pop() });
+    }).catch(() => {});
   }, [tree]); // eslint-disable-line
 
   // Visual review annotations (09-integrations Epic 1b).
@@ -579,13 +589,18 @@ export default function Workbench() {
     }
   }
 
-  // Ctrl+S 保存当前文件（捕获阶段拦截浏览器的“另存为”）。
+  // Ctrl+S 保存当前文件（捕获阶段拦截浏览器的“另存为”）；
+  // Ctrl+Shift+M 把选中的自然语言描述变成公式请求（latex-stickies 同款快捷键）。
   const saveRef = useRef(() => {});
+  const formulaRef = useRef(() => {});
   useEffect(() => {
     const onKey = (event) => {
       if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "s") {
         event.preventDefault();
         saveRef.current();
+      } else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "m") {
+        event.preventDefault();
+        formulaRef.current();
       }
     };
     window.addEventListener("keydown", onKey, true);
@@ -884,11 +899,51 @@ export default function Workbench() {
   const chatAbortRef = useRef(null);
   useEffect(() => () => chatAbortRef.current?.abort(), []);
 
+  // Pine lesson: `@path/to/file.tex` in the prompt pulls that file's real
+  // content into the request as a fenced block. The chat bubble keeps the
+  // short @ form; only the outgoing message is expanded. Unknown paths are
+  // left as-is and noted so nothing is silently dropped.
+  async function expandFileMentions(text) {
+    const mentions = [...new Set((text.match(/@([\w./-]+\.[A-Za-z0-9]+)/g) || []).map((m) => m.slice(1)))];
+    if (mentions.length === 0) return { expanded: text, attached: [], missing: [] };
+    const attached = [];
+    const missing = [];
+    for (const rel of mentions.slice(0, 6)) {
+      try {
+        const d = await api.get(`/api/editor/file?workspace=${encodeURIComponent(contest)}&path=${encodeURIComponent(rel)}`);
+        attached.push({ path: rel, content: String(d.content || "").slice(0, 20000) });
+      } catch {
+        missing.push(rel);
+      }
+    }
+    const blocks = attached.map((a) => `\n\n[file:${a.path}]\n\`\`\`latex\n${a.content}\n\`\`\``).join("");
+    return { expanded: text + blocks, attached, missing };
+  }
+
+  // latex-stickies lesson (Cmd+Shift+M): turn a natural-language description
+  // into a LaTeX formula. Goes through the configured provider via the normal
+  // chat path, so the result lands as a reviewable reply — never auto-inserted.
+  function describeToFormula() {
+    const excerpt = String(annoSel?.excerpt || "").trim();
+    if (!excerpt) {
+      setLog((l) => ["[math] 先在编辑器里选中一段自然语言描述（如「x 平方从 0 到 1 的积分」）", ...l].slice(0, 80));
+      return;
+    }
+    setMsg(`把下面这段描述写成一条 LaTeX 公式，只输出公式本身（用 \\[ ... \\] 包裹），不要解释：\n\n${excerpt.slice(0, 600)}`);
+  }
+
   async function sendChat() {
     const unresolvedProposal = ["ready", "conflict", "rollback"].includes(proposal?.state);
     if (!msg.trim() || busy || unresolvedProposal) return;
 
     const userText = msg.trim();
+    const mention = await expandFileMentions(userText);
+    if (mention.missing.length) {
+      setLog((l) => [`[chat] 未找到 @ 引用的文件: ${mention.missing.join(", ")}`, ...l].slice(0, 80));
+    }
+    if (mention.attached.length) {
+      setLog((l) => [`[chat] 已附带 ${mention.attached.length} 个文件: ${mention.attached.map((a) => a.path).join(", ")}`, ...l].slice(0, 80));
+    }
     const controller = new AbortController();
     chatAbortRef.current?.abort();
     chatAbortRef.current = controller;
@@ -955,7 +1010,7 @@ export default function Workbench() {
               role: item.role || (item.who === "You" ? "user" : "assistant"),
               content: item.text,
             })),
-            { role: "user", content: userText },
+            { role: "user", content: mention.expanded },
           ],
           workspace: contest,
           ...(aiProfileId ? { profileId: aiProfileId } : {}),
@@ -995,6 +1050,7 @@ export default function Workbench() {
   const dirty = active && editor !== original;
   const allFiles = flattenTree(tree);
   saveRef.current = save;
+  formulaRef.current = describeToFormula;
   dirtyRef.current = Boolean(dirty) || openTabs.some((t) => t.dirty);
   const aiPlan = aiPhase === "idle"
     ? []
@@ -1303,6 +1359,14 @@ export default function Workbench() {
                   <>
                     <span>·</span>
                     <button className="pdf-btn" onClick={takeSnapshot} title="保存并为当前文件存一份快照">◎ 快照</button>
+                    <button
+                      className="pdf-btn"
+                      onClick={describeToFormula}
+                      disabled={!annoSel?.excerpt?.trim()}
+                      title="选中一段自然语言描述 → 生成 LaTeX 公式（Ctrl+Shift+M）"
+                    >
+                      ∑ 描述→公式
+                    </button>
                     {snapshots.length > 0 && (
                       <select
                         className="snapshot-select"

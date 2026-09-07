@@ -48,9 +48,9 @@ Ctrl+K 命令面板、Tectonic 内置、SyncTeX 正反向、内置 Git、Bib 管
 | 1 | 编译成功自动快照 + 一键回滚 | Mimir | 服务端快照存储 | ✅ 2026-09-07 |
 | 1 | 原子写入（temp→rename） | latex-stickies | 无 | ✅ 2026-09-07 |
 | 2 | 集成终端（工作区 cwd、白名单+超时、SSE 输出） | VS Code | 服务端 | ✅ 2026-09-07 |
-| 2 | 自然语言→LaTeX 公式（走 provider，Preview 后插入） | latex-stickies | 无 | ⏳ |
-| 2 | AI 输入 `@文件` 引用 | Pine | 无 | ⏳ |
-| 2 | 导入时自动识别入口 .tex | Mimir | 无 | ⏳ |
+| 2 | 自然语言→LaTeX 公式（Ctrl+Shift+M / ∑ 按钮 → 走 provider → 回答可审阅） | latex-stickies | 无 | ✅ 2026-09-07 |
+| 2 | AI 输入 `@文件` 引用（发送前展开为真实文件内容块） | Pine | 无 | ✅ 2026-09-07 |
+| 2 | 入口 .tex 自动探测（`\documentclass` 扫描）+ 首次打开自动加载 | Mimir | 无 | ✅ 2026-09-07 |
 | 3 | SyncTeX 正反向 | LaTeX Editor | synctex 解析 | ⏳ |
 | 3 | KaoNotes 风格笔记模板 | KaoNotes | 模板 | ⏳ |
 | — | 安装包 exe（自包含 .NET + Node sidecar；签名需证书） | 用户需求 | 打包 | ⏳ 见 §3 |
