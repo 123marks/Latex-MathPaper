@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
 import { api } from "../../lib/api.js";
 import AIAssistantPanel from "../../components/workbench/AIAssistantPanel.jsx";
 import PdfViewer from "../../components/workbench/PdfViewer.jsx";
@@ -14,20 +13,6 @@ import {
   parseFileBlocks,
   parseSSEBuffer,
 } from "../../lib/ai-execution.js";
-
-const TABS = [
-  { name: "methodology.tex", dirty: true },
-  { name: "preamble.sty", dirty: false },
-  { name: "results.tex", dirty: false },
-];
-
-const STAGED = [
-  { q: "Q1", label: "问题重述", state: "done" },
-  { q: "Q2", label: "方法选择", state: "done" },
-  { q: "Q3", label: "实验与结果", state: "in_progress" },
-  { q: "Q4", label: "灵敏度与稳健性", state: "todo" },
-  { q: "Q5", label: "论文写作", state: "todo" },
-];
 
 // Mimir lesson: a clickable outline of \part/\chapter/\section… with line numbers.
 const OUTLINE_LEVEL = { part: 0, chapter: 1, section: 2, subsection: 3, subsubsection: 4, paragraph: 5 };
@@ -48,33 +33,6 @@ function flattenTree(nodes, out = []) {
     else if (n.children) flattenTree(n.children, out);
   }
   return out;
-}
-
-function renderSource(line, i) {
-  const parts = line.split(/(\\section|\\subsection|\\begin|\\end|\\min|\\sum|\\lambda|\\frac|\\label|\\ref|\\cite|%)/g);
-  return (
-    <motion.div
-      key={i}
-      initial={{ opacity: 0, x: -4 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: Math.min(i, 30) * 0.012, duration: 0.25 }}
-    >
-      <span className="ln">{i + 1}</span>
-      {parts.map((p, j) => {
-        if (/^\\(section|subsection|begin|end|label)$/.test(p))
-          return <span key={j} className="k">{p}</span>;
-        if (p === "%") return <span key={j} className="c">{p}</span>;
-        if (/^\\cite/.test(p))
-          return (
-            <span key={j}>
-              <span className="k">{p}</span>
-            </span>
-          );
-        if (/^\\/.test(p)) return <span key={j} className="m">{p}</span>;
-        return <span key={j}>{p}</span>;
-      })}
-    </motion.div>
-  );
 }
 
 export default function Workbench() {
@@ -382,6 +340,21 @@ export default function Workbench() {
     // 内容经 React 渲染进 Monaco 需要一拍；失败则再重试一次。
     setTimeout(() => { if (!jump()) setTimeout(jump, 200); }, 60);
   }
+
+  // ── 状态栏真实数据：git 状态（非仓库如实显示）+ 当前文件的证据链接数 ──
+  const [gitStatus, setGitStatus] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => api.get(`/api/editor/git-status?workspace=${encodeURIComponent(contest)}`)
+      .then((d) => { if (!cancelled) setGitStatus(d); })
+      .catch(() => { if (!cancelled) setGitStatus({ isRepo: false }); });
+    load();
+    const timer = setInterval(load, 20000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [contest]);
+  // Product thesis (evidence discipline): count `% evidence:` anchors in the
+  // open buffer so the writer always sees how many claims are traced.
+  const evidenceAnchors = active ? (editor.match(/^\s*%\s*evidence:/gm) || []).length : 0;
 
   // ── SyncTeX 正反向（LaTeX Editor 迁移）──
   const [syncTarget, setSyncTarget] = useState(null); // { page, x, y }
@@ -1461,20 +1434,23 @@ export default function Workbench() {
                   }}
                 />
               ) : (
-                <div className="pdf-page">
-                  <h3>{active ? active.name.replace(".tex", "") : "Preview"}</h3>
-                  <p style={{ fontWeight: 600 }}>2.1 Problem Formulation</p>
-                  <p>
-                    Given the dataset <em>D</em> = {"{"}(x<sub>i</sub>, y<sub>i</sub>){")"}, we
-                    formulate the objective as the minimization of a
-                    regularized risk:
-                  </p>
-                  <div className="formula" style={{ fontStyle: "italic" }}>
-                    min<sub>x</sub> f(x) = ∑ c<sub>i</sub> x<sub>i</sub> + λ ‖x‖<sup>2</sup>
-                  </div>
-                  <p>
-                    点击右上 ⟲ Recompile 触发 Tectonic 编译,真实 PDF 将在此处渲染。
-                  </p>
+                <div className="pdf-page pdf-empty">
+                  <h3>{active ? active.name : "尚未编译"}</h3>
+                  {!engine?.tectonic?.present ? (
+                    <p>
+                      还没有本地 LaTeX 引擎。点顶部横幅一键下载 Tectonic（约 30MB，只需一次），
+                      之后每次 ⟲ Recompile 都在你自己的机器上完成。
+                    </p>
+                  ) : !active ? (
+                    <p>从左侧打开一个 .tex 文件，然后点 ⟲ Recompile，真实 PDF 会渲染在这里。</p>
+                  ) : (
+                    <p>点 ⟲ Recompile 编译 <code>{active.path}</code>；编译成功会自动存一份源码快照。</p>
+                  )}
+                  <ul className="pdf-empty-tips">
+                    <li>编译后：双击 PDF 任意位置跳回源码行；Ctrl+Alt+J 从源码定位到 PDF。</li>
+                    <li>划选 PDF 文字 →「问 AI」核对表述；拖框 → 区域标注，交给 AI 修改。</li>
+                    <li>正文里的每个结果数字都应有 <code>% evidence:</code> 出处——状态栏会计数。</li>
+                  </ul>
                 </div>
               )}
             </div>
@@ -1555,9 +1531,24 @@ export default function Workbench() {
           )}
 
           <div className="statusbar">
-            <span className="seg branch">⎇ main</span>
-            <span className="seg">LaTeX</span>
+            <span
+              className="seg branch"
+              title={gitStatus?.isRepo
+                ? `git 分支 ${gitStatus.branch}${gitStatus.dirtyCount ? ` · ${gitStatus.dirtyCount} 个未提交变更` : " · 工作树干净"}${gitStatus.ahead ? ` · 领先远端 ${gitStatus.ahead}` : ""}`
+                : "此工作区不是 git 仓库（可在终端里 git init）"}
+            >
+              {gitStatus === null ? "⎇ …" : gitStatus.isRepo
+                ? `⎇ ${gitStatus.branch}${gitStatus.dirtyCount ? ` ·${gitStatus.dirtyCount}` : ""}`
+                : "⎇ 非 git"}
+            </span>
+            <span className="seg">{active ? (active.path.split(".").pop() || "").toUpperCase() : "—"}</span>
             <span className="seg">UTF-8</span>
+            <span
+              className={`seg ${evidenceAnchors ? "" : "muted"}`}
+              title="本文件中标注了数据来源的 % evidence: 锚点数——每个结果数字都应有出处"
+            >
+              ⌖ 证据 {evidenceAnchors}
+            </span>
             <span className="seg">
               {annoSel ? `Ln ${annoSel.line ?? annoSel.startLine}, Col ${annoSel.column ?? 1}` : "Ln —, Col —"}
             </span>
@@ -1571,7 +1562,12 @@ export default function Workbench() {
               <button className="btn btn-quiet btn-sm" onClick={save} disabled={!active || busy === "save"}>
                 {busy === "save" ? "保存中…" : "⌘S 保存"}
               </button>
-              <span className="seg">● 本地引擎</span>
+              <span
+                className={`seg ${engine?.tectonic?.present ? "" : "muted"}`}
+                title={engine?.tectonic?.present ? `Tectonic ${engine.tectonic.detail || ""} · 本地编译可用` : "未安装 Tectonic：点顶部横幅一键下载"}
+              >
+                {engine?.tectonic?.present ? "● Tectonic" : "○ 无引擎"}
+              </span>
             </div>
           </div>
         </div>

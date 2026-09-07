@@ -13,6 +13,7 @@
   - 公式即时预览（latex-stickies 思路）：光标停在 `$…$` / `$$…$$` / `\[…\]` / `\(…\)` / equation·align 系环境内时，编辑器右侧浮出 KaTeX 渲染；语法错误显示红色提示而非空白。
   - 编译成功自动快照 + 回滚（Mimir 思路）：`state/snapshots/` 每文件保留 20 份；PDF 工具栏「◎ 快照」手动存、下拉选择回滚；回滚前自动存「pre-restore」安全快照。`GET/POST /api/editor/snapshots`、`POST /api/editor/snapshots/:id/restore`。
   - 原子写入（latex-stickies 思路）：文件保存/创建/快照均 temp→rename，崩溃不留截断文件；Windows 文件占用时回退就地写入。
+- 工作台"去摆设"审计：删除从未使用的 mock 常量（`TABS`/`STAGED`）与死渲染函数（`renderSource`，连带移除 framer-motion 引用）；状态栏**硬编码的 `⎇ main` 假分支**改为真实 `GET /api/editor/git-status`（非仓库如实显示「非 git」，仓库显示分支·脏文件数，20s 轮询）；`● 本地引擎` 改为真实 Tectonic 状态；新增 **`⌖ 证据 N`** 段实时统计当前文件的 `% evidence:` 锚点数（产品初衷：每个结果数字有出处）；未编译时的 PDF 占位从一段虚构论文改为按引擎/文件状态给出的真实引导与三条工作流提示。
 - Wave 3 · SyncTeX 正反向（LaTeX Editor 思路）：Tectonic 编译启用 `--synctex`；`lib/synctex.mjs` 解析 `.synctex(.gz)`（Input 标签、页块、box/point 记录、sp→PDF pt 换算）；`GET /api/editor/synctex` 提供 forward（源码文件+行 → 页+坐标，空行取最近后续记录）与 inverse（页+坐标 → 文件+行，纵向优先最近匹配）。工作台 **Ctrl+Alt+J** 把光标行定位到 PDF（琥珀标记线 + 滚动居中），**双击 PDF** 跳到对应源码行；未编译时如实提示 `SYNCTEX_MISSING`。
 - Windows 自包含安装包流水线 `npm run package:installer`：launcher 改为 `--self-contained` 发布（内嵌 .NET 8）、捆包官方 Node 22 运行时（下载后对照官方 SHASUMS256 校验、精简）、预装服务端生产依赖、自动生成 Inno Setup 脚本产出 `Setup.exe`（本机无 Inno 时回退为 `-selfcontained.zip`，解压双击即用，109 MB）。launcher 优先使用 `runtime\node`，回退系统 PATH；csproj 版本对齐 0.7.0。真机验证：解压包用捆包 Node 独立跑起服务与 Web UI。未签名，下载页如实标注。
 - Wave 2 · AI 输入 `@文件` 引用（Pine 思路）：提示词里写 `@sections/intro.tex`，发送前自动把真实文件内容以代码块附带（最多 6 个、每个 20KB），聊天气泡保留简短 @ 形式；找不到的路径在输出面板如实提示。

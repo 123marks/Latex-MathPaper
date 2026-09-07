@@ -1877,6 +1877,44 @@ async function api(req, res, path) {
     return sendJson(res, 200, { reply });
   }
 
+  // 工作区 git 状态（状态栏真实数据）：是否仓库、分支、脏文件数。git 不存在或
+  // 非仓库时如实返回 isRepo:false，绝不编造分支名。
+  if (req.method === "GET" && path === "/api/editor/git-status") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const url = new URL(req.url, `http://localhost:${port}`);
+    const workspaceId = queryWorkspaceId(url);
+    const cwd = workspaceRoot(workspaceId);
+    const runGit = (args) => new Promise((resolveGit) => {
+      let out = "";
+      let child;
+      try {
+        child = spawn("git", args, { cwd, windowsHide: true, stdio: ["ignore", "pipe", "ignore"] });
+      } catch {
+        resolveGit(null);
+        return;
+      }
+      const timer = setTimeout(() => { try { child.kill(); } catch { /* noop */ } resolveGit(null); }, 8000);
+      child.stdout.on("data", (b) => { out += b.toString(); });
+      child.on("error", () => { clearTimeout(timer); resolveGit(null); });
+      child.on("close", (code) => { clearTimeout(timer); resolveGit(code === 0 ? out.trim() : null); });
+    });
+    const inside = await runGit(["rev-parse", "--is-inside-work-tree"]);
+    if (inside !== "true") return sendJson(res, 200, { isRepo: false });
+    // Sequential on purpose: three concurrent git processes per poll multiply
+    // under load (many workspaces / test servers) for no user-visible gain.
+    const branch = await runGit(["rev-parse", "--abbrev-ref", "HEAD"]);
+    const porcelain = await runGit(["status", "--porcelain"]);
+    const ahead = await runGit(["rev-list", "--count", "@{upstream}..HEAD"]);
+    const dirtyCount = porcelain ? porcelain.split(/\r?\n/).filter(Boolean).length : 0;
+    return sendJson(res, 200, {
+      isRepo: true,
+      branch: branch || "HEAD",
+      dirtyCount,
+      ahead: ahead === null ? null : Number(ahead) || 0,
+    });
+  }
+
   // SyncTeX 正反向：forward（源码行 → PDF 页/坐标）、inverse（PDF 页/坐标 → 源码行）。
   // 读取编译产出的 .synctex(.gz)；没有就如实 404。
   if (req.method === "GET" && path === "/api/editor/synctex") {

@@ -101,6 +101,25 @@ test("SyncTeX forward (Ctrl+Alt+J) and inverse (double-click) are wired through 
   assert.match(css, /\.pdfv-sync-marker \{/);
 });
 
+test("no decorative fakes in the Workbench: statusbar and PDF placeholder are truthful", () => {
+  // Dead mock constants and the unused source renderer are gone.
+  assert.doesNotMatch(workbenchSource, /const TABS = \[/);
+  assert.doesNotMatch(workbenchSource, /const STAGED = \[/);
+  assert.doesNotMatch(workbenchSource, /function renderSource/);
+  assert.doesNotMatch(workbenchSource, /from "framer-motion"/);
+  // Statusbar: real git status (honest non-repo state), real engine, evidence count.
+  assert.doesNotMatch(workbenchSource, /⎇ main/);
+  assert.doesNotMatch(workbenchSource, /● 本地引擎/);
+  assert.match(workbenchSource, /\/api\/editor\/git-status\?workspace=/);
+  assert.match(workbenchSource, /⎇ 非 git/);
+  assert.match(workbenchSource, /evidenceAnchors/);
+  assert.match(workbenchSource, /engine\?\.tectonic\?\.present \? "● Tectonic" : "○ 无引擎"/);
+  // PDF placeholder no longer shows a fabricated paper excerpt.
+  assert.doesNotMatch(workbenchSource, /Problem Formulation/);
+  assert.doesNotMatch(workbenchSource, /regularized risk/);
+  assert.match(workbenchSource, /pdf-empty-tips/);
+});
+
 test("outline rail and snapshot controls are wired to real endpoints", () => {
   assert.match(workbenchSource, /railMode === "outline"/);
   assert.match(workbenchSource, /openFileAt\(active\.path, o\.line\)/);
