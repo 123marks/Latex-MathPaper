@@ -51,7 +51,7 @@ Ctrl+K 命令面板、Tectonic 内置、SyncTeX 正反向、内置 Git、Bib 管
 | 2 | 自然语言→LaTeX 公式（Ctrl+Shift+M / ∑ 按钮 → 走 provider → 回答可审阅） | latex-stickies | 无 | ✅ 2026-09-07 |
 | 2 | AI 输入 `@文件` 引用（发送前展开为真实文件内容块） | Pine | 无 | ✅ 2026-09-07 |
 | 2 | 入口 .tex 自动探测（`\documentclass` 扫描）+ 首次打开自动加载 | Mimir | 无 | ✅ 2026-09-07 |
-| 3 | SyncTeX 正反向 | LaTeX Editor | synctex 解析 | ⏳ |
+| 3 | SyncTeX 正反向（Ctrl+Alt+J 源码→PDF 高亮定位；双击 PDF→源码行） | LaTeX Editor | `lib/synctex.mjs` 解析器 | ✅ 2026-09-07 |
 | 3 | KaoNotes 风格笔记模板 | KaoNotes | 模板 | ⏳ |
 | — | 安装包 exe（自包含 .NET + Node sidecar；签名需证书） | 用户需求 | 打包 | ⏳ 见 §3 |
 

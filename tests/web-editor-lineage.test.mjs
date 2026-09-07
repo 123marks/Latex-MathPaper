@@ -87,6 +87,20 @@ test("@file mentions attach real file content; describe-to-formula routes throug
   assert.match(panelSource, /@sections\/intro\.tex/);
 });
 
+test("SyncTeX forward (Ctrl+Alt+J) and inverse (double-click) are wired through /api/editor/synctex", () => {
+  const viewerSource = readFileSync(resolve(webRoot, "src/components/workbench/PdfViewer.jsx"), "utf8");
+  assert.match(workbenchSource, /mode=forward&path=/);
+  assert.match(workbenchSource, /mode=inverse&page=/);
+  assert.match(workbenchSource, /event\.altKey && event\.key\.toLowerCase\(\) === "j"/);
+  assert.match(workbenchSource, /compiledTexRef\.current = active\.path/);
+  assert.match(workbenchSource, /onInverseSync=\{inverseSync\}/);
+  // Viewer converts a double-click into PDF points using the unscaled viewport.
+  assert.match(viewerSource, /onDoubleClick=/);
+  assert.match(viewerSource, /page\.getViewport\(\{ scale: 1 \}\)/);
+  assert.match(viewerSource, /pdfv-sync-marker/);
+  assert.match(css, /\.pdfv-sync-marker \{/);
+});
+
 test("outline rail and snapshot controls are wired to real endpoints", () => {
   assert.match(workbenchSource, /railMode === "outline"/);
   assert.match(workbenchSource, /openFileAt\(active\.path, o\.line\)/);

@@ -313,6 +313,8 @@ export default function Workbench() {
     if (!active) return;
     try {
       setCompiling(true);
+      compiledTexRef.current = active.path;
+      setSyncTarget(null);
       setLog((l) => [`[compile] ${active.path} ...`, ...l].slice(0, 80));
       await api.post("/api/editor/compile-live", { contest, path: active.path });
       // progress + PDF are streamed back via the `compile:<contest>` WS
@@ -380,6 +382,40 @@ export default function Workbench() {
     // 内容经 React 渲染进 Monaco 需要一拍；失败则再重试一次。
     setTimeout(() => { if (!jump()) setTimeout(jump, 200); }, 60);
   }
+
+  // ── SyncTeX 正反向（LaTeX Editor 迁移）──
+  const [syncTarget, setSyncTarget] = useState(null); // { page, x, y }
+  const compiledTexRef = useRef(null); // the .tex that produced the current PDF
+  async function forwardSync() {
+    const texFile = compiledTexRef.current || active?.path;
+    if (!texFile || !active || !annoSel) {
+      setLog((l) => ["[synctex] 先编译并把光标放在源码行上", ...l].slice(0, 80));
+      return;
+    }
+    const line = annoSel.line ?? annoSel.startLine;
+    try {
+      const d = await api.get(`/api/editor/synctex?workspace=${encodeURIComponent(contest)}&tex=${encodeURIComponent(texFile)}&mode=forward&path=${encodeURIComponent(active.path)}&line=${line}`);
+      setSyncTarget({ page: d.page, x: d.x, y: d.y, at: Date.now() });
+      setLog((l) => [`[synctex] ${active.path}:${line} → PDF 第 ${d.page} 页`, ...l].slice(0, 80));
+    } catch (e) {
+      setLog((l) => [`[synctex] ${e.message}`, ...l].slice(0, 80));
+    }
+  }
+  async function inverseSync({ page, x, y }) {
+    const texFile = compiledTexRef.current || active?.path;
+    if (!texFile) return;
+    try {
+      const d = await api.get(`/api/editor/synctex?workspace=${encodeURIComponent(contest)}&tex=${encodeURIComponent(texFile)}&mode=inverse&page=${page}&x=${x.toFixed(2)}&y=${y.toFixed(2)}`);
+      if (d.path && d.line) {
+        await openFileAt(d.path, d.line);
+        setLog((l) => [`[synctex] PDF 第 ${page} 页 → ${d.path}:${d.line}`, ...l].slice(0, 80));
+      }
+    } catch (e) {
+      setLog((l) => [`[synctex] ${e.message}`, ...l].slice(0, 80));
+    }
+  }
+  const forwardSyncRef = useRef(() => {});
+  forwardSyncRef.current = forwardSync;
 
   // ── VS Code 式外壳：底部面板（输出 / 终端）──
   const [showOutput, setShowOutput] = useState(false);
@@ -598,9 +634,13 @@ export default function Workbench() {
       if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "s") {
         event.preventDefault();
         saveRef.current();
-      } else if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "m") {
+      } else       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "m") {
         event.preventDefault();
         formulaRef.current();
+      }
+      if ((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase() === "j") {
+        event.preventDefault();
+        forwardSyncRef.current();
       }
     };
     window.addEventListener("keydown", onKey, true);
@@ -1399,6 +1439,8 @@ export default function Workbench() {
                       note: a.note,
                       status: a.status,
                     }))}
+                  syncTarget={syncTarget}
+                  onInverseSync={inverseSync}
                   onAskSelection={(text) => {
                     setMsg(`关于编译 PDF 中选中的这段内容：\n> ${text.replace(/\n/g, "\n> ")}\n\n请检查它与源码是否一致，并给出改进建议。`);
                   }}

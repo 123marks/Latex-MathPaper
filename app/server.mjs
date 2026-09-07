@@ -5,6 +5,7 @@ import { WebSocketServer } from "ws";
 import { existsSync, readFileSync, writeFileSync, renameSync, unlinkSync, chmodSync, rmSync, mkdirSync, readdirSync, lstatSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, resolve, sep } from "node:path";
 import { cpus, freemem, loadavg, totalmem, uptime as osUptime } from "node:os";
+import { gunzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 
 import { createStore } from "./lib/store.mjs";
@@ -35,6 +36,7 @@ import {
 import { PLAN_LIMITS, effectivePlan, planLimits, trimUserThreads } from "./lib/plans.mjs";
 import { paymentProviderStatus } from "./lib/payments.mjs";
 import { TERMINAL_OUTPUT_CAP, TERMINAL_TIMEOUT_MS, validateTerminalCommand } from "./lib/terminal.mjs";
+import { forwardLookup, inverseLookup, parseSyncTeX } from "./lib/synctex.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
@@ -1875,6 +1877,56 @@ async function api(req, res, path) {
     return sendJson(res, 200, { reply });
   }
 
+  // SyncTeX 正反向：forward（源码行 → PDF 页/坐标）、inverse（PDF 页/坐标 → 源码行）。
+  // 读取编译产出的 .synctex(.gz)；没有就如实 404。
+  if (req.method === "GET" && path === "/api/editor/synctex") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const url = new URL(req.url, `http://localhost:${port}`);
+    const workspaceId = queryWorkspaceId(url);
+    const rootPath = workspaceRoot(workspaceId);
+    const texRel = String(url.searchParams.get("tex") || "").replace(/^\/+/, "");
+    if (!texRel || texRel.includes("..") || texRel.includes("\\")) return sendJson(res, 400, { error: "tex is required" });
+    const base = texRel.split("/").pop().replace(/\.tex$/i, "");
+    const dirRel = texRel.includes("/") ? texRel.slice(0, texRel.lastIndexOf("/")) : "";
+    const candidates = [
+      join(rootPath, "build", `${base}.synctex.gz`), join(rootPath, "build", `${base}.synctex`),
+      join(rootPath, dirRel, `${base}.synctex.gz`), join(rootPath, dirRel, `${base}.synctex`),
+      join(rootPath, `${base}.synctex.gz`), join(rootPath, `${base}.synctex`),
+    ];
+    const file = candidates.find((p) => existsSync(p));
+    if (!file) return sendJson(res, 404, { error: "没有 synctex 数据：请先编译（Tectonic 已启用 --synctex）", code: "SYNCTEX_MISSING" });
+    let text;
+    try {
+      const buf = readFileSync(file);
+      text = file.endsWith(".gz") ? gunzipSync(buf).toString("utf-8") : buf.toString("utf-8");
+    } catch (error) {
+      return sendJson(res, 500, { error: `synctex 读取失败: ${String(error.message || error).slice(0, 120)}` });
+    }
+    const parsed = parseSyncTeX(text);
+    const mode = url.searchParams.get("mode") || "forward";
+    if (mode === "forward") {
+      const rel = String(url.searchParams.get("path") || texRel).replace(/^\/+/, "");
+      const line = Math.max(1, Math.floor(Number(url.searchParams.get("line")) || 1));
+      const hit = forwardLookup(parsed, rel, line);
+      if (!hit) return sendJson(res, 404, { error: "该行没有 synctex 记录", code: "SYNCTEX_NO_MATCH" });
+      return sendJson(res, 200, { mode, ...hit });
+    }
+    if (mode === "inverse") {
+      const page = Math.max(1, Math.floor(Number(url.searchParams.get("page")) || 1));
+      const x = Number(url.searchParams.get("x")) || 0;
+      const y = Number(url.searchParams.get("y")) || 0;
+      const hit = inverseLookup(parsed, page, x, y);
+      if (!hit) return sendJson(res, 404, { error: "该位置没有 synctex 记录", code: "SYNCTEX_NO_MATCH" });
+      // Normalise the recorded input path to a workspace-relative one.
+      let relPath = String(hit.path || "").replace(/\\/g, "/").replace(/^\.\//, "");
+      const rootNorm = rootPath.replace(/\\/g, "/").replace(/\/+$/, "");
+      if (relPath.toLowerCase().startsWith(rootNorm.toLowerCase() + "/")) relPath = relPath.slice(rootNorm.length + 1);
+      return sendJson(res, 200, { mode, path: relPath, line: hit.line, page: hit.page });
+    }
+    return sendJson(res, 400, { error: "mode must be forward or inverse" });
+  }
+
   // 集成终端：白名单程序、argv 直传（无 shell）、工作区 cwd、超时、输出上限，
   // 以 SSE 流式回传 stdout/stderr/exit。
   if (req.method === "POST" && path === "/api/editor/terminal") {
@@ -3206,10 +3258,10 @@ async function api(req, res, path) {
     // pick engine: bundled tectonic > system tectonic > latexmk
     const localBin = engineBinaryPath();
     let bin = null, args = null;
-    if (existsSync(localBin)) { bin = localBin; args = [relPath, "--keep-intermediates", "--outdir", "build"]; }
+    if (existsSync(localBin)) { bin = localBin; args = [relPath, "--keep-intermediates", "--synctex", "--outdir", "build"]; }
     else {
       const which = await runCommand("tectonic", ["--version"], { timeoutMs: 1500 });
-      if (which.code === 0) { bin = "tectonic"; args = [relPath, "--keep-intermediates", "--outdir", "build"]; }
+      if (which.code === 0) { bin = "tectonic"; args = [relPath, "--keep-intermediates", "--synctex", "--outdir", "build"]; }
       else if (whichCommand(latexmkCommand)) { bin = latexmkCommand; args = ["-pdf", "-synctex=1", "-interaction=nonstopmode", "-halt-on-error", relPath]; }
     }
     if (!bin) {
@@ -3255,8 +3307,8 @@ async function api(req, res, path) {
     if (!existsSync(filePath)) return sendJson(res, 404, { error: "file not found" });
     const localBin = engineBinaryPath();
     let bin = null, args = null;
-    if (existsSync(localBin)) { bin = localBin; args = [relPath, "--keep-intermediates", "--outdir", "build"]; }
-    else if (whichCommand("tectonic")) { bin = "tectonic"; args = [relPath, "--keep-intermediates", "--outdir", "build"]; }
+    if (existsSync(localBin)) { bin = localBin; args = [relPath, "--keep-intermediates", "--synctex", "--outdir", "build"]; }
+    else if (whichCommand("tectonic")) { bin = "tectonic"; args = [relPath, "--keep-intermediates", "--synctex", "--outdir", "build"]; }
     else if (whichCommand(latexmkCommand)) { bin = latexmkCommand; args = ["-pdf", "-synctex=1", "-interaction=nonstopmode", "-halt-on-error", relPath]; }
     if (!bin) {
       return sendJson(res, 412, { error: "no LaTeX engine available" });

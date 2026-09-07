@@ -4,7 +4,7 @@ import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 // pdf.js 渲染层（09-integrations 3c/1d 基础）：canvas 逐页渲染 + 文本层
 // （可划词）+ 区域标注模式（拖框 → 归一化矩形回调）。SSR 安全：pdfjs-dist
 // 仅在浏览器内动态加载，服务端/加载中渲染占位。
-export default function PdfViewer({ url, regions = [], onAskSelection, onRegionAnnotate }) {
+export default function PdfViewer({ url, regions = [], onAskSelection, onRegionAnnotate, onInverseSync, syncTarget }) {
   const [doc, setDoc] = useState(null);
   const [pageCount, setPageCount] = useState(0);
   const [scale, setScale] = useState(1.1);
@@ -61,6 +61,7 @@ export default function PdfViewer({ url, regions = [], onAskSelection, onRegionA
         <button type="button" className="pdfv-btn" title="把 PDF 中选中的文本发给 AI" onClick={askSelection}>
           ↗ 问 AI（选中文本）
         </button>
+        {onInverseSync && <span className="pdfv-hint">双击页面 → 源码行 · Ctrl+Alt+J 源码 → PDF</span>}
       </div>
       {error ? (
         <div className="pdfv-error">{error}</div>
@@ -76,10 +77,12 @@ export default function PdfViewer({ url, regions = [], onAskSelection, onRegionA
               scale={scale}
               regionMode={regionMode}
               regions={regions.filter((r) => r.page === i + 1)}
+              syncTarget={syncTarget && syncTarget.page === i + 1 ? syncTarget : null}
               onRegion={(rect) => {
                 setRegionMode(false);
                 onRegionAnnotate?.({ page: i + 1, rect });
               }}
+              onInverseSync={onInverseSync}
             />
           ))}
         </div>
@@ -88,11 +91,27 @@ export default function PdfViewer({ url, regions = [], onAskSelection, onRegionA
   );
 }
 
-function PdfPage({ doc, pageNumber, scale, regionMode, regions = [], onRegion }) {
+function PdfPage({ doc, pageNumber, scale, regionMode, regions = [], syncTarget, onRegion, onInverseSync }) {
   const canvasRef = useRef(null);
   const textRef = useRef(null);
   const wrapRef = useRef(null);
   const [drag, setDrag] = useState(null); // { x0, y0, x1, y1 } in page px
+  // Page size in PDF points (from the viewport) so clicks can be converted
+  // into SyncTeX's point-based coordinate system regardless of zoom.
+  const pageSizeRef = useRef({ wPt: 612, hPt: 792 });
+
+  // Forward sync: scroll the highlighted position into view.
+  useEffect(() => {
+    if (!syncTarget || !wrapRef.current) return;
+    const box = wrapRef.current;
+    const yPx = (syncTarget.y / pageSizeRef.current.hPt) * box.clientHeight;
+    box.scrollIntoView?.({ block: "nearest" });
+    const scroller = box.closest(".pdfv-pages-scroll");
+    if (scroller) {
+      const top = box.offsetTop + yPx - scroller.clientHeight / 2;
+      scroller.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    }
+  }, [syncTarget]);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,6 +120,8 @@ function PdfPage({ doc, pageNumber, scale, regionMode, regions = [], onRegion })
         const page = await doc.getPage(pageNumber);
         if (cancelled) return;
         const viewport = page.getViewport({ scale });
+        const base = page.getViewport({ scale: 1 });
+        pageSizeRef.current = { wPt: base.width, hPt: base.height };
         const canvas = canvasRef.current;
         const textEl = textRef.current;
         if (!canvas || !textEl) return;
@@ -182,9 +203,25 @@ function PdfPage({ doc, pageNumber, scale, regionMode, regions = [], onRegion })
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
       onMouseLeave={() => { if (drag) setDrag(null); }}
+      onDoubleClick={(e) => {
+        // Inverse sync (LaTeX Editor lesson): double-click a spot -> source line.
+        if (regionMode || !onInverseSync) return;
+        const box = wrapRef.current.getBoundingClientRect();
+        const xPt = ((e.clientX - box.left) / box.width) * pageSizeRef.current.wPt;
+        const yPt = ((e.clientY - box.top) / box.height) * pageSizeRef.current.hPt;
+        onInverseSync({ page: pageNumber, x: xPt, y: yPt });
+      }}
+      title={onInverseSync ? "双击定位到源码（SyncTeX）" : undefined}
     >
       <canvas ref={canvasRef} />
       <div ref={textRef} className="pdfjs-text-layer" />
+      {syncTarget && (
+        <div
+          className="pdfv-sync-marker"
+          style={{ top: `${(syncTarget.y / pageSizeRef.current.hPt) * 100}%` }}
+          aria-label="源码对应位置"
+        />
+      )}
       {regions.map((r) => (
         <div
           key={r.id}

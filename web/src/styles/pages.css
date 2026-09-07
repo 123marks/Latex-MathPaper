@@ -3679,6 +3679,21 @@ body.pane-dragging .pane-handle { background: rgba(212, 163, 65, 0.3); }
   border-color: rgba(120, 160, 120, 0.7);
   background: rgba(120, 160, 120, 0.08);
 }
+/* SyncTeX 正向定位标记 + 提示 */
+.pdfv-sync-marker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  margin-top: -1px;
+  background: linear-gradient(90deg, var(--amber), transparent);
+  box-shadow: 0 0 10px rgba(212, 163, 65, 0.8);
+  pointer-events: none;
+  animation: sync-pulse 1.4s ease-out 1;
+}
+@keyframes sync-pulse { from { opacity: 1; transform: scaleY(3); } to { opacity: 0.85; transform: scaleY(1); } }
+.pdfv-hint { font-size: 10.5px; color: var(--faint); margin-left: auto; }
+@media (prefers-reduced-motion: reduce) { .pdfv-sync-marker { animation: none; } }
 
 /* Dashboard 控制中枢 */
 .ws-list { display: grid; gap: 8px; }
