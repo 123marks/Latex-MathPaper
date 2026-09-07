@@ -34,6 +34,7 @@ import {
 } from "./lib/annotations.mjs";
 import { PLAN_LIMITS, effectivePlan, planLimits, trimUserThreads } from "./lib/plans.mjs";
 import { paymentProviderStatus } from "./lib/payments.mjs";
+import { TERMINAL_OUTPUT_CAP, TERMINAL_TIMEOUT_MS, validateTerminalCommand } from "./lib/terminal.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
@@ -1872,6 +1873,61 @@ async function api(req, res, path) {
     });
     if (!reply) return sendJson(res, 404, { error: "帖子不存在" });
     return sendJson(res, 200, { reply });
+  }
+
+  // 集成终端：白名单程序、argv 直传（无 shell）、工作区 cwd、超时、输出上限，
+  // 以 SSE 流式回传 stdout/stderr/exit。
+  if (req.method === "POST" && path === "/api/editor/terminal") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const body = await readBody(req);
+    if (!body.workspace && !body.contest) return sendJson(res, 400, { error: "workspace is required" });
+    const workspaceId = bodyWorkspaceId(body);
+    const cwd = workspaceRoot(workspaceId); // kernel error -> mapped status
+    let parsed;
+    try {
+      parsed = validateTerminalCommand(body.command);
+    } catch (error) {
+      return sendJson(res, 400, { error: error.message, code: "TERMINAL_REJECTED" });
+    }
+    res.writeHead(200, { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store", Connection: "keep-alive" });
+    const send = (event, data) => { if (!res.writableEnded) res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); };
+    send("start", { program: parsed.program, args: parsed.args, cwd: "." });
+    audit(user, "terminal.run", `${workspaceId}: ${parsed.program} ${parsed.args.join(" ")}`.slice(0, 200));
+    const startedAt = Date.now();
+    let emitted = 0;
+    let child;
+    try {
+      child = spawn(parsed.program, parsed.args, { cwd, windowsHide: true, shell: false, stdio: ["ignore", "pipe", "pipe"] });
+    } catch (error) {
+      send("exit", { code: null, error: String(error.message || error), durationMs: 0 });
+      res.end();
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      send("stderr", { text: `\n[terminal] 超过 ${TERMINAL_TIMEOUT_MS / 1000}s 已终止\n` });
+      try { child.kill(); } catch { /* already gone */ }
+    }, TERMINAL_TIMEOUT_MS);
+    const forward = (stream) => (chunk) => {
+      if (emitted >= TERMINAL_OUTPUT_CAP) return;
+      const text = chunk.toString();
+      emitted += text.length;
+      send(stream, { text: emitted >= TERMINAL_OUTPUT_CAP ? `${text}\n[terminal] 输出超过上限，已截断\n` : text });
+    };
+    child.stdout.on("data", forward("stdout"));
+    child.stderr.on("data", forward("stderr"));
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      send("exit", { code: null, error: error.code === "ENOENT" ? `未找到程序 ${parsed.program}（未安装或不在 PATH）` : String(error.message || error), durationMs: Date.now() - startedAt });
+      res.end();
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      send("exit", { code, durationMs: Date.now() - startedAt });
+      res.end();
+    });
+    req.on("close", () => { try { child.kill(); } catch { /* noop */ } });
+    return undefined;
   }
 
   // 源码快照：列出 / 手动创建 / 回滚（回滚前先自动存一份当前内容，可再回去）。

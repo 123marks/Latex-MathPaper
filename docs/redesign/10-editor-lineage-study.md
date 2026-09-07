@@ -47,7 +47,7 @@ Ctrl+K 命令面板、Tectonic 内置、SyncTeX 正反向、内置 Git、Bib 管
 | 1 | 公式即时预览（KaTeX 浮层，光标在数学环境内触发） | latex-stickies | katex 依赖 | ✅ 2026-09-07 |
 | 1 | 编译成功自动快照 + 一键回滚 | Mimir | 服务端快照存储 | ✅ 2026-09-07 |
 | 1 | 原子写入（temp→rename） | latex-stickies | 无 | ✅ 2026-09-07 |
-| 2 | 集成终端（工作区 cwd、白名单+超时、SSE 输出） | VS Code | 服务端 | ⏳ |
+| 2 | 集成终端（工作区 cwd、白名单+超时、SSE 输出） | VS Code | 服务端 | ✅ 2026-09-07 |
 | 2 | 自然语言→LaTeX 公式（走 provider，Preview 后插入） | latex-stickies | 无 | ⏳ |
 | 2 | AI 输入 `@文件` 引用 | Pine | 无 | ⏳ |
 | 2 | 导入时自动识别入口 .tex | Mimir | 无 | ⏳ |

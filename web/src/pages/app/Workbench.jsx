@@ -371,8 +371,75 @@ export default function Workbench() {
     setTimeout(() => { if (!jump()) setTimeout(jump, 200); }, 60);
   }
 
-  // ── VS Code 式外壳：底部输出面板开关 ──
+  // ── VS Code 式外壳：底部面板（输出 / 终端）──
   const [showOutput, setShowOutput] = useState(false);
+  const [bottomTab, setBottomTab] = useState("output"); // "output" | "terminal"
+  const [termLines, setTermLines] = useState([]); // { kind: "cmd"|"out"|"err"|"sys", text }
+  const [termInput, setTermInput] = useState("");
+  const [termHistory, setTermHistory] = useState([]);
+  const [termBusy, setTermBusy] = useState(false);
+  const termAbortRef = useRef(null);
+  const termEndRef = useRef(null);
+  useEffect(() => { termEndRef.current?.scrollIntoView?.({ block: "end" }); }, [termLines]);
+
+  async function runTerminal(commandText) {
+    const command = String(commandText || "").trim();
+    if (!command || termBusy) return;
+    setTermHistory((h) => [command, ...h.filter((x) => x !== command)].slice(0, 50));
+    setTermLines((l) => [...l, { kind: "cmd", text: `$ ${command}` }].slice(-800));
+    setTermInput("");
+    setTermBusy(true);
+    const controller = new AbortController();
+    termAbortRef.current = controller;
+    try {
+      const response = await fetch("/api/editor/terminal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        signal: controller.signal,
+        body: JSON.stringify({ workspace: contest, command }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        setTermLines((l) => [...l, { kind: "err", text: err.error || `HTTP ${response.status}` }]);
+        return;
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      const consume = (raw) => {
+        const frames = raw.split("\n\n");
+        buffer = frames.pop() || "";
+        for (const frame of frames) {
+          const ev = (frame.match(/^event: (.+)$/m) || [])[1];
+          const dataLine = (frame.match(/^data: (.+)$/m) || [])[1];
+          if (!ev || !dataLine) continue;
+          let data = {};
+          try { data = JSON.parse(dataLine); } catch { continue; }
+          if (ev === "stdout") setTermLines((l) => [...l, { kind: "out", text: data.text }].slice(-800));
+          else if (ev === "stderr") setTermLines((l) => [...l, { kind: "err", text: data.text }].slice(-800));
+          else if (ev === "exit") {
+            setTermLines((l) => [...l, {
+              kind: "sys",
+              text: data.error ? `✗ ${data.error}` : `↳ 退出码 ${data.code} · ${data.durationMs}ms`,
+            }].slice(-800));
+          }
+        }
+      };
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        consume(buffer + decoder.decode(value, { stream: true }));
+      }
+      consume(buffer + decoder.decode());
+    } catch (error) {
+      if (error.name !== "AbortError") setTermLines((l) => [...l, { kind: "err", text: error.message }]);
+      else setTermLines((l) => [...l, { kind: "sys", text: "↳ 已中断" }]);
+    } finally {
+      termAbortRef.current = null;
+      setTermBusy(false);
+    }
+  }
 
   // ── 大纲 / 文献键 / 快照（Mimir · OverCite · latex-stickies 迁移）──
   const outline = active ? buildOutline(editor) : [];
@@ -1330,16 +1397,54 @@ export default function Workbench() {
           {showOutput && (
             <div className="output-panel">
               <div className="output-head">
-                <b>输出</b>
-                <span className="muted" style={{ fontSize: 11 }}>{log.length} 条 · 编译 / AI / 文件事件</span>
+                <button type="button" className={`bottom-tab ${bottomTab === "output" ? "active" : ""}`} onClick={() => setBottomTab("output")}>输出</button>
+                <button type="button" className={`bottom-tab ${bottomTab === "terminal" ? "active" : ""}`} onClick={() => setBottomTab("terminal")}>终端</button>
+                <span className="muted" style={{ fontSize: 11 }}>
+                  {bottomTab === "output" ? `${log.length} 条 · 编译 / AI / 文件事件` : `cwd = ${contest}/ · 白名单程序 · 无 shell 语法`}
+                </span>
                 <span style={{ marginLeft: "auto", display: "inline-flex", gap: 6 }}>
-                  <button type="button" className="btn btn-quiet btn-sm" onClick={() => setLog([])}>清空</button>
+                  {bottomTab === "output" ? (
+                    <button type="button" className="btn btn-quiet btn-sm" onClick={() => setLog([])}>清空</button>
+                  ) : (
+                    <>
+                      {termBusy && <button type="button" className="btn btn-quiet btn-sm" onClick={() => termAbortRef.current?.abort()}>中断</button>}
+                      <button type="button" className="btn btn-quiet btn-sm" onClick={() => setTermLines([])}>清空</button>
+                    </>
+                  )}
                   <button type="button" className="btn btn-quiet btn-sm" onClick={() => setShowOutput(false)}>收起</button>
                 </span>
               </div>
-              <pre className="output-body">
-                {log.length === 0 ? "（暂无输出。编译、AI 请求与文件操作的日志会出现在这里。）" : log.slice().reverse().join("\n")}
-              </pre>
+              {bottomTab === "output" ? (
+                <pre className="output-body">
+                  {log.length === 0 ? "（暂无输出。编译、AI 请求与文件操作的日志会出现在这里。）" : log.slice().reverse().join("\n")}
+                </pre>
+              ) : (
+                <div className="terminal">
+                  <pre className="terminal-body">
+                    {termLines.length === 0
+                      ? "（集成终端。在工作区目录里运行 python / git / tectonic / latexmk 等白名单程序，例如：git status）"
+                      : termLines.map((ln, i) => <span key={i} className={`term-${ln.kind}`}>{ln.text}{ln.text.endsWith("\n") ? "" : "\n"}</span>)}
+                    <span ref={termEndRef} />
+                  </pre>
+                  <form
+                    className="terminal-input"
+                    onSubmit={(e) => { e.preventDefault(); runTerminal(termInput); }}
+                  >
+                    <span className="terminal-prompt">{termBusy ? "…" : "$"}</span>
+                    <input
+                      value={termInput}
+                      disabled={termBusy}
+                      placeholder="git status"
+                      spellCheck={false}
+                      autoComplete="off"
+                      onChange={(e) => setTermInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowUp" && termHistory.length) { e.preventDefault(); setTermInput(termHistory[0]); }
+                      }}
+                    />
+                  </form>
+                </div>
+              )}
             </div>
           )}
 

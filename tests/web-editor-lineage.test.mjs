@@ -60,6 +60,18 @@ test("editor wires cite completion, live math preview, and the host passes real 
   assert.match(workbenchSource, /citeKeys=\{citeKeys\}/);
 });
 
+test("integrated terminal streams /api/editor/terminal into the bottom panel", () => {
+  assert.match(workbenchSource, /bottomTab === "terminal"/);
+  assert.match(workbenchSource, /fetch\("\/api\/editor\/terminal"/);
+  assert.match(workbenchSource, /workspace: contest, command/);
+  // SSE frames: stdout/stderr/exit handled; abort supported; history on ArrowUp.
+  assert.match(workbenchSource, /ev === "stdout"/);
+  assert.match(workbenchSource, /ev === "exit"/);
+  assert.match(workbenchSource, /termAbortRef\.current\?\.abort\(\)/);
+  assert.match(workbenchSource, /e\.key === "ArrowUp"/);
+  assert.match(css, /\.terminal-body \{/);
+});
+
 test("outline rail and snapshot controls are wired to real endpoints", () => {
   assert.match(workbenchSource, /railMode === "outline"/);
   assert.match(workbenchSource, /openFileAt\(active\.path, o\.line\)/);

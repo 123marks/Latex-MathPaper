@@ -13,6 +13,7 @@
   - 公式即时预览（latex-stickies 思路）：光标停在 `$…$` / `$$…$$` / `\[…\]` / `\(…\)` / equation·align 系环境内时，编辑器右侧浮出 KaTeX 渲染；语法错误显示红色提示而非空白。
   - 编译成功自动快照 + 回滚（Mimir 思路）：`state/snapshots/` 每文件保留 20 份；PDF 工具栏「◎ 快照」手动存、下拉选择回滚；回滚前自动存「pre-restore」安全快照。`GET/POST /api/editor/snapshots`、`POST /api/editor/snapshots/:id/restore`。
   - 原子写入（latex-stickies 思路）：文件保存/创建/快照均 temp→rename，崩溃不留截断文件；Windows 文件占用时回退就地写入。
+- Wave 2 · 集成终端（VS Code 思路，安全优先）：底部面板新增「终端」标签，`POST /api/editor/terminal` 以 SSE 流式回传 stdout/stderr/exit。策略（`lib/terminal.mjs`）：程序白名单（tectonic/latexmk/python/node/git/rg 等）、argv 直传无 shell 解释（引号外的 `| & ; < > \` $` 一律拒绝）、cwd 锁定工作区根、参数禁止 `..`/绝对路径逃逸、120s 超时、512KB 输出上限、可中断、命令历史；每次执行审计留痕。
 
 ## [0.7.0] - 2026-08-31
 
