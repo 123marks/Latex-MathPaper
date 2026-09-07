@@ -3,6 +3,7 @@
   "channel": "stable",
   "publishedAt": "2026-08-31",
   "notes": [
+    "Windows 自包含包：内嵌 .NET 8 与 Node 22 运行时，解压后双击 PaperOS.exe 即用（未签名，首次运行会有 SmartScreen 提示）",
     "PDF 审阅：pdf.js 渲染层、划词问 AI、拖框区域标注与回显；文献 DOI/arXiv 一键导入",
     "真编辑器套件：全文搜索侧栏与精确跳行、Ctrl+S、关闭保护、标签页恢复、分栏拖拽、右键菜单",
     "⌘K 全局聚合搜索；工作区界面内新建/注册/导出备份/安全移除",
@@ -11,10 +12,10 @@
   "assets": [
     {
       "os": "windows",
-      "label": "Windows 10 / 11 · x64",
+      "label": "Windows 10 / 11 · x64 · 自包含（免装 Node / .NET）",
       "ext": ".zip",
-      "file": "dist/release/PaperOS-0.7.0-windows-x64.zip",
-      "minimum": "Windows 10 1809+"
+      "file": "dist/release/PaperOS-0.7.0-windows-x64-selfcontained.zip",
+      "minimum": "Windows 10 1809+ · 解压后双击 PaperOS.exe · 未签名"
     },
     {
       "os": "macos",

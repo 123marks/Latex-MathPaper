@@ -124,8 +124,8 @@ export default function Download() {
               </ul>
             ) : (
               <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 6, maxWidth: 540 }}>
-                当前采用本地 Node 运行时(需 Node.js 20+);后续将发布内嵌 Tectonic
-                的独立安装包,实现真正零依赖的本地 LaTeX 编译。
+                Windows 自包含包已内嵌 .NET 与 Node 运行时，解压即用；macOS / Linux
+                便携版仍需 Node.js 20+。安装包未做代码签名，首次运行系统会提示。
               </p>
             )}
           </div>

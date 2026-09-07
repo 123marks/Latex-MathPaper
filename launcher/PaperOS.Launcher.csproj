@@ -7,9 +7,9 @@
     <Nullable>enable</Nullable>
     <AssemblyName>PaperOS</AssemblyName>
     <RootNamespace>PaperOS.Launcher</RootNamespace>
-    <Version>0.5.0</Version>
-    <FileVersion>0.5.0.0</FileVersion>
-    <InformationalVersion>0.5.0</InformationalVersion>
+    <Version>0.7.0</Version>
+    <FileVersion>0.7.0.0</FileVersion>
+    <InformationalVersion>0.7.0</InformationalVersion>
     <NuGetAudit>false</NuGetAudit>
     <ApplicationIcon></ApplicationIcon>
   </PropertyGroup>

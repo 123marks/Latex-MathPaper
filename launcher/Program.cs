@@ -37,7 +37,10 @@ internal static class Program
             return;
         }
 
-        string? node = FindOnPath("node.exe");
+        // Self-contained installs ship a private Node under runtime\node; a
+        // system Node on PATH is only the fallback for the developer archive.
+        string bundledNode = Path.Combine(root, "runtime", "node", "node.exe");
+        string? node = File.Exists(bundledNode) ? bundledNode : FindOnPath("node.exe");
         if (node is null)
         {
             MessageBox.Show(

@@ -12,6 +12,7 @@
     "build": "npm --prefix web run build && npm run ide:build",
     "package:win": "node scripts/package-release.mjs",
     "package:portable": "node scripts/package-portable.mjs",
+    "package:installer": "node scripts/package-installer.mjs",
     "smoke": "node app/smoke.mjs",
     "visual-smoke": "node app/visual-smoke.mjs",
     "home-hero-visual-smoke": "node app/home-hero-visual-smoke.mjs",

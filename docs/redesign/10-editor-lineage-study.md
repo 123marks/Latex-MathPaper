@@ -55,13 +55,14 @@ Ctrl+K 命令面板、Tectonic 内置、SyncTeX 正反向、内置 Git、Bib 管
 | 3 | KaoNotes 风格笔记模板 | KaoNotes | 模板 | ⏳ |
 | — | 安装包 exe（自包含 .NET + Node sidecar；签名需证书） | 用户需求 | 打包 | ⏳ 见 §3 |
 
-## 3. exe 安装包路线（诚实边界）
-当前 ZIP 内 `PaperOS.exe` 为框架依赖型（需 .NET 8 Desktop Runtime + Node 20）。目标"双击安装即用"需要：
-1. `dotnet publish -r win-x64 --self-contained` 打入 .NET 运行时（+~60MB）；
-2. Node 运行时 sidecar 捆包（+~40MB）或迁移 Tauri 原生壳；
-3. Inno Setup / WiX 生成 `Setup.exe`（安装向导、开始菜单、卸载）；
-4. **代码签名证书**（需购买，否则 SmartScreen 警告）——无法由代码解决。
-1–3 可在本机完成；4 需你提供证书。本文档不宣称已完成。
+## 3. exe 安装包路线（诚实边界）— 2026-09-07 已落地 1–2，3 有回退，4 待证书
+`npm run package:installer`（`scripts/package-installer.mjs`）四步流水线：
+1. ✅ `dotnet publish -r win-x64 --self-contained`：.NET 8 运行时打入包，用户免装 .NET。
+2. ✅ Node 22.12 官方 win-x64 zip 下载 + **对照官方 SHASUMS256.txt 校验** + 精简后放入 `runtime\node`；launcher 优先使用捆包 Node，回退系统 PATH。服务端生产依赖预装，首启无需 npm。
+3. ⚠️ Inno Setup：脚本会自动生成 `.iss`（安装向导/开始菜单/桌面图标/卸载）并调用 ISCC；**本机未安装 Inno Setup（winget 亦不可用）**，因此当前回退产出 `PaperOS-<v>-windows-x64-selfcontained.zip`（109 MB，解压双击即用）。装上 Inno Setup 6 重跑即得 `Setup.exe`。
+4. ⏳ 代码签名：需购买证书；未签名前 SmartScreen 会提示"未知发布者"。下载页已如实标注。
+
+真机验证（2026-09-07）：自包含 zip 解压到临时目录，用捆包 Node 启动服务 → health 200 / v0.7.0 / node v22.12.0 / Web UI 200，全程不依赖项目目录与系统 Node。
 
 ## 4. 不变量（迁移时不可破坏）
 - 所有面板只显示真实数据；无数据显示诚实空态。
