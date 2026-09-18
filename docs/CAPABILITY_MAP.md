@@ -44,10 +44,11 @@ evidence is tracked separately in `STATUS.md` and `TRACEABILITY.md`.
 | Generic `Resource` / versioned `TextDocument` | Kernel | **Contract** | Current code still passes paths and ad hoc models |
 | `EditorProvider` registry | Workbench/Pack Host | **Contract** | Replace hard-coded type branches; keep text fallback |
 | `PreviewProvider` registry | Workbench/Pack Host | **Contract** | Generalize PDF/image and add Markdown/formula providers |
-| Outline / Go to Symbol | Provider + Workbench | **Planned** | Must be supplied by language/semantic providers |
-| Source control integration | Workbench | **Planned** | Do not infer from decorative branch/status UI |
+| Outline / Go to Symbol | Provider + Workbench | **Partial** | Section outline exists in both the desktop IDE (`OutlinePanel`) and the Web Workbench; no language-server symbols |
+| Source control integration | Workbench | **Partial** | Read-only `GET /api/editor/git-status` (branch, dirty count, `isRepo:false` when absent) shown in the Web Workbench status bar; the desktop IDE status bar is not wired yet; no staging/commit/diff UI |
 | Output/problems panel | Workbench | **Implemented** | Shows current command/build output and parsed problems; this is not a terminal session |
-| Interactive terminal | Tool runtime + Workbench | **Planned** | Current UI has output/problems plus capability-gated math-modeling `paperctl` TASKS; no generic terminal session exists |
+| Interactive terminal | Tool runtime + Workbench | **Partial** | `POST /api/editor/terminal` (allowlist, argv-only, cwd pinned, 120s/512KB caps, SSE) plus a Web Workbench panel; the desktop IDE has no terminal tab yet (slice 4); not a full shell |
+| Desktop Agent/Render work modes | Workbench (desktop) | **Implemented** | Slice 1 (2026-09-18): layout emphasis only, shared state, `localStorage` persistence, honest `RenderStage` empty state, 1440/1280/1024/800 folding without overlap; `tests/desktop-work-mode.test.mjs`, `npm run desktop-mode-visual-smoke` |
 
 ## Build, Diagnostics, and Artifacts
 
@@ -58,7 +59,9 @@ evidence is tracked separately in `STATUS.md` and `TRACEABILITY.md`.
 | Install/probe Tectonic | Local runtime | **Implemented** | Engine endpoint and IDE installation surface |
 | PDF discovery after compile | Build service | **Partial** | Works through current path heuristics; not a typed Artifact Set |
 | Parsed, navigable LaTeX diagnostics | Diagnostics | **Partial** | Logs/output exist; complete structured parsing and jump-to-source remain |
-| Source to PDF navigation | LaTeX Pack | **Partial** | Estimated navigation exists; true SyncTeX remains planned |
+| Source to PDF navigation | LaTeX Pack | **Partial** | Real SyncTeX (`--synctex`, `lib/synctex.mjs`, `GET /api/editor/synctex` forward/inverse) is wired in the Web Workbench; the desktop IDE still uses `\section`-based page estimation (slice 2b wires the route) |
+| Compile lifecycle honesty (desktop) | Build service + desktop Workbench | **Planned** | `compile-live` has no timeout/cancel/concurrency guard; a failed compile can still broadcast a stale `build/*.pdf` as `pdf` with no stale flag; slice 2a |
+| Live formula draft (desktop) | LaTeX Pack + desktop Workbench | **Planned** | Web Workbench has a KaTeX caret overlay; the desktop `RenderStage` is an honest empty state until slice 2b reuses KaTeX through the esbuild alias |
 | Declarative `BuildProfile` | Pack Host + Build service | **Contract** | Needed for entrypoint/tool/output rules without contest assumptions |
 | Cancellable, retained `BuildJob` lifecycle | Build service | **Contract** | Current live route streams a process but lacks the generic job model |
 | Typed `ArtifactSet` | Build service | **Contract** | Replace hard-coded PDF lookup and represent logs/SyncTeX/packages |

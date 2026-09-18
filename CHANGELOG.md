@@ -6,6 +6,8 @@
 
 ### Added
 
+- 桌面 IDE 切片 1 · Agent/Render 双模式工作台（`apps/desktop/src/ide.jsx`）：顶栏 `role="group"` 分段控制（`aria-pressed`/`aria-label`/`title`，≤920px 只收缩文字标签）；模式是布局重心而非权限墙——Workspace、标签、缓冲、聊天、编译状态全部共享，编辑器在两种模式下都挂载；`localStorage["paperos.workMode"]` 持久化并在刷新后恢复；Assistant 头部与状态栏重复显示模式；命令面板新增「切换到 Agent/Render 模式」。Render 模式无 PDF 时显示诚实空状态 `RenderStage`：真实编译目标（与 `compile()` 共用 `pickCompileTarget`）、`/api/engine/status` 探测结果、编译/安装 Tectonic 入口、无 LaTeX Capability 的 Pack 说明、隐藏 PDF 的恢复入口。契约测试 `tests/desktop-work-mode.test.mjs`，真实启动 smoke `npm run desktop-mode-visual-smoke`（隔离数据目录、Monaco 真实输入、mock-local 聊天往返、刷新持久化、Agent/Render × 1440/1280/1024/800 几何断言与截图）。
+- 桌面 IDE 菜单栏紧凑模式：≤1100px 时同一份菜单数据折叠进一个「≡」下拉（按菜单分节），条目与 Capability 门控不变。
 - 编辑器谱系调研 `docs/redesign/10-editor-lineage-study.md`：Mimir / latex-stickies / LaTeX Editor / Pine / OverCite / KaoNotes 逐项理解、可迁移项与 Wave 路线、exe 安装包诚实边界。
 - Wave 1 迁移（全部真实数据、有测试）：
   - `\cite{` 自动补全（OverCite 思路）：Monaco completion provider，键/作者/年份/标题来自 references 扫描，输入 `{` 或 `,` 触发。
@@ -20,6 +22,15 @@
 - Wave 2 · 描述→公式（latex-stickies 思路）：选中一段自然语言，按 Ctrl+Shift+M 或 PDF 工具栏「∑ 描述→公式」，生成"只输出 `\[…\]` 公式"的请求送入 AI；结果作为可审阅回复出现，不自动插入。
 - Wave 2 · 入口文件自动探测（Mimir 思路）：Kernel 不再只认 main/paper.tex，浅层扫描声明 `\documentclass` 的 .tex 作为入口（惯例名优先），`/api/editor/projects` 暴露 `texEntry`；工作台在无恢复标签、无深链时自动打开入口文件——注册已有论文目录即刻可编辑。
 - Wave 2 · 集成终端（VS Code 思路，安全优先）：底部面板新增「终端」标签，`POST /api/editor/terminal` 以 SSE 流式回传 stdout/stderr/exit。策略（`lib/terminal.mjs`）：程序白名单（tectonic/latexmk/python/node/git/rg 等）、argv 直传无 shell 解释（引号外的 `| & ; < > \` $` 一律拒绝）、cwd 锁定工作区根、参数禁止 `..`/绝对路径逃逸、120s 超时、512KB 输出上限、可中断、命令历史；每次执行审计留痕。
+
+### Fixed
+
+- 桌面 IDE 网格列不可回缩：`.split` 的 `1fr` 隐含 `min-content` 下限，Monaco 写入自身像素宽度后编辑列无法随窗口变窄收缩，1280px 下 Assistant 面板被裁掉 160px；改为 `minmax(0, 1fr)` 并给网格项 `min-width: 0`（新 smoke 抓出）。
+- 桌面 IDE 标题栏 1024px 下左组（菜单/Workspace chip/Ctrl+K）溢出压住右组：Workspace chip 可收缩带省略号，Pack 标签、`工作区` 按钮按断点隐藏，菜单折叠为紧凑模式；断点按“主区宽度 = 视口 − 侧栏”重算（≤1359 三栏收紧、≤1239 折两栏、≤1100 菜单紧凑、≤920 模式按钮仅图标）。
+
+### Removed
+
+- 桌面 IDE 上一轮遗留但未提交的装饰性 `harness ready` 状态 chip（无真实来源）、在 Render 模式下整体替换编辑器的 `LiveMathPreview`（违反“Render 不是只读”）以及 `../../../web/node_modules/katex` 跨包相对 import（KaTeX 字体不再误入桌面 bundle，4.6 MB → 4.4 MB）。实时公式草稿将在切片 2b 以 esbuild alias 方式重新接入。
 
 ## [0.7.0] - 2026-08-31
 

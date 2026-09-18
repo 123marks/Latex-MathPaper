@@ -175,6 +175,20 @@ a { color: inherit; text-decoration: none; }
   -webkit-text-fill-color: #e2b564 !important;
   outline: none;
 }
+/* Compact menubar: one "≡" root folding every menu into sections. */
+.menubar.compact .menu-root > button { padding: 0 6px; display: grid; place-items: center; }
+.menu-dropdown-compact { max-height: calc(100vh - 60px); overflow-y: auto; min-width: 232px; }
+.menu-section { display: flex; flex-direction: column; gap: 1px; padding-bottom: 4px; }
+.menu-section + .menu-section { border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 4px; }
+.menu-section-title {
+  padding: 5px 10px 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a7a095 !important;
+  -webkit-text-fill-color: #a7a095 !important;
+}
 .menu-dropdown kbd {
   font-family: var(--font-mono);
   font-size: 10.5px;
@@ -325,6 +339,7 @@ a { color: inherit; text-decoration: none; }
   background: var(--bg-app);
   overflow: hidden;
   min-height: 0;
+  min-width: 0;
 }
 .tabs-row {
   display: flex;
@@ -410,7 +425,11 @@ a { color: inherit; text-decoration: none; }
 .tab .close:hover { color: var(--text); background: var(--bg-hover); }
 .tab .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); flex-shrink: 0; }
 
-.split { display: grid; grid-template-columns: 1fr 340px; height: 100%; min-height: 0; }
+/* minmax(0, 1fr) + min-width: 0 on the items: Monaco writes explicit pixel
+   widths into its own DOM, so an implicit min-content track would never let
+   the editor column shrink again after the window narrows. */
+.split { display: grid; grid-template-columns: minmax(0, 1fr) 340px; height: 100%; min-height: 0; min-width: 0; }
+.split > * { min-width: 0; }
 .split.with-pdf { grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr) 340px; }
 
 /* PDF preview pane (between editor and AI panel when compile succeeds) */
@@ -423,8 +442,8 @@ a { color: inherit; text-decoration: none; }
 .pdf-frame { flex: 1; min-height: 0; width: 100%; background: #1a1a1a; border: 0; }
 
 /* editor surface */
-.editor-wrap { display: flex; flex-direction: column; min-height: 0; background: var(--bg-app); }
-.editor-host { flex: 1; min-height: 0; position: relative; }
+.editor-wrap { display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; background: var(--bg-app); }
+.editor-host { flex: 1; min-height: 0; min-width: 0; position: relative; }
 .editor-host .monaco-host { position: absolute; inset: 0; }
 .empty-editor {
   position: relative;
@@ -747,15 +766,18 @@ a { color: inherit; text-decoration: none; }
 .project-chip {
   display: flex; align-items: center; gap: 6px; margin-left: 4px;
   padding: 3px 8px; background: var(--bg-3); border: 1px solid var(--ink-line-2); border-radius: 14px;
-  flex-shrink: 0;
+  /* Shrinks (select gets ellipsis) before the mode switch is pushed out. */
+  flex-shrink: 1; min-width: 96px;
 }
+.project-chip .workspace-pack { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
 .project-chip .chip-label {
   font-size: 10px; color: var(--muted); font-family: var(--font-mono);
   text-transform: uppercase; letter-spacing: 0.08em;
 }
 .project-chip select {
   background: transparent; color: var(--amber-bright); font-size: 12px; font-weight: 600;
-  font-family: var(--font-mono); border: 0; outline: 0; padding: 2px 4px; cursor: pointer; max-width: 140px;
+  font-family: var(--font-mono); border: 0; outline: 0; padding: 2px 4px; cursor: pointer;
+  min-width: 0; max-width: 140px; text-overflow: ellipsis;
 }
 .project-chip button {
   display: grid; place-items: center; color: var(--muted); padding: 2px;
@@ -1718,4 +1740,178 @@ a { color: inherit; text-decoration: none; }
   .project-chip .chip-label {
     display: none;
   }
+}
+
+/* ── Agent / Render work modes (layout emphasis, shared state) ── */
+.work-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 168px;
+  height: 28px;
+  padding: 2px;
+  border: 1px solid var(--ink-line-2);
+  border-radius: 6px;
+  background: #111116;
+  flex-shrink: 0;
+}
+.work-mode-switch button {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.work-mode-switch button:hover { color: var(--text); background: rgba(232, 227, 218, 0.05); }
+.work-mode-switch button:focus-visible { outline: 0; box-shadow: var(--ring); }
+.work-mode-switch button.active[data-testid="work-mode-agent"] {
+  color: #c8d9e8;
+  background: rgba(126, 155, 184, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(126, 155, 184, 0.28);
+}
+.work-mode-switch button.active[data-testid="work-mode-render"] {
+  color: var(--amber-bright);
+  background: rgba(212, 163, 65, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(212, 163, 65, 0.28);
+}
+
+/* Column emphasis. Agent: editor primary. Render: preview primary. */
+.split.render-mode.with-pdf,
+.split.render-mode.with-stage {
+  grid-template-columns: minmax(260px, 0.7fr) minmax(420px, 1.3fr) 320px;
+}
+
+.render-stage {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 28px minmax(0, 1fr);
+  overflow: hidden;
+  background: #0d0d10;
+  border-left: 1px solid var(--ink-line);
+}
+.render-stage-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--ink-line);
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.render-stage-head strong { color: var(--text); font-weight: 600; }
+.render-eyebrow {
+  color: var(--amber-bright);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.render-stage-note { color: var(--faint); overflow: hidden; text-overflow: ellipsis; }
+.render-stage-body {
+  min-height: 0;
+  overflow: auto;
+  padding: clamp(20px, 5vh, 56px) clamp(18px, 4vw, 48px);
+}
+.render-empty {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 10px;
+  min-height: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.render-empty strong { color: var(--text); font-size: 15px; font-weight: 600; }
+.render-empty code {
+  color: #b9ccdf;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  user-select: text;
+}
+.render-engine { font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+.render-engine.ok { color: var(--jade-bright); }
+.render-engine.missing { color: var(--amber-bright); }
+.render-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
+.render-actions .ghost-btn { border: 1px solid var(--ink-line-2); padding: 5px 12px; }
+.render-actions .ghost-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.ai-head .name { white-space: nowrap; flex-shrink: 0; }
+.ai-head-meta { min-width: 0; display: flex; align-items: center; gap: 7px; }
+.ai-head-meta .ctx { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-mode {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.ai-mode--agent { color: #b9ccdf; background: rgba(126, 155, 184, 0.12); }
+.ai-mode--render { color: var(--amber-bright); background: rgba(212, 163, 65, 0.12); }
+.statusbar .mode-seg.agent { color: #a9c2d9; }
+.statusbar .mode-seg.render { color: var(--amber-bright); }
+
+/* Responsive folding. The main area is the viewport minus 296px of activity
+   bar + sidebar (244px under 920px). Columns fold by priority and never
+   overlap: Agent keeps editor > Assistant > PDF; Render keeps preview >
+   Assistant > editor. Three columns need 1000px (940px when tightened), so
+   they fold to two below 1240px. */
+@media (max-width: 1359px) {
+  .titlebar-right > .status-pill:not(.live) { display: none; }
+  .split.render-mode.with-pdf,
+  .split.render-mode.with-stage {
+    grid-template-columns: minmax(240px, 0.7fr) minmax(400px, 1.3fr) 300px;
+  }
+  .split.agent-mode.with-pdf { grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr) 300px; }
+}
+
+@media (max-width: 1239px) {
+  .titlebar-title .ver,
+  .cmdk-btn em,
+  .user-chip > span:last-child { display: none; }
+  .user-chip { padding-right: 4px; }
+  .project-chip .workspace-pack { display: none; }
+
+  .split.agent-mode.with-pdf { grid-template-columns: minmax(0, 1fr) 300px; }
+  .split.agent-mode.with-pdf .pdf-pane { display: none; }
+
+  .split.render-mode.with-pdf,
+  .split.render-mode.with-stage { grid-template-columns: minmax(0, 1fr) 300px; }
+  .split.render-mode.with-pdf .editor-wrap,
+  .split.render-mode.with-stage .editor-wrap { display: none; }
+  .split.render-mode .pdf-pane,
+  .split.render-mode .render-stage { border-left: 0; }
+}
+
+/* The menubar itself folds into one "≡" root below 1100px (MENUBAR_COMPACT_QUERY
+   in ide.jsx); the title-bar "工作区" button duplicates the chip's "+" and goes. */
+@media (max-width: 1100px) {
+  .titlebar-right > .ghost-btn { display: none; }
+  .project-chip .chip-label { display: none; }
+  .project-chip select { max-width: 120px; }
+}
+
+@media (max-width: 920px) {
+  .ide-app { grid-template-columns: 44px 200px minmax(0, 1fr); }
+  .work-mode-switch { width: 72px; }
+  .work-mode-switch .mode-label { display: none; }
+  .titlebar-right > .status-pill { display: none; }
+  .split,
+  .split.agent-mode.with-pdf,
+  .split.render-mode.with-pdf,
+  .split.render-mode.with-stage { grid-template-columns: minmax(0, 1fr) 264px; }
+  .statusbar { gap: 10px; }
+  .statusbar .right .seg:nth-child(2) { display: none; }
 }

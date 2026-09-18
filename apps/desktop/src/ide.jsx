@@ -501,9 +501,31 @@ function TreeNode({ node, depth, activePath, onOpen, onRename, onDelete, expande
   );
 }
 
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() => (
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia(query).matches
+      : false
+  ));
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return undefined;
+    const list = window.matchMedia(query);
+    const onChange = (event) => setMatches(event.matches);
+    setMatches(list.matches);
+    list.addEventListener("change", onChange);
+    return () => list.removeEventListener("change", onChange);
+  }, [query]);
+  return matches;
+}
+
+// Below this width the eight menu roots no longer fit beside the Workspace
+// chip and mode switch; the same menus fold into one "≡" dropdown.
+const MENUBAR_COMPACT_QUERY = "(max-width: 1100px)";
+
 function MenuBar({ onAction, capabilities = [] }) {
   const [open, setOpen] = useState(null);
   const rootRef = useRef(null);
+  const compact = useMediaQuery(MENUBAR_COMPACT_QUERY);
   const menus = [
     {
       id: "file", label: "文件(F)", items: [
@@ -586,9 +608,65 @@ function MenuBar({ onAction, capabilities = [] }) {
     };
   }, [open]);
 
+  const visibleMenus = menus.filter((menu) => !menu.capability || capabilities.includes(menu.capability));
+  const renderItems = (m) => m.items
+    .filter((item) => !item.capability || capabilities.includes(item.capability))
+    .map((it, i) => (
+      it.sep ? <div key={`${m.id}-sep-${i}`} className="menu-sep" /> : (
+        <button
+          type="button"
+          key={`${m.id}-${it.id}`}
+          role="menuitem"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(null);
+            onAction(it.id);
+          }}
+        >
+          <span>{it.label}</span>
+          {it.hint && <kbd>{it.hint}</kbd>}
+        </button>
+      )
+    ));
+
+  if (compact) {
+    return (
+      <div className="menubar compact" ref={rootRef} role="menubar">
+        <div className={`menu-root ${open === "all" ? "open" : ""}`}>
+          <button
+            type="button"
+            className={open === "all" ? "on" : ""}
+            role="menuitem"
+            aria-haspopup="true"
+            aria-expanded={open === "all"}
+            aria-label="菜单"
+            title="菜单"
+            data-testid="menubar-compact"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(open === "all" ? null : "all");
+            }}
+          >
+            <Icon name="menu" size={15} />
+          </button>
+          {open === "all" && (
+            <div className="menu-dropdown menu-dropdown-compact" role="menu" onMouseDown={(e) => e.stopPropagation()}>
+              {visibleMenus.map((m) => (
+                <div key={m.id} className="menu-section">
+                  <div className="menu-section-title">{m.label.replace(/\([A-Z]\)$/, "")}</div>
+                  {renderItems(m)}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="menubar" ref={rootRef} role="menubar">
-      {menus.filter((menu) => !menu.capability || capabilities.includes(menu.capability)).map((m) => (
+      {visibleMenus.map((m) => (
         <div key={m.id} className={`menu-root ${open === m.id ? "open" : ""}`}>
           <button
             type="button"
@@ -610,23 +688,7 @@ function MenuBar({ onAction, capabilities = [] }) {
               role="menu"
               onMouseDown={(e) => e.stopPropagation()}
             >
-              {m.items.filter((item) => !item.capability || capabilities.includes(item.capability)).map((it, i) => (
-                it.sep ? <div key={i} className="menu-sep" /> : (
-                  <button
-                    type="button"
-                    key={it.id}
-                    role="menuitem"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setOpen(null);
-                      onAction(it.id);
-                    }}
-                  >
-                    <span>{it.label}</span>
-                    {it.hint && <kbd>{it.hint}</kbd>}
-                  </button>
-                )
-              ))}
+              {renderItems(m)}
             </div>
           )}
         </div>
@@ -725,6 +787,117 @@ function buildExecutionPlan(userText) {
   return steps;
 }
 
+// ───────────── Compile target selection ─────────────
+// Deterministic entry choice shared by the compile command and the Render
+// stage so the UI always names the file that would actually be compiled.
+function pickCompileTarget(tree, active) {
+  if (active?.path && /\.tex$/i.test(active.path)) return active.path;
+  const texFiles = flattenTree(tree).filter((f) => /\.tex$/i.test(f.path || f.name || ""));
+  const prefer = texFiles.find((f) => /(^|\/)main\.tex$/i.test(f.path))
+    || texFiles.find((f) => /(^|\/)paper\.tex$/i.test(f.path))
+    || texFiles[0];
+  return prefer?.path || null;
+}
+
+// ───────────── Render stage ─────────────
+// Shown in Render mode when there is no compiled PDF on screen. It is an
+// honest empty state: it names the real compile target and engine state and
+// offers the real actions. Formula drafts and PDF tooling are later slices.
+function RenderStage({
+  workspace,
+  canCompile,
+  compileTarget,
+  engine,
+  busy,
+  hiddenPdfVersion,
+  onCompile,
+  onShowPdf,
+  onInstallEngine,
+  activePath,
+}) {
+  const tectonicReady = Boolean(engine?.tectonic?.present);
+  const latexmkReady = Boolean(engine?.latexmk?.present);
+  const engineKnown = engine != null;
+  const engineReady = tectonicReady || latexmkReady;
+  const engineLabel = !engineKnown
+    ? "正在探测本地引擎…"
+    : tectonicReady
+      ? `Tectonic 就绪${engine.tectonic.source === "bundled" ? "（内置）" : "（系统）"}`
+      : latexmkReady
+        ? "latexmk 就绪（系统 TeX）"
+        : "未检测到 LaTeX 引擎";
+
+  let body;
+  if (!workspace) {
+    body = (
+      <div className="render-empty">
+        <strong>没有打开的 Workspace</strong>
+        <span>在标题栏选择或创建 Workspace 后，编译产物和可预览的 Resource 会显示在这里。</span>
+      </div>
+    );
+  } else if (hiddenPdfVersion) {
+    body = (
+      <div className="render-empty">
+        <strong>PDF 预览已隐藏</strong>
+        <span>最近一次编译产物 v{hiddenPdfVersion} 仍然可用。</span>
+        <button type="button" className="ghost-btn sm amber" onClick={onShowPdf}>
+          <Icon name="pdf" size={12} /> 显示 PDF
+        </button>
+      </div>
+    );
+  } else if (canCompile) {
+    body = (
+      <div className="render-empty">
+        <strong>尚无编译产物</strong>
+        <span>
+          编译成功后 PDF 会显示在这里；源码编辑区在 Render 模式下保持可用。
+          {compileTarget ? <> 将编译 <code>{compileTarget}</code>。</> : " 当前 Workspace 还没有 .tex 文件。"}
+        </span>
+        <span className={`render-engine ${engineReady ? "ok" : engineKnown ? "missing" : ""}`} data-testid="render-engine">
+          {engineLabel}
+        </span>
+        <div className="render-actions">
+          <button
+            type="button"
+            className="ghost-btn sm amber"
+            onClick={onCompile}
+            disabled={busy || !compileTarget || !engineReady}
+            title={!engineReady ? "先安装或配置 LaTeX 引擎" : "编译并预览 PDF（Ctrl+Shift+B）"}
+          >
+            <Icon name="play" size={12} /> 编译 PDF
+          </button>
+          {engineKnown && !tectonicReady ? (
+            <button type="button" className="ghost-btn sm" onClick={onInstallEngine}>
+              <Icon name="download" size={12} /> 安装 Tectonic
+            </button>
+          ) : null}
+        </div>
+      </div>
+    );
+  } else {
+    body = (
+      <div className="render-empty">
+        <strong>当前 Pack 没有编译预览</strong>
+        <span>
+          {workspace.packName || workspace.pack} 没有 LaTeX Capability。Render 模式会直接显示已打开的图片和 PDF Resource；
+          {activePath ? <> <code>{activePath}</code> 是文本文件，请在左侧编辑区查看。</> : " 打开文件后可在左侧编辑区查看。"}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="render-stage" data-testid="render-stage" role="region" aria-label="Render preview">
+      <div className="render-stage-head">
+        <span className="render-eyebrow">Render</span>
+        <strong>预览</strong>
+        <span className="render-stage-note">编译产物与可预览 Resource</span>
+      </div>
+      <div className="render-stage-body">{body}</div>
+    </div>
+  );
+}
+
 // ───────────── Top-level IDE ─────────────
 function IDE() {
   const [user, setUser] = useState(null);
@@ -768,6 +941,9 @@ function IDE() {
   const [aiTool, setAiTool] = useState("files");
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
   const [showPdf, setShowPdf] = useState(true);
+  const [workMode, setWorkMode] = useState(() => {
+    try { return localStorage.getItem("paperos.workMode") === "render" ? "render" : "agent"; } catch { return "agent"; }
+  });
   const [syncHit, setSyncHit] = useState(null);
   const [magnifier, setMagnifier] = useState(false);
   const [evidence, setEvidence] = useState(null);
@@ -799,6 +975,13 @@ function IDE() {
   const canUseEvidence = currentCapabilities.includes("evidence");
 
   const canRunPaperctl = currentCapabilities.includes("paperctl");
+
+  function switchWorkMode(nextMode) {
+    const next = nextMode === "render" ? "render" : "agent";
+    setWorkMode(next);
+    try { localStorage.setItem("paperos.workMode", next); } catch { /* private mode */ }
+    if (next === "render") setShowPdf(true);
+  }
 
   useEffect(() => {
     if (
@@ -1371,15 +1554,7 @@ function IDE() {
       flash("当前 Workspace 未启用 LaTeX Capability");
       return;
     }
-    const files = flattenTree(tree);
-    const texPath = (() => {
-      if (active?.path && /\.tex$/i.test(active.path)) return active.path;
-      const mains = files.filter((f) => /\.tex$/i.test(f.path || f.name || ""));
-      const prefer = mains.find((f) => /(^|\/)main\.tex$/i.test(f.path))
-        || mains.find((f) => /(^|\/)paper\.tex$/i.test(f.path))
-        || mains[0];
-      return prefer?.path || null;
-    })();
+    const texPath = pickCompileTarget(tree, active);
     if (!texPath) {
       setLog((l) => ["[compile] 未找到 .tex 文件", ...l].slice(0, 200));
       setBottomTab("latex");
@@ -1996,6 +2171,13 @@ function IDE() {
   }
 
   const initial = (user.displayName || user.username).slice(0, 1).toUpperCase();
+  // Layout emphasis only: the mode never changes which state exists, just
+  // which column is primary. Media Resources already render in the editor
+  // column, so the Render stage only fills in when nothing renders anywhere.
+  const pdfVisible = Boolean(pdfUrl && showPdf);
+  const activeIsMedia = Boolean(active && mediaPreview && mediaPreview.path === active.path);
+  const showRenderStage = workMode === "render" && !pdfVisible && !activeIsMedia;
+  const compileTarget = canCompile ? pickCompileTarget(tree, active) : null;
   return (
     <div className="ide-app">
       {/* Title bar — Cursor-style: brand · menu · project · Cmd+K · status */}
@@ -2040,7 +2222,33 @@ function IDE() {
           </button>
         </div>
         <div className="titlebar-right">
-          <span className="status-pill live"><span className="dot" />Local</span>
+          <div className="work-mode-switch" role="group" aria-label="工作模式" data-testid="work-mode-switch">
+            <button
+              type="button"
+              data-testid="work-mode-agent"
+              aria-pressed={workMode === "agent"}
+              aria-label="Agent 模式"
+              className={workMode === "agent" ? "active" : ""}
+              onClick={() => switchWorkMode("agent")}
+              title="Agent 模式：以编辑器和 AI 任务流为主"
+            >
+              <Icon name="sparkle" size={13} />
+              <span className="mode-label">Agent</span>
+            </button>
+            <button
+              type="button"
+              data-testid="work-mode-render"
+              aria-pressed={workMode === "render"}
+              aria-label="Render 模式"
+              className={workMode === "render" ? "active" : ""}
+              onClick={() => switchWorkMode("render")}
+              title="Render 模式：以 PDF 与预览为主，源码仍可编辑"
+            >
+              <Icon name="pdf" size={13} />
+              <span className="mode-label">Render</span>
+            </button>
+          </div>
+          <span className="status-pill live" data-testid="workspace-status"><span className="dot" />Local</span>
           <span className="status-pill">{currentWorkspace?.packName || "No Pack"}</span>
           <span className="user-chip">
             <span className="user-avatar">{initial}</span>
@@ -2259,7 +2467,12 @@ function IDE() {
           </div>
         </div>
 
-        <div className={`split ${pdfUrl && showPdf ? "with-pdf" : ""}`} ref={splitRef}>
+        <div
+          className={`split ${pdfVisible ? "with-pdf" : ""} ${showRenderStage ? "with-stage" : ""} ${workMode === "render" ? "render-mode" : "agent-mode"}`}
+          data-testid="workbench-split"
+          data-mode={workMode}
+          ref={splitRef}
+        >
           <div className="editor-wrap">
             <div className="editor-host" style={{ position: "relative" }}>
               {externalMtime && (
@@ -2410,7 +2623,22 @@ function IDE() {
             </div>
           </div>
 
-          {pdfUrl && showPdf && (
+          {showRenderStage && (
+            <RenderStage
+              workspace={currentWorkspace}
+              canCompile={canCompile}
+              compileTarget={compileTarget}
+              engine={engine}
+              busy={busy}
+              hiddenPdfVersion={pdfUrl && !showPdf ? pdfVer : 0}
+              onCompile={compile}
+              onShowPdf={() => setShowPdf(true)}
+              onInstallEngine={installTectonic}
+              activePath={active?.path || ""}
+            />
+          )}
+
+          {pdfVisible && (
             <div className="pdf-pane">
               {syncHit && <div className="sync-bridge" aria-hidden="true" />}
               <div className="pdf-pane-head">
@@ -2436,7 +2664,16 @@ function IDE() {
                 <span className="qmark"><BrandLogo size={20} /></span>
                 Paper OS Assistant
               </div>
-              <div className="ctx">{active ? active.path : "no file"}</div>
+              <div className="ai-head-meta">
+                <span
+                  className={`ai-mode ai-mode--${workMode}`}
+                  data-testid="ai-mode-label"
+                  title={workMode === "agent" ? "Agent 模式：编辑器与 AI 任务流为主" : "Render 模式：PDF 与预览为主"}
+                >
+                  {workMode === "agent" ? "Agent 模式" : "Render 模式"}
+                </span>
+                <span className="ctx" title={active ? active.path : ""}>{active ? active.path : "no file"}</span>
+              </div>
             </div>
             <div className="ai-stream">
               {chat.map((m, i) => {
@@ -2647,6 +2884,17 @@ function IDE() {
           <Icon name="warn" size={12} /> {warnCount}
         </span>
         <span className="seg live"><span className="dot" />本地模式</span>
+        <button
+          type="button"
+          className={`seg status-btn mode-seg ${workMode}`}
+          data-testid="status-work-mode"
+          onClick={() => switchWorkMode(workMode === "agent" ? "render" : "agent")}
+          title={`当前 ${workMode === "agent" ? "Agent" : "Render"} 模式 — 点击切换`}
+          aria-label={`当前 ${workMode === "agent" ? "Agent" : "Render"} 模式，点击切换`}
+        >
+          <Icon name={workMode === "agent" ? "sparkle" : "pdf"} size={12} />
+          {workMode === "agent" ? "Agent 模式" : "Render 模式"}
+        </button>
         {canCompile ? (
           engine?.tectonic?.present ? (
             <span className="seg live"><span className="dot" />Tectonic</span>
@@ -2791,6 +3039,8 @@ function IDE() {
           { id: "cmd.save",    cat: "File",    label: "保存当前文件",       hint: "Ctrl+S", run: () => save() },
           { id: "cmd.saveall", cat: "File",    label: "全部保存",           hint: "Ctrl+Shift+S", run: () => commitAllDirty() },
           { id: "cmd.compile", cat: "Run",     label: "编译 LaTeX",         hint: "Ctrl+Shift+B", capability: "latex", run: () => compile() },
+          { id: "cmd.mode.agent", cat: "View", label: "切换到 Agent 模式",  hint: "", run: () => switchWorkMode("agent") },
+          { id: "cmd.mode.render", cat: "View", label: "切换到 Render 模式", hint: "", run: () => switchWorkMode("render") },
           { id: "cmd.inline",  cat: "AI",      label: "Inline Edit 选区",   hint: "Ctrl+K", run: () => openInlineEdit() },
           { id: "cmd.snippets", cat: "Editor", label: "插入 LaTeX 片段",    hint: "Ctrl+Shift+K", capability: "latex", run: () => setShowSnippets(true) },
           { id: "cmd.search",  cat: "Search",  label: "在文件中搜索",       hint: "Ctrl+Shift+F", run: () => { setView("search"); setSearchOpen(true); } },

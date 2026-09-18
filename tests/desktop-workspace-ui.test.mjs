@@ -113,7 +113,10 @@ test("paperctl menu entries require the paperctl Capability", () => {
 
   assert.match(menuSource, /\{ id: "view-tasks", label: "Paperctl 任务", capability: "paperctl" \}/);
   assert.match(menuSource, /id: "tasks", label: "任务\(T\)", capability: "paperctl"/);
-  assert.match(menuSource, /menus\.filter\(\(menu\) => !menu\.capability \|\| capabilities\.includes\(menu\.capability\)\)\.map/);
+  assert.match(menuSource, /const visibleMenus = menus\.filter\(\(menu\) => !menu\.capability \|\| capabilities\.includes\(menu\.capability\)\)/);
+  // Both the wide menubar and the compact "≡" dropdown render the filtered list.
+  assert.equal((menuSource.match(/visibleMenus\.map\(/g) || []).length, 2);
+  assert.doesNotMatch(menuSource, /\bmenus\.map\(/);
 });
 
 test("adapter-bound Packs stay visible but cannot use generic create or register", () => {

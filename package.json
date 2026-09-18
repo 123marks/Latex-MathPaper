@@ -20,6 +20,7 @@
     "auth-visual-smoke": "node app/auth-visual-smoke.mjs",
     "hero-visual-smoke": "node app/hero-ide-visual-smoke.mjs",
     "dom-ui-smoke": "node app/dom-ui-smoke.mjs",
+    "desktop-mode-visual-smoke": "node app/desktop-mode-visual-smoke.mjs",
     "headed-visual-smoke": "node app/headed-visual-smoke.mjs",
     "browser-visual-smoke": "node app/browser-visual-smoke.mjs --strict",
     "browser-visual-smoke:optional": "node app/browser-visual-smoke.mjs",

@@ -1,16 +1,16 @@
 ---
 title: Paper OS current status
 status: active
-as_of: 2026-08-31
+as_of: 2026-09-18
 branch: main
-baseline_commit: 2629f33
-worktree: clean
+baseline_commit: 8c62e93
+worktree: dirty
 product_version: 0.7.0
 ---
 
 # Paper OS 当前状态
 
-本页是 2026-08-12 对当前工作区的审计快照。T0.2–T1.5、T3.x、09-integrations Epic 1–4b（标注→AI、会话管理、References+DOI、多 provider+会话级选择）、错误码映射/用量归因、文件树文件夹管理与 0.6.0 版本对齐均已在初始提交 `1546dab` 之上分组提交，工作区为 clean。它仍不是发布证明：没有 PR、tag 或签名安装包。任何接手者都应先运行本页的基线命令，再相信能力声明。
+本页最新一节是 2026-09-18 的桌面 IDE 切片 1（Agent/Render 双模式）实测快照；HEAD 为 `8c62e93`（其上是 Wave 1–3：编辑器血统、终端、@file、SyncTeX、真实 git 状态栏，均落在 Web Workbench），工作区 **dirty**（切片 1 的桌面 IDE 改动、新测试、新 smoke 和计划文档尚未提交）。更早的 2026-08 章节是历史快照。它仍不是发布证明：没有 PR、tag 或签名安装包。任何接手者都应先运行本页的基线命令，再相信能力声明。
 
 ## 状态口径
 
@@ -26,8 +26,9 @@ product_version: 0.7.0
 | 项目 | 当前事实 |
 | --- | --- |
 | 产品方向 | 本地优先、Workspace Kernel + Packs 的通用文档 IDE |
-| 当前分支/提交 | `main` / `2629f33`（在 `1546dab` 之上，含 09-integrations Epic 1–4b 全部、v0.6.0 发布 + tag、pdf.js 层、DOI/arXiv 导入、Dashboard 控制中枢、管理台监控/在线会话、mac/linux 便携包、390px 溢出修复） |
-| 工作区 | clean；重设计与文档实现已提交，构建产物按 `.gitignore` 排除 |
+| 当前分支/提交 | `main` / `8c62e93`（在 `2629f33` 之上：Wave 1 编辑器血统、Wave 2 终端 + @file/公式描述/tex 入口探测、Wave 3 SyncTeX、Windows 自包含打包管线、Workbench 去装饰 + 真实 git 状态栏；这些全部只落在 Web Workbench 与服务端） |
+| 工作区 | dirty：切片 1 桌面 IDE 双模式（`apps/desktop/src/ide.jsx`、`ide.css`）、`tests/desktop-work-mode.test.mjs`、`app/desktop-mode-visual-smoke.mjs`、`docs/plans/2026-09-18-desktop-ide-dual-mode-plan.md`、`docs/PRODUCT_SPEC_CURSOR.md`、`docs/CURSOR_DEVELOPMENT_BRIEF.md`，以及上一轮遗留的 `findings.md`/`progress.md`/`task_plan.md`（未删除，由用户决定） |
+| 两个前端 | 桌面 IDE（`PaperOS.exe` → `/ide/`，源码 `apps/desktop/src/ide.jsx`）与 Web Workbench（`/app/workbench`，源码 `web/src/pages/app/Workbench.jsx`）共用 `app/server.mjs`；Wave 1–3 的终端/SyncTeX/公式浮层/git 状态栏尚未接入桌面 IDE |
 | 根版本 | `package.json` 为 `0.7.0` |
 | 桌面版本 | 根、Tauri config、desktop package、Cargo 均为 `0.7.0`（2026-08-31 随 0.7.0 发布统一 bump），Web UI 版本号由 Vite `define` 注入单一来源 |
 | 当前 Windows 入口 | 根目录 `PaperOS.exe`，WinForms + WebView2 + 本地 Node 服务 |
@@ -47,7 +48,8 @@ product_version: 0.7.0
 | stale tree/open response guard | Implemented | `treeRequestRef`、`openRequestRef` | 仅覆盖当前 desktop 请求路径 |
 | local auth bootstrap | Implemented | `/api/auth/bootstrap`、desktop boot、auth test | 本地信任模型仍需正式威胁模型和桌面 CSP 收口 |
 | Apply blocks 冲突与回滚 | Partial | baseline mtime、409 `APPLY_CONFLICT`、500 `APPLY_ROLLBACK`、transaction test、Web AI Preview/Reject/Apply | 尚无持久 transaction ID、通用内容版本、用户级 undo/hunk UI |
-| LaTeX compile/PDF preview | Partial | compile routes、Tectonic/latexmk、IDE preview | BuildProfile/BuildJob/ArtifactSet/真实 SyncTeX 未完成 |
+| LaTeX compile/PDF preview | Partial | compile routes、Tectonic/latexmk、IDE preview、`--synctex` + 编译快照（服务端） | 桌面：`compile-live` 无超时/取消/并发保护，失败仍可能把旧 `build/*.pdf` 当新产物广播且无 stale 标记，PDF 为 `<iframe>` 无页码/缩放；真实 SyncTeX 路由只接入 Web Workbench；BuildProfile/BuildJob/ArtifactSet 未完成 |
+| 桌面 IDE Agent/Render 双模式（切片 1） | Implemented（布局重心，非权限墙） | `apps/desktop/src/ide.jsx` 顶栏 `role="group"` 分段控制 + 状态栏/Assistant 模式标签 + 命令面板两条命令；`localStorage["paperos.workMode"]`；`RenderStage` 诚实空状态（编译目标、引擎探测、编译/安装入口、无 LaTeX Capability 说明）；`tests/desktop-work-mode.test.mjs` 9/9；`npm run desktop-mode-visual-smoke` | 编辑器在两模式下都挂载；1240px 以下 Render 折叠为“预览 + Assistant”两栏（编辑列隐藏，一键切回 Agent）；实时公式草稿、PDF 工具条、SyncTeX 接入属切片 2；标签页不跨刷新持久化 |
 | AI provider 与 Web AI 审查流 | Partial | OpenAI-compatible provider path、账户密钥加密、`/api/chat` runtime metadata、真实 `ActionTimeline`、BEGIN_FILE preview/diff、显式 Reject/Apply | provider 失败会回退并明确标识 `mock-local`；仍不是本机模型推理，也没有通用 undo/hunk 编辑器 |
 | Team/community/admin API | Partial | server routes 与部分测试 | 不是生产级实时协作、队列或多代理编排 |
 | Ed25519 发布清单 | Implemented | `app/lib/signer.mjs`、release endpoints、signer/admin tests | 不替代 Authenticode/notarization；launcher 尚未验证更新链 |
@@ -290,8 +292,53 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 
 未来：T3.3 现在关闭；下一严格任务是 T3.6 真实 Workbench 产品截图，将已验证的 AI 面板、真实 workspace/file 状态和 PDF/编辑器组合拍成 web/public/hero-ide.png，再做产品截图替换与独立截图审查。不要在 T3.6 中重写 T3.3 的 runtime truth、Preview → Apply 事务边界或把 SwiftShader 采样写成实体 GPU 性能。
 
+## 2026-09-18 阶段 0 基线 + 切片 1 桌面双模式证据（当前）
+
+基线：`main` / `8c62e93` + dirty worktree；Windows 10.0.26200；Node v24.12.0；npm 11.6.2；Python 3.13.10；本机 `latexmk`（TeX Live 2024）在 PATH，`app/data/engine/tectonic.exe` 存在。计划、审查与验收定义见 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md)。
+
+### 阶段 0：改动前基线（上一轮遗留的未提交 `ide.jsx`/`ide.css` 已在工作区）
+
+| 命令 | 结果 | 证明范围 |
+| --- | --- | --- |
+| `node --test` | 270/270 pass，107s | 全 Node suite，没有既有失败可归因 |
+| `npm run build` | exit 0；Web 2327 modules；IDE bundle 4.6 MB | 当时 bundle 因遗留的 `../../../web/node_modules/katex` 相对 import 而把 KaTeX 字体打入 `app/ide/` |
+| `python -m pytest -p no:cacheprovider tests/test_paperctl_runtime.py` | 25/25 pass，85s | math-modeling Pack runtime |
+| `node app/desktop-workspace-visual-smoke.mjs` | OK；1440x900 / 1100x720 | 真实启动 server + 无头 Edge 打开 `/ide/` |
+
+### 切片 1：做了什么
+
+- 先写 `tests/desktop-work-mode.test.mjs`，在遗留实现上得到 7/9 预期 RED，再实现到 9/9。
+- 删除遗留的装饰性 `harness ready` chip 和把编辑器整体替换掉的 `LiveMathPreview`（它违反“Render 不是只读”）；移除跨包相对 import。
+- 新增 `RenderStage`：Render 模式且屏幕上没有 PDF/媒体时的诚实空状态，显示真实编译目标（`pickCompileTarget`，与 `compile()` 共用）、`/api/engine/status` 探测结果、编译/安装 Tectonic 入口，或“当前 Pack 没有编译预览”说明；隐藏 PDF 时提供恢复入口。
+- 顶栏 `role="group"` 分段控制（`aria-pressed`、`aria-label`、`title`，窄窗口只收缩文字标签）；Assistant 头部与状态栏重复显示模式；命令面板新增两条切换命令；`localStorage["paperos.workMode"]` 持久化。
+- MenuBar 新增 ≤1100px 紧凑模式：同一份菜单数据折叠进一个 `≡` 下拉（按菜单分节），不丢任何条目。
+- 修复两处 smoke 抓出的既有布局缺陷：(1) `.split` 使用 `1fr` 隐含 `min-content` 下限，Monaco 写入自身像素宽度后网格列无法回缩，1280px 下 AI 面板被裁掉 160px——改为 `minmax(0, 1fr)` + 网格项 `min-width: 0`；(2) 标题栏左组子元素在 1024px 下溢出并压住右组——Workspace chip 可收缩、Pack 标签/工作区按钮按断点隐藏。
+- 断点按“主区宽度 = 视口 − 侧栏”重算：≤1359 收紧三栏最小值（940px），≤1239 折两栏，≤1100 菜单紧凑，≤920 模式按钮仅图标。
+
+### 切片 1：验证
+
+| 命令 | 结果 | 证明范围 |
+| --- | --- | --- |
+| `node --test tests/desktop-work-mode.test.mjs` | 9/9 pass（改动前 2/9） | 持久化、可访问分段控制、无假 chip、无相对 import、编辑器不被替换、Render stage 条件、双处模式标签、切换不重置状态、窄窗口收缩 |
+| `node --test` | 279 tests：278 pass，1 环境失败 | 失败项 `workspace export streams a verifiable tar.gz backup` 为 `listen EACCES 127.0.0.1:57738`（随机端口落入 Windows 保留段）；单独复跑 1/1 pass，与本次改动无关 |
+| `npm run build` | exit 0；Web 2327 modules；IDE bundle 4.4 MB | 去掉相对 import 后 KaTeX 字体不再进入桌面 bundle |
+| `npm run desktop-mode-visual-smoke` | OK | 隔离 `PAPER_OS_DATA_DIR`；注册临时 LaTeX 外部文件夹；Monaco 中真实输入使标签变脏；通过 `/api/chat` 完成一次 mock-local 往返（3 条消息）；切到 Render 后 Workspace/标签/脏标记/聊天/首行内容全部不变，`localStorage=render`，Render stage 命名 `main.tex` 并显示“latexmk 就绪（系统 TeX）”；刷新后仍为 Render；切回 Agent 后 stage 消失；Agent/Render × 1440/1280/1024/800 共 8 张截图，`scrollWidth<=innerWidth`，编辑/预览/Assistant 列两两不相交，标题栏 menubar/Workspace chip/Ctrl+K/模式开关/右组两两不相交且不出视口，≤1100 出现紧凑菜单；无 JS 对话框 |
+| `node app/desktop-workspace-visual-smoke.mjs` | OK | 既有 Workspace chooser 双视口未回归 |
+| `git diff --check`、`node --check app/desktop-mode-visual-smoke.mjs` | exit 0 | 空白与语法 |
+| 真实桌面入口 `PaperOS.exe`（`PAPER_OS_PORT=3733`、隔离 `PAPER_OS_DATA_DIR`） | `/api/health` 4.2s 内 200（version 0.7.0）；主窗口标题 `Paper OS`、句柄非零；`/ide/` 200；`CloseMainWindow` 后端口释放，无孤儿 Node | WinForms + WebView2 启动契约仍成立。整屏抓图因包含无关个人窗口已删除，不作为证据 |
+
+证据文件：`dist/visual-qa/desktop-mode-{agent,render}-{1440x900,1280x800,1024x768,800x600}.png` 与 `dist/visual-qa/desktop-mode-behavior.json`（含切换前后/刷新后/恢复后的快照与 8 组几何数据）。人工目视核对了 render 1440/1280/1024/800 与 agent 800：无重叠、无截断。
+
+### 切片 1：未做与边界
+
+- 没有实时公式草稿、PDF 页码/缩放工具条、SyncTeX 桌面接入、编译状态机/stale 标记：这些是切片 2a/2b，Render stage 目前只是诚实空状态。
+- 桌面 IDE 标签页不跨刷新持久化（smoke 依赖 IDE 自身的 `main.tex` 自动打开）。
+- 1240px 以下 Render 模式隐藏编辑列（一键切回 Agent 可编辑）；这是折叠优先级，不是能力限制。
+- 125%/150% DPI 与 1920x1080 尚未实测（属阶段 6）；Windows 真机窗口尺寸 ≥ `MinimumSize 1100x720`，800px 视口只在浏览器中验证。
+
 ## 已知风险
 
+0. **切片 1 未提交**：桌面双模式、测试、smoke、计划文档仍在 dirty worktree；下一步应审阅 diff 并按 Lore protocol 提交（`Tested`/`Not-tested` 见上节）。
 1. **尚无 PR / tag / 签名发布**：重设计、文档、09-integrations Epic 1–4b、文件夹管理与 0.6.0 版本对齐均已在 `1546dab` 之上分组提交，dirty worktree 风险已消除；仍缺少 PR 审阅、git tag 和签名安装包，结果尚未绑定 tag/release。
 2. **发布版本治理**：根、Tauri config、desktop package、Cargo 已统一 bump 为 `0.6.0`（2026-08-12），Web UI 版本号改由 Vite `define` 从根 `package.json` 注入；打 tag 仍待执行。
 3. **发布声明超前**：Windows ZIP 缺少 Node 生产依赖和 self-contained .NET runtime；macOS/Linux 清单与实际产物不一致；原生代码签名未完成。
@@ -307,6 +354,7 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 
 | 优先级 | 工作 | 完成判据 |
 | --- | --- | --- |
+| P0 | 提交切片 1 并进入切片 2a（编译生命周期：`compile-live` 超时/取消/并发保护、新旧产物区分、stale 标记、前端状态机） | 见 `plans/2026-09-18-desktop-ide-dual-mode-plan.md` §1；成功 `.tex` 与故意失败 `.tex` 双样本验收 |
 | P0 | 形成可审阅提交和完整验证基线 | dirty 变更分组审阅；全测试/构建结果绑定 SHA |
 | P0 | 修正版本和发布资产一致性 | 单一版本源；清单不声明缺失资产；签名边界明确 |
 | P1 | 完成 T3.6 真实 Workbench 产品截图 | 以真实 AI 面板和 Workspace/file 状态拍摄 web/public/hero-ide.png，并通过桌面/移动截图审查 |
