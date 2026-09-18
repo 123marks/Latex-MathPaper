@@ -19,6 +19,7 @@
 
 | 类型 | 文件 | 权威范围 |
 | --- | --- | --- |
+| 产品规格与交接 | `PRODUCT_SPEC_CURSOR.md`、`CURSOR_DEVELOPMENT_BRIEF.md` | Paper OS 双模式 IDE、LaTeX/Render、AI Harness、插件兼容路线及可直接交给 Cursor 的分阶段开发任务书 |
 | 领域契约 | `../CONTEXT.md` | 术语和系统不变量 |
 | 产品契约 | `PRODUCT.md` | 产品承诺、边界、非目标 |
 | 架构契约 | `ARCHITECTURE.md`、`adr/` | 组件职责、信任边界、决策原因 |
@@ -45,4 +46,3 @@
 - 改能力状态：同步 `STATUS.md`、`CAPABILITY_MAP.md`、测试证据和 `CHANGELOG.md`。
 - 改启动、数据、环境变量或发布流程：同步 `DEVELOPMENT.md`、`RUNBOOK.md` 和 README。
 - 完成计划：将计划状态改为 `completed`，记录验证与结果提交；不要只在聊天或 HANDOFF 中打勾。
-
