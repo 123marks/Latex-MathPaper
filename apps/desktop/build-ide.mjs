@@ -48,6 +48,7 @@ await build({
     "ai-execution": join(root, "web", "src", "lib", "ai-execution.js"),
     "terminal-policy": join(root, "app", "lib", "terminal.mjs"),
     "extensions-compat": join(root, "app", "lib", "extensions.mjs"),
+    "ui-budget": join(root, "apps", "desktop", "src", "ui-budget.mjs"),
   },
   // Minify by default (pass --dev to keep it readable); ship without source
   // maps unless explicitly developing, so the distributed IDE bundle is not

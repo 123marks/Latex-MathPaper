@@ -1,7 +1,7 @@
 # 桌面 IDE 增量开发计划：双模式、Render/LaTeX、AI Harness
 
 Date: 2026-09-18
-Status: Active（阶段 0 完成；切片 S1–S4 已提交 `fb8fac2` / `161d052` / `759648b` / `4cbabb6` / `a725121`；切片 S5 完成并实测，证据见 `../STATUS.md` 2026-09-21 节；下一步 S6）
+Status: Complete（阶段 0 完成；切片 S1–S5 已提交 `fb8fac2` / `161d052` / `759648b` / `4cbabb6` / `a725121` / `d79e455`；切片 S6 完成并实测，证据见 `../STATUS.md` 2026-09-21 节；双模式计划到此结束，不发明 S7）
 Baseline: `main` / `8c62e93` + 上一轮遗留的未提交 `apps/desktop/src/ide.jsx`、`ide.css`、`docs/README.md` 修改
 
 本计划是 `PRODUCT_SPEC_CURSOR.md` 与 `CURSOR_DEVELOPMENT_BRIEF.md` 的执行分解。它先回答“现在真实是什么”，再给出每个切片的验收。计划本身不证明任何能力已完成；完成事实只写进 `STATUS.md`。
@@ -157,6 +157,14 @@ ide.jsx (IDE 组件)
 - 真实启动：`npm run desktop-vsix-smoke` OK。夹具 `Paper OS Theme+Language Fixture` 可见；无 Paper Excellence；文案为第一层主题色+语言 id；兼容矩阵含 supported/planned/unsupported；禁用后卸载到空列表。
 - 回归：`npm run desktop-compile-smoke` OK；`npm run ide:build` 4.7 MB。
 - 全量 `node --test` 325/326：`git-status-api` 满载 flake（`isRepo` 超时降级），单独重跑 1/1。
+
+### S6 执行记录（2026-09-21）
+
+- 契约：`tests/desktop-ui-budget.test.mjs` 4/4。cap 截断、2MB 门与 `FILE_TOO_LARGE` 对齐、键盘接线、1920+DPI、800 非原生窗口。
+- 真实启动：`npm run desktop-ui-smoke` OK。五视口与 DPI 1.25/1.5 均 `overflowX:false`；Ctrl+Alt+M agent→render；Quick Open `huge.txt`（2 097 153 B）走 oversized 面板，API 413 `FILE_TOO_LARGE`。证据 `evidence:"cdp-css-pixel"`（ADR-0006）。
+- 回归：`npm run desktop-compile-smoke` OK；`npm run ide:build` 4.7 MB。
+- 全量 `node --test` 329/330：`git-status-api` 满载 flake（`isRepo` 超时降级），单独重跑 1/1（78s）。
+- 计划到此结束。不要发明 S7。
 
 ## 3. 不做与假设
 

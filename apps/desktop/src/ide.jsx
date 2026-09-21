@@ -57,6 +57,15 @@ import {
   buildMonacoTheme,
   languageIdForFile,
 } from "extensions-compat";
+import {
+  appendCapped,
+  CHAT_MESSAGE_CAP,
+  describeOversizedFile,
+  EDITOR_OPEN_MAX_BYTES,
+  LOG_LINE_CAP,
+  prependCapped,
+  TERM_LINE_CAP,
+} from "ui-budget";
 
 // Bundle monaco locally (WebView2 must not depend on CDN). Theme is defined
 // in setupLatex beforeMount so we never paint dark chrome with light "vs" text.
@@ -1328,18 +1337,18 @@ function IDE() {
   function handleCompileMessage(msg) {
     if (msg.event === "stdout" || msg.event === "stderr") {
       const lines = String(msg.text).split("\n");
-      setLog((l) => [...lines.filter(Boolean), ...l].slice(0, 200));
+      setLog((l) => [...lines.filter(Boolean), ...l].slice(0, LOG_LINE_CAP));
       return;
     }
     if (msg.event === "start") {
       setCompileJob((prev) => applyCompileEvent(prev, msg));
-      setLog((l) => [`[compile] start ${msg.engine}`, ...l].slice(0, 200));
+      setLog((l) => [`[compile] start ${msg.engine}`, ...l].slice(0, LOG_LINE_CAP));
       setBottomTab("latex");
       return;
     }
     if (msg.event === "error") {
       setCompileJob((prev) => applyCompileEvent(prev, msg));
-      setLog((l) => [`[compile] ✗ ${msg.message || "engine error"}`, ...l].slice(0, 200));
+      setLog((l) => [`[compile] ✗ ${msg.message || "engine error"}`, ...l].slice(0, LOG_LINE_CAP));
       return;
     }
     if (msg.event === "done") {
@@ -1347,7 +1356,7 @@ function IDE() {
       setLog((l) => [
         `[compile] done exit=${msg.code} ${msg.durationMs}ms pdf=${msg.pdf ? "ready" : "stale-or-none"}${msg.pdfPath ? ` ${msg.pdfPath}` : ""}${msg.timedOut ? " timedOut" : ""}${msg.cancelled ? " cancelled" : ""}`,
         ...l,
-      ].slice(0, 200));
+      ].slice(0, LOG_LINE_CAP));
       if (msg.pdf && !keepExistingPdf(msg)) {
         const blob = base64ToBlob(msg.pdf, "application/pdf");
         const next = URL.createObjectURL(blob) + `#v=${Date.now()}`;
@@ -1563,20 +1572,20 @@ function IDE() {
   async function installTectonic(opts = {}) {
     const force = !!opts.force;
     if (engine?.tectonic?.present && !force) {
-      setLog((l) => [`[tectonic] 已就绪 · ${engine.tectonic.detail || engine.tectonic.path || "ok"}（菜单「运行 → 安装/重装」可强制重装）`, ...l].slice(0, 200));
+      setLog((l) => [`[tectonic] 已就绪 · ${engine.tectonic.detail || engine.tectonic.path || "ok"}（菜单「运行 → 安装/重装」可强制重装）`, ...l].slice(0, LOG_LINE_CAP));
       setBottomTab("latex");
       return;
     }
     if (installPct > 0 && installPct < 100) return;
     setInstallPct(1);
     setBottomTab("latex");
-    setLog((l) => ["[tectonic] downloading…", ...l].slice(0, 200));
+    setLog((l) => ["[tectonic] downloading…", ...l].slice(0, LOG_LINE_CAP));
     let finished = false;
     const es = new EventSource(`/api/engine/install/tectonic${force ? "?force=1" : ""}`, { withCredentials: true });
     const fail = (msg) => {
       if (finished) return;
       finished = true;
-      setLog((l) => [`[tectonic] ✗ ${msg}`, ...l].slice(0, 200));
+      setLog((l) => [`[tectonic] ✗ ${msg}`, ...l].slice(0, LOG_LINE_CAP));
       try { es.close(); } catch { /* */ }
       setInstallPct(0);
     };
@@ -1587,18 +1596,18 @@ function IDE() {
         if (d.skipped) {
           finished = true;
           setInstallPct(100);
-          setLog((l) => [`[tectonic] ✓ already present ${d.version || ""}`.trim(), ...l].slice(0, 200));
+          setLog((l) => [`[tectonic] ✓ already present ${d.version || ""}`.trim(), ...l].slice(0, LOG_LINE_CAP));
           es.close();
           setTimeout(() => { setInstallPct(0); loadEngine(); }, 400);
           return;
         }
-        if (d.version) setLog((l) => [`[tectonic] fetching ${d.version} (${d.asset || ""})`, ...l].slice(0, 200));
+        if (d.version) setLog((l) => [`[tectonic] fetching ${d.version} (${d.asset || ""})`, ...l].slice(0, LOG_LINE_CAP));
       } catch { /* */ }
     });
     es.addEventListener("progress", (e) => {
       try {
         const d = JSON.parse(e.data);
-        if (d.phase === "extract") setLog((l) => ["[tectonic] extracting…", ...l].slice(0, 200));
+        if (d.phase === "extract") setLog((l) => ["[tectonic] extracting…", ...l].slice(0, LOG_LINE_CAP));
         if (d.percent != null) setInstallPct(Math.max(5, Math.min(99, d.percent)));
       } catch { /* */ }
     });
@@ -1606,7 +1615,7 @@ function IDE() {
       setInstallPct(95);
       try {
         const d = JSON.parse(e.data);
-        setLog((l) => [`[tectonic] downloaded ${Math.round((d.bytes || 0) / 1024 / 1024 * 10) / 10} MB`, ...l].slice(0, 200));
+        setLog((l) => [`[tectonic] downloaded ${Math.round((d.bytes || 0) / 1024 / 1024 * 10) / 10} MB`, ...l].slice(0, LOG_LINE_CAP));
       } catch { /* */ }
     });
     es.addEventListener("done", (e) => {
@@ -1615,7 +1624,7 @@ function IDE() {
       setInstallPct(100);
       let ver = "";
       try { ver = JSON.parse(e.data)?.version || ""; } catch { /* */ }
-      setLog((l) => [`[tectonic] ✓ installed ${ver}`.trim(), ...l].slice(0, 200));
+      setLog((l) => [`[tectonic] ✓ installed ${ver}`.trim(), ...l].slice(0, LOG_LINE_CAP));
       es.close();
       setTimeout(() => { setInstallPct(0); loadEngine(); }, 800);
     });
@@ -1777,7 +1786,15 @@ function IDE() {
     } catch (e) {
       if (openRequestRef.current !== requestId) return;
       const msg = String(e.message || "");
-      if (/binary|415/i.test(msg)) {
+      if (e.status === 413 || e.code === "FILE_TOO_LARGE" || /too large|FILE_TOO_LARGE/i.test(msg)) {
+        const info = describeOversizedFile(e.payload?.size || EDITOR_OPEN_MAX_BYTES + 1, e.payload?.max || EDITOR_OPEN_MAX_BYTES);
+        setMediaPreview({ path: file.path, kind: "oversized", url: null, ...info });
+        setOpenTabs((tabs) => tabs.map((tab) => (
+          tab.path === file.path ? { ...tab, kind: "media", dirty: false } : tab
+        )));
+        setEditor("");
+        setOriginal("");
+      } else if (/binary|415/i.test(msg)) {
         setMediaPreview({ path: file.path, kind: "binary", url: null });
         setOpenTabs((tabs) => tabs.map((tab) => (
           tab.path === file.path ? { ...tab, kind: "media", dirty: false } : tab
@@ -1785,7 +1802,7 @@ function IDE() {
         setEditor("");
         setOriginal("");
       } else {
-        setLog((l) => [`[file] ${e.message}`, ...l].slice(0, 50));
+        setLog((l) => prependCapped(l, [`[file] ${e.message}`], LOG_LINE_CAP));
       }
     }
   }
@@ -1835,10 +1852,10 @@ function IDE() {
           ? markTextBufferSaved(tab, snapshot)
           : tab
       )));
-      setLog((l) => [`[save] ${active.path}`, ...l].slice(0, 200));
+      setLog((l) => [`[save] ${active.path}`, ...l].slice(0, LOG_LINE_CAP));
     } catch (e) {
       // Save failed: the buffer stays dirty so nothing is silently lost.
-      setLog((l) => [`[save] ${e.message}`, ...l].slice(0, 200));
+      setLog((l) => [`[save] ${e.message}`, ...l].slice(0, LOG_LINE_CAP));
       flash(`保存失败: ${e.message}`);
     } finally { setBusy(false); }
   }
@@ -1853,19 +1870,19 @@ function IDE() {
     }
     const texPath = pickCompileTarget(tree, active);
     if (!texPath) {
-      setLog((l) => ["[compile] 未找到 .tex 文件", ...l].slice(0, 200));
+      setLog((l) => ["[compile] 未找到 .tex 文件", ...l].slice(0, LOG_LINE_CAP));
       setBottomTab("latex");
       return;
     }
     compiledTexRef.current = texPath;
     setBottomTab("latex");
-    setLog((l) => [`[compile] ${texPath} ...`, ...l].slice(0, 200));
+    setLog((l) => [`[compile] ${texPath} ...`, ...l].slice(0, LOG_LINE_CAP));
     try {
       const accepted = await api.post("/api/editor/compile-live", { workspace: contest, path: texPath });
       setCompileJob((prev) => applyCompileAccepted(prev, accepted, texPath));
     } catch (e) {
       setCompileJob((prev) => applyCompileHttpError(prev, e));
-      setLog((l) => [`[compile] ${e.message}`, ...l].slice(0, 200));
+      setLog((l) => [`[compile] ${e.message}`, ...l].slice(0, LOG_LINE_CAP));
     }
   }
 
@@ -1873,10 +1890,10 @@ function IDE() {
     if (!compileIsRunning(compileJob)) return;
     try {
       await api.post("/api/editor/compile-cancel", { workspace: contest });
-      setLog((l) => ["[compile] 正在取消…", ...l].slice(0, 200));
+      setLog((l) => ["[compile] 正在取消…", ...l].slice(0, LOG_LINE_CAP));
     } catch (e) {
       if (e.code !== "NO_ACTIVE_COMPILE") {
-        setLog((l) => [`[compile] 取消失败: ${e.message}`, ...l].slice(0, 200));
+        setLog((l) => [`[compile] 取消失败: ${e.message}`, ...l].slice(0, LOG_LINE_CAP));
       }
     }
   }
@@ -2197,7 +2214,7 @@ function IDE() {
         y: preferred.y,
         token: Date.now(),
       });
-      setLog((l) => [`[synctex] ${active?.path || tex}:${preferred.line || estimate.sourceLine} → PDF p.${preferred.page}`, ...l].slice(0, 200));
+      setLog((l) => [`[synctex] ${active?.path || tex}:${preferred.line || estimate.sourceLine} → PDF p.${preferred.page}`, ...l].slice(0, LOG_LINE_CAP));
     } catch (error) {
       const desc = describeSynctexError(error);
       const fallback = preferSynctexHit(null, estimate);
@@ -2205,7 +2222,7 @@ function IDE() {
       setSynctexNote(desc);
       if (fallback?.page) setPdfSyncTarget({ page: fallback.page, x: null, y: null, token: Date.now() });
       flash(desc.message);
-      setLog((l) => [`[synctex] ${desc.code}: ${desc.message}`, ...l].slice(0, 200));
+      setLog((l) => [`[synctex] ${desc.code}: ${desc.message}`, ...l].slice(0, LOG_LINE_CAP));
     }
   }
 
@@ -2231,7 +2248,7 @@ function IDE() {
       const rel = String(payload.path || tex).replace(/^\.\//, "");
       setSyncHit(preferSynctexHit({ ...payload, path: rel }, null));
       setSynctexNote(null);
-      setLog((l) => [`[synctex] PDF p.${page} → ${rel}:${payload.line}`, ...l].slice(0, 200));
+      setLog((l) => [`[synctex] PDF p.${page} → ${rel}:${payload.line}`, ...l].slice(0, LOG_LINE_CAP));
       if (active?.path === rel) {
         jumpToLine(payload.line);
         return;
@@ -2247,7 +2264,7 @@ function IDE() {
       const desc = describeSynctexError(error);
       setSynctexNote(desc);
       flash(desc.message);
-      setLog((l) => [`[synctex] ${desc.code}: ${desc.message}`, ...l].slice(0, 200));
+      setLog((l) => [`[synctex] ${desc.code}: ${desc.message}`, ...l].slice(0, LOG_LINE_CAP));
     }
   }
 
@@ -2269,7 +2286,7 @@ function IDE() {
       setEvidence(data);
       setMagnifier(true);
     } catch (e) {
-      setLog((l) => [`[evidence] ${e.message}`, ...l].slice(0, 200));
+      setLog((l) => [`[evidence] ${e.message}`, ...l].slice(0, LOG_LINE_CAP));
     } finally {
       setEvidenceBusy(false);
     }
@@ -2362,7 +2379,7 @@ function IDE() {
       setProposal((current) => ({ ...current, state: "applied", result }));
       setAiPhase("applied");
       recordHarness("applied", { blockCount: proposal.blocks?.length || 0, clock: "apply" });
-      setLog((l) => [`[apply] wrote ${(result.written || []).join(", ")}`, ...l].slice(0, 200));
+      setLog((l) => [`[apply] wrote ${(result.written || []).join(", ")}`, ...l].slice(0, LOG_LINE_CAP));
       await loadTree();
       if (active && (result.written || []).includes(active.path)) {
         await openFile(active, { reload: true });
@@ -2440,7 +2457,7 @@ function IDE() {
       if (!confirm(`${reason}\n\n确认运行：${command}`)) return;
     }
     setTermHistory((history) => [command, ...history.filter((item) => item !== command)].slice(0, 50));
-    setTermLines((lines) => [...lines, { kind: "cmd", text: `$ ${command}` }].slice(-800));
+    setTermLines((lines) => [...lines, { kind: "cmd", text: `$ ${command}` }].slice(-TERM_LINE_CAP));
     setTermInput("");
     setTermBusy(true);
     const controller = new AbortController();
@@ -2455,7 +2472,7 @@ function IDE() {
       });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        setTermLines((lines) => [...lines, { kind: "err", text: err.error || `HTTP ${response.status}` }].slice(-800));
+        setTermLines((lines) => [...lines, { kind: "err", text: err.error || `HTTP ${response.status}` }].slice(-TERM_LINE_CAP));
         return;
       }
       const reader = response.body.getReader();
@@ -2466,14 +2483,14 @@ function IDE() {
         buffer = parsed.rest;
         for (const frame of parsed.frames) {
           if (frame.event === "stdout") {
-            setTermLines((lines) => [...lines, { kind: "out", text: frame.data.text || "" }].slice(-800));
+            setTermLines((lines) => [...lines, { kind: "out", text: frame.data.text || "" }].slice(-TERM_LINE_CAP));
           } else if (frame.event === "stderr") {
-            setTermLines((lines) => [...lines, { kind: "err", text: frame.data.text || "" }].slice(-800));
+            setTermLines((lines) => [...lines, { kind: "err", text: frame.data.text || "" }].slice(-TERM_LINE_CAP));
           } else if (frame.event === "exit") {
             setTermLines((lines) => [...lines, {
               kind: "sys",
               text: frame.data.error ? `✗ ${frame.data.error}` : `↳ 退出码 ${frame.data.code} · ${frame.data.durationMs}ms`,
-            }].slice(-800));
+            }].slice(-TERM_LINE_CAP));
           }
         }
       };
@@ -2485,9 +2502,9 @@ function IDE() {
       consume(buffer + decoder.decode());
     } catch (error) {
       if (error.name === "AbortError") {
-        setTermLines((lines) => [...lines, { kind: "sys", text: "↳ 已中断" }].slice(-800));
+        setTermLines((lines) => [...lines, { kind: "sys", text: "↳ 已中断" }].slice(-TERM_LINE_CAP));
       } else {
-        setTermLines((lines) => [...lines, { kind: "err", text: error.message }].slice(-800));
+        setTermLines((lines) => [...lines, { kind: "err", text: error.message }].slice(-TERM_LINE_CAP));
       }
     } finally {
       if (termAbortRef.current === controller) termAbortRef.current = null;
@@ -2526,13 +2543,13 @@ function IDE() {
         setOriginal(saved.get(active.path));
       }
       if (saved.size) {
-        setLog((l) => [`[save] ${saved.size} buffer${saved.size > 1 ? "s" : ""} saved`, ...l].slice(0, 200));
+        setLog((l) => [`[save] ${saved.size} buffer${saved.size > 1 ? "s" : ""} saved`, ...l].slice(0, LOG_LINE_CAP));
       }
       if (failed.length) {
         setLog((l) => [
           ...failed.map((f) => `[save] ✗ ${f.path}: ${f.reason}`),
           ...l,
-        ].slice(0, 200));
+        ].slice(0, LOG_LINE_CAP));
         flash(`${failed.length} 个文件保存失败，已保留未保存状态`);
       } else {
         flash(`已保存全部更改 (${saved.size})`);
@@ -2592,6 +2609,16 @@ function IDE() {
         forwardSyncFromCursor();
         return;
       }
+      if ((e.metaKey || e.ctrlKey) && e.altKey && (e.key === "m" || e.key === "M")) {
+        e.preventDefault();
+        switchWorkMode(workMode === "agent" ? "render" : "agent");
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.altKey && (e.key === "p" || e.key === "P")) {
+        e.preventDefault();
+        setShowPdf((v) => !v);
+        return;
+      }
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "B" || e.key === "b")) {
         e.preventDefault();
         compile();
@@ -2632,7 +2659,7 @@ function IDE() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [searchOpen, showCmd, quickOpen, showSnippets, inlineEdit, active, editor, dirty, cursorPos.line, tree, contest]); // eslint-disable-line
+  }, [searchOpen, showCmd, quickOpen, showSnippets, inlineEdit, active, editor, dirty, cursorPos.line, tree, contest, workMode]); // eslint-disable-line
 
 
   async function sendChat() {
@@ -2648,10 +2675,12 @@ function IDE() {
     setHarnessTimings({});
     setAiPhase("requesting");
     harnessClockRef.current.request = Date.now();
-    setChat((c) => [...c, { who: "你", text: userText, streaming: false }]);
+    setChat((c) => appendCapped(c, [
+      { who: "你", text: userText, streaming: false },
+      { who: "Paper OS Assistant", text: "", streaming: true },
+    ], CHAT_MESSAGE_CAP));
     setMsg("");
     setBusy(true);
-    setChat((c) => [...c, { who: "Paper OS Assistant", text: "", streaming: true }]);
 
     let acc = "";
     let buffer = "";
@@ -3135,6 +3164,7 @@ function IDE() {
           className={`split ${pdfVisible ? "with-pdf" : ""} ${showRenderStage ? "with-stage" : ""} ${workMode === "render" ? "render-mode" : "agent-mode"}`}
           data-testid="workbench-split"
           data-mode={workMode}
+          data-show-pdf={showPdf ? "1" : "0"}
           ref={splitRef}
         >
           <div className="editor-wrap">
@@ -3147,7 +3177,17 @@ function IDE() {
                 </div>
               )}
               {active && mediaPreview && mediaPreview.path === active.path ? (
-                mediaPreview.kind === "pdf" ? (
+                mediaPreview.kind === "oversized" ? (
+                  <div className="media-stage binary" data-testid="file-oversized">
+                    <div className="binary-card">
+                      <Icon name="file" size={28} />
+                      <h3>{active.name}</h3>
+                      <p>{mediaPreview.message || "文件过大，未载入编辑器"}</p>
+                      <p className="mono">{active.path}</p>
+                      <button type="button" className="ghost-btn" onClick={() => closeTab(active.path)}>关闭标签</button>
+                    </div>
+                  </div>
+                ) : mediaPreview.kind === "pdf" ? (
                   <div className="media-stage">
                     <div className="media-stage-bar">
                       <Icon name="pdf" size={14} />
@@ -3587,12 +3627,12 @@ function IDE() {
                   if (!cmd) return;
                   e.currentTarget.value = "";
                   setBottomTab("tasks");
-                  setLog((l) => [`$ paperctl ${cmd}`, ...l].slice(0, 200));
+                  setLog((l) => [`$ paperctl ${cmd}`, ...l].slice(0, LOG_LINE_CAP));
                   try {
                     const r = await api.post("/api/run", { contestId: contest, workspace: contest, command: cmd });
-                    setLog((l) => [...(r.stdout ? r.stdout.split("\n").filter(Boolean) : []), ...l].slice(0, 200));
+                    setLog((l) => [...(r.stdout ? r.stdout.split("\n").filter(Boolean) : []), ...l].slice(0, LOG_LINE_CAP));
                   } catch (err) {
-                    setLog((l) => [`error: ${err.message}`, ...l].slice(0, 200));
+                    setLog((l) => [`error: ${err.message}`, ...l].slice(0, LOG_LINE_CAP));
                   }
                 }}
               />
@@ -3813,8 +3853,9 @@ function IDE() {
           { id: "cmd.compile", cat: "Run",     label: "编译 LaTeX",         hint: "Ctrl+Shift+B", capability: "latex", run: () => compile() },
           { id: "cmd.synctex.forward", cat: "Go", label: "源码 → PDF（SyncTeX）", hint: "Ctrl+Alt+J", capability: "latex", run: () => forwardSyncFromCursor() },
           { id: "cmd.compile.cancel", cat: "Run", label: "取消编译", hint: "", capability: "latex", run: () => cancelCompile() },
-          { id: "cmd.mode.agent", cat: "View", label: "切换到 Agent 模式",  hint: "", run: () => switchWorkMode("agent") },
-          { id: "cmd.mode.render", cat: "View", label: "切换到 Render 模式", hint: "", run: () => switchWorkMode("render") },
+          { id: "cmd.mode.agent", cat: "View", label: "切换到 Agent 模式",  hint: "Ctrl+Alt+M", run: () => switchWorkMode("agent") },
+          { id: "cmd.mode.render", cat: "View", label: "切换到 Render 模式", hint: "Ctrl+Alt+M", run: () => switchWorkMode("render") },
+          { id: "cmd.preview.toggle", cat: "View", label: "显示/隐藏 PDF 预览", hint: "Ctrl+Alt+P", run: () => setShowPdf((v) => !v) },
           { id: "cmd.terminal", cat: "View", label: "打开终端", hint: "Ctrl+`", run: () => openTerminal() },
           { id: "cmd.extensions", cat: "View", label: "打开扩展", hint: "", run: () => setView("skills") },
           { id: "cmd.inline",  cat: "AI",      label: "Inline Edit 选区",   hint: "Ctrl+K", run: () => openInlineEdit() },
@@ -4017,7 +4058,7 @@ function CommandPalette({ open, onClose, onRun, commands }) {
   if (!open) return null;
   const filtered = q ? commands.filter((c) => (c.label + (c.hint || "")).toLowerCase().includes(q.toLowerCase())) : commands;
   return (
-    <div className="login-overlay" onClick={onClose}>
+    <div className="login-overlay" data-testid="command-palette" onClick={onClose}>
       <div
         className="login-card"
         style={{ maxWidth: 520, padding: 0, overflow: "hidden" }}
@@ -4105,7 +4146,7 @@ function QuickOpenModal({ open, files, onPick, onClose }) {
     : files.map((file) => ({ file, score: 0 }))
   ).slice(0, 50);
   return (
-    <div className="login-overlay" onClick={onClose}>
+    <div className="login-overlay" data-testid="quick-open" onClick={onClose}>
       <div
         className="login-card"
         style={{ maxWidth: 560, padding: 0, overflow: "hidden" }}

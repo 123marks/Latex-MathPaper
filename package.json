@@ -26,6 +26,7 @@
     "desktop-ai-smoke": "node app/desktop-ai-harness-smoke.mjs",
     "desktop-term-smoke": "node app/desktop-terminal-git-smoke.mjs",
     "desktop-vsix-smoke": "node app/desktop-vsix-smoke.mjs",
+    "desktop-ui-smoke": "node app/desktop-ui-perf-smoke.mjs",
     "headed-visual-smoke": "node app/headed-visual-smoke.mjs",
     "browser-visual-smoke": "node app/browser-visual-smoke.mjs --strict",
     "browser-visual-smoke:optional": "node app/browser-visual-smoke.mjs",

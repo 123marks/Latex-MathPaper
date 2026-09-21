@@ -35,7 +35,7 @@ evidence is tracked separately in `STATUS.md` and `TRACEABILITY.md`.
 
 | Capability | Owner | Status | Current evidence / remaining work |
 | --- | --- | --- | --- |
-| File tree, open, edit, save, create, rename, delete | Kernel + Workbench | **Implemented** | Desktop tree/Monaco and Workspace-routed server operations |
+| File tree, open, edit, save, create, rename, delete | Kernel + Workbench | **Implemented** | Desktop tree/Monaco and Workspace-routed server operations; files over 2MB return 413 `FILE_TOO_LARGE` and the desktop shows `file-oversized` instead of opening Monaco (slice 6) |
 | Independent text buffers and Save All snapshots | Workbench | **Implemented** | `text-buffer.mjs`; buffer state/wiring tests; newer edits remain dirty after an older snapshot saves |
 | PDF and image preview | Workbench | **Implemented** | Media preview avoids opening binary content as text |
 | Workspace text search | Search service | **Implemented** | Server-side bounded search |
@@ -50,6 +50,7 @@ evidence is tracked separately in `STATUS.md` and `TRACEABILITY.md`.
 | Interactive terminal | Tool runtime + Workbench | **Partial** | `POST /api/editor/terminal` (allowlist, argv-only, cwd pinned, 120s/512KB caps, SSE) plus Web and desktop (slice 4) panels; dangerous git/npm commands confirm first; not a full shell and Packs do not claim a `terminal` Capability |
 | Desktop Agent/Render work modes | Workbench (desktop) | **Implemented** | Slice 1 (2026-09-18): layout emphasis only, shared state, `localStorage` persistence, honest `RenderStage` empty state, 1440/1280/1024/800 folding without overlap; `tests/desktop-work-mode.test.mjs`, `npm run desktop-mode-visual-smoke` |
 | VS Code `.vsix` first layer | Workbench (desktop) | **Partial** | Slice 5: unpack/install/enable/disable/uninstall under `PAPER_OS_DATA_DIR/extensions`; `themes.colors` subset → Monaco; language ids only. Extension JS is not executed. TextMate, commands, webview, debug are planned or unsupported. Not full VS Code plugin compatibility. `npm run desktop-vsix-smoke` |
+| Desktop chrome / DPI / keyboard budgets | Workbench (desktop) | **Partial** | Slice 6: CSS-pixel viewport matrix 1920/1440/1280/1024/800 and CDP `deviceScaleFactor` 1.25/1.5 (`npm run desktop-ui-smoke`, ADR-0006). Keyboard: Ctrl+P / Ctrl+Shift+P / Ctrl+S / Ctrl+Shift+B / Ctrl+Alt+M / Ctrl+Alt+P. Caps: log 200, chat 80, terminal 800, editor open 2MB matching `FILE_TOO_LARGE`. 800px and emulated DPI are not `PaperOS.exe` / physical display. Native min 1100×720. Not virtualized 60fps. |
 
 ## Build, Diagnostics, and Artifacts
 

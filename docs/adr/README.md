@@ -19,6 +19,7 @@ ADR 记录会长期影响边界、兼容、安全或运维的决策。它回答�
 | [0003](0003-transactional-apply-blocks.md) | Accepted | Apply Blocks 兼容路径的冲突与回滚语义 |
 | [0004](0004-release-integrity-layers.md) | Accepted | Ed25519 manifest、hash 和平台代码签名分层 |
 | [0005](0005-transitional-desktop-shell.md) | Accepted (Transitional) | WinForms 当前入口、Tauri scaffold 和 Node runtime 边界 |
+| [0006](0006-desktop-chrome-evidence.md) | Accepted | 桌面视口/DPI 证据是 CSS 像素 + CDP 模拟，不是 PaperOS.exe 真机窗口 |
 
 ## 新增 ADR 的触发条件
 

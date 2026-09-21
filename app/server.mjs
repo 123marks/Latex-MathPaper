@@ -2814,7 +2814,12 @@ async function api(req, res, path) {
     }
     const stat = statSync(filePath);
     if (stat.size > 2_097_152) {
-      return sendJson(res, 413, { error: "file too large (>2MB)" });
+      return sendJson(res, 413, {
+        error: "file too large (>2MB)",
+        code: "FILE_TOO_LARGE",
+        size: stat.size,
+        max: 2_097_152,
+      });
     }
     const content = readFileSync(filePath, "utf-8");
     return sendJson(res, 200, { workspace: workspaceId, path: relPath, content, size: stat.size, mtime: stat.mtimeMs });
