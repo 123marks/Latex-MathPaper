@@ -1,7 +1,7 @@
 # 桌面 IDE 增量开发计划：双模式、Render/LaTeX、AI Harness
 
 Date: 2026-09-18
-Status: Active（阶段 0 完成；切片 S1 已提交 `fb8fac2`；切片 S2a 已提交 `161d052`；切片 S2b 完成并实测，证据见 `../STATUS.md` 2026-09-21 节；下一步 S3）
+Status: Active（阶段 0 完成；切片 S1 已提交 `fb8fac2`；切片 S2a 已提交 `161d052`；切片 S2b 已提交 `759648b`；切片 S3 完成并实测，证据见 `../STATUS.md` 2026-09-21 节；下一步 S4）
 Baseline: `main` / `8c62e93` + 上一轮遗留的未提交 `apps/desktop/src/ide.jsx`、`ide.css`、`docs/README.md` 修改
 
 本计划是 `PRODUCT_SPEC_CURSOR.md` 与 `CURSOR_DEVELOPMENT_BRIEF.md` 的执行分解。它先回答“现在真实是什么”，再给出每个切片的验收。计划本身不证明任何能力已完成；完成事实只写进 `STATUS.md`。
@@ -135,6 +135,14 @@ ide.jsx (IDE 组件)
 - 全量 `node --test` 308/309：`git-status-api` 满载 flake（`HEAD` vs `paper-draft`），单独重跑通过。
 - 计划外但必要：`.mjs` 曾被当成 `application/octet-stream`；`connect-src` 缺 `blob:` 导致 fetch(blob) 失败；pdf.js worker 无法拉取 blob URL，改为主线程读字节。
 - 连续第二次编译曾在无头 Chrome 里把整页卸掉；smoke 改为在第一次成功 PDF 上写入 `.synctex` 验收正向命中，而不是连编两次。
+
+### S3 执行记录（2026-09-21）
+
+- 契约：`tests/desktop-ai-harness.test.mjs` 5/5；Plan 来自 `buildExecutionPlan({phase,runtime})`，源码不再有关键字启发式或 Apply 的 `confirm()`。
+- 真实启动：`npm run desktop-ai-smoke` OK。Context chips 为 Workspace / Pack / File / Selection / Errors；SSE runtime=`mock-local`；unified Diff 含 `Revised note`；`window.confirm` 计数 0；Apply 后文件含 `Revised note`，trace 为 applied。
+- 回归：`npm run desktop-compile-smoke` OK；`npm run ide:build` 4.6 MB。
+- 全量 `node --test` 313/314：`git-status-api` 满载 flake（`HEAD` vs `paper-draft`），单独重跑 1/1。
+- 计划外但必要：审查区曾被 Plan 长文挤出可视区，无头点击 Apply 落空；改为单行 Plan、提案滚入视野、Apply/Diff 必须在视口内。
 
 ## 3. 不做与假设
 

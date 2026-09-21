@@ -3,14 +3,14 @@ title: Paper OS current status
 status: active
 as_of: 2026-09-21
 branch: main
-baseline_commit: 161d052
+baseline_commit: 759648b
 worktree: dirty
 product_version: 0.7.0
 ---
 
 # Paper OS 当前状态
 
-本页最新一节是 2026-09-21 的桌面 IDE 切片 2b（PDF 工具条 / SyncTeX / KaTeX Live 草稿）实测快照；HEAD 为 `161d052`（切片 2a 编译生命周期已提交），工作区 **dirty**（切片 2b 尚未提交）。更早的 2026-09-18 / 2026-08 章节是历史快照。它仍不是发布证明：没有 PR、tag 或签名安装包。任何接手者都应先运行本页的基线命令，再相信能力声明。
+本页最新一节是 2026-09-21 的桌面 IDE 切片 3（可见 AI Harness）实测快照；HEAD 为 `759648b`（切片 2b PDF / SyncTeX / Live 草稿已提交），工作区 **dirty**（切片 3 尚未提交）。更早的 2026-09-18 / 2026-08 章节是历史快照。它仍不是发布证明：没有 PR、tag 或签名安装包。任何接手者都应先运行本页的基线命令，再相信能力声明。
 
 ## 状态口径
 
@@ -26,9 +26,9 @@ product_version: 0.7.0
 | 项目 | 当前事实 |
 | --- | --- |
 | 产品方向 | 本地优先、Workspace Kernel + Packs 的通用文档 IDE |
-| 当前分支/提交 | `main` / `161d052`（切片 1 + 2a 已提交；其上是 Wave 1–3 与 Windows 自包含打包管线，这些能力仍主要落在 Web Workbench 与服务端） |
-| 工作区 | dirty：切片 2b PDF/SyncTeX/KaTeX（`apps/desktop/src/{pdf-preview,live-math-drafts,math-drafts,synctex-client}.*`、`ide.jsx`/`ide.css`/`ide.html`、`build-ide.mjs`、`app/server.mjs` MIME+CSP、`app/desktop-render-smoke.mjs`），以及上一轮遗留的 `findings.md`/`progress.md`/`task_plan.md`（未删除，由用户决定） |
-| 两个前端 | 桌面 IDE（`PaperOS.exe` → `/ide/`，源码 `apps/desktop/src/ide.jsx`）与 Web Workbench（`/app/workbench`，源码 `web/src/pages/app/Workbench.jsx`）共用 `app/server.mjs`；桌面已接编译生命周期、pdf.js 预览、SyncTeX 与 Live 公式草稿；终端/git 状态栏/可见 AI Harness 仍未接入桌面 |
+| 当前分支/提交 | `main` / `759648b`（切片 1 + 2a + 2b 已提交；其上是 Wave 1–3 与 Windows 自包含打包管线） |
+| 工作区 | dirty：切片 3 可见 AI Harness（`apps/desktop/src/{ai-harness,ai-harness-panel}.*`、`ide.jsx`/`ide.css`、`build-ide.mjs` alias `ai-execution`、`app/desktop-ai-harness-smoke.mjs`、`tests/desktop-ai-harness.test.mjs`），以及上一轮遗留的 `findings.md`/`progress.md`/`task_plan.md`（未删除，由用户决定） |
+| 两个前端 | 桌面 IDE（`PaperOS.exe` → `/ide/`，源码 `apps/desktop/src/ide.jsx`）与 Web Workbench（`/app/workbench`，源码 `web/src/pages/app/Workbench.jsx`）共用 `app/server.mjs`；桌面已接编译生命周期、pdf.js 预览、SyncTeX、Live 公式草稿与可见 AI Harness；终端/git 状态栏仍未接入桌面 |
 | 根版本 | `package.json` 为 `0.7.0` |
 | 桌面版本 | 根、Tauri config、desktop package、Cargo 均为 `0.7.0`（2026-08-31 随 0.7.0 发布统一 bump），Web UI 版本号由 Vite `define` 注入单一来源 |
 | 当前 Windows 入口 | 根目录 `PaperOS.exe`，WinForms + WebView2 + 本地 Node 服务 |
@@ -47,12 +47,12 @@ product_version: 0.7.0
 | 每 tab 独立 Buffer / Save All | Implemented | `text-buffer.mjs`、buffer tests | 尚无通用 versioned `TextDocument` 服务 |
 | stale tree/open response guard | Implemented | `treeRequestRef`、`openRequestRef` | 仅覆盖当前 desktop 请求路径 |
 | local auth bootstrap | Implemented | `/api/auth/bootstrap`、desktop boot、auth test | 本地信任模型仍需正式威胁模型和桌面 CSP 收口 |
-| Apply blocks 冲突与回滚 | Partial | baseline mtime、409 `APPLY_CONFLICT`、500 `APPLY_ROLLBACK`、transaction test、Web AI Preview/Reject/Apply | 尚无持久 transaction ID、通用内容版本、用户级 undo/hunk UI |
+| Apply blocks 冲突与回滚 | Partial | baseline mtime、409 `APPLY_CONFLICT`、500 `APPLY_ROLLBACK`、transaction test、Web 与桌面 Preview/Reject/Apply | 尚无持久 transaction ID、通用内容版本、用户级 undo/hunk UI |
 | LaTeX compile/PDF preview | Partial | compile routes、Tectonic/latexmk、IDE preview、`--synctex` + 编译快照（服务端）；切片 2a：超时/取消/COMPILE_BUSY、done 只在新鲜产物上带 `pdf`；切片 2b：桌面 pdf.js 页码/缩放 + SyncTeX + KaTeX Live 草稿 | 验收用假引擎夹具，不是本机 Tectonic 排版证明；BuildProfile/BuildJob/ArtifactSet 未完成 |
 | 桌面 IDE Agent/Render 双模式（切片 1） | Implemented（布局重心，非权限墙） | `apps/desktop/src/ide.jsx` 顶栏 `role="group"` 分段控制 + 状态栏/Assistant 模式标签 + 命令面板两条命令；`localStorage["paperos.workMode"]`；`RenderStage` 诚实空状态；`tests/desktop-work-mode.test.mjs` 9/9；`npm run desktop-mode-visual-smoke` | 编辑器在两模式下都挂载；1240px 以下 Render 折叠为两栏；实时公式草稿、PDF 工具条、SyncTeX 接入属切片 2b；标签页不跨刷新持久化 |
 | 桌面编译生命周期（切片 2a） | Implemented | `app/lib/compile-jobs.mjs`（超时 180s、取消、每 Workspace 一任务、输出封顶、`classifyArtifact`）；`POST /api/editor/compile-live` 202 + `compile-cancel` + `compile-status`；桌面 `compile-lifecycle.mjs` 状态机 idle→running→succeeded/failed/timeout/cancelled/no-engine；失败保留上次 PDF 并标过期；`tests/compile-jobs.test.mjs` 10/10、`tests/compile-live-api.test.mjs` 2/2、`tests/desktop-compile-lifecycle.test.mjs` 6/6；`npm run desktop-compile-smoke` | 验收用假引擎夹具（`tests/fixtures/fake-latexmk.mjs`），不是本机 Tectonic 排版证明 |
 | 桌面 PDF / SyncTeX / Live 草稿（切片 2b） | Implemented | 桌面 `DesktopPdfPreview`（pdf.js 页码/缩放/版本/过期）；`GET /api/editor/synctex` 正反向，缺失标 `估算` + `SYNCTEX_MISSING`；Render 无 PDF 时 `LiveMathDrafts`（KaTeX esbuild alias，逐公式错误）；`npm run desktop-render-smoke` | 公式草稿不是光标浮层；章节估算在无 SyncTeX 时仍可用且标明「估算」；pdf.js 在主线程读 blob 字节（worker 无法 fetch `blob:`） |
-| AI provider 与 Web AI 审查流 | Partial | OpenAI-compatible provider path、账户密钥加密、`/api/chat` runtime metadata、真实 `ActionTimeline`、BEGIN_FILE preview/diff、显式 Reject/Apply | provider 失败会回退并明确标识 `mock-local`；仍不是本机模型推理，也没有通用 undo/hunk 编辑器 |
+| AI provider 与审查流 | Partial | OpenAI-compatible provider path、账户密钥加密、`/api/chat` runtime metadata、Web `ActionTimeline`、桌面切片 3 `AiHarnessPanel`（真实阶段 Plan、Diff、Apply/Reject、`paperos.aiTrace`） | provider 失败会回退并明确标识 `mock-local`；仍不是本机模型推理，也没有通用 undo/hunk 编辑器 |
 | Team/community/admin API | Partial | server routes 与部分测试 | 不是生产级实时协作、队列或多代理编排 |
 | Ed25519 发布清单 | Implemented | `app/lib/signer.mjs`、release endpoints、signer/admin tests | 不替代 Authenticode/notarization；launcher 尚未验证更新链 |
 | 企业级视觉重设计 | Active implementation | docs/redesign、tokens/motion/Horizon、五个 motif、十四个 UI primitives、两端统一 Icon registry、T1.1–T1.5、T3.3 Web AI 面板、T3.4 放大镜通用化、T3.5 团队/市场/社区/总览；Home/公共页/认证页/Workbench 的响应式、键盘、reduced-motion 和浏览器证据已完成 | `HeroIdeMock` 仍是临时界面示意；T3.6 Workbench 实拍、实体 GPU、移动真机、像素基准、桌面壳与 P0-P6 整体仍未完成 |
@@ -397,11 +397,41 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 - 没有用本机 Tectonic 排版真实论文；夹具只证明预览、定位与草稿，不证明排版质量。
 - Live 草稿是公式列表，不是 Web Workbench 那种光标浮层。
 - 桌面 PDF 没有「问 AI」和区域标注（仍属 Web Workbench）。
-- 可见 AI Harness（切片 3）、桌面终端/Git（切片 4）、`.vsix`（切片 5）未做。
+- 可见 AI Harness 已在切片 3 落地（见下一节）。桌面终端/Git（切片 4）、`.vsix`（切片 5）未做。
+
+## 2026-09-21 切片 3 可见 AI Harness 证据（当前）
+
+基线：`main` / `759648b` + dirty worktree；Windows 10.0.26200；Node v24.12.0。计划见 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md) §1 S3。
+
+### 做了什么
+
+- 桌面 Assistant 去掉关键字启发式 `buildExecutionPlan(userText)` 和 Apply 的 `confirm()`。Plan 由 `web/src/lib/ai-execution.js`（esbuild alias `ai-execution`）按 `aiPhase` / SSE `meta.runtime` 推导。
+- Context chips：Workspace、Pack、文件、选区、错误。Provider 标签与 `mock-local` / provider runtime 分开显示。
+- 流结束后走 `apply-blocks` 预览，统一 Diff + Apply / Reject / Refresh / Cancel。`APPLY_CONFLICT` / `APPLY_ROLLBACK` 显式状态。运行记录写入 `localStorage["paperos.aiTrace"]`（最多 40 条，新的在前）。
+- 工作区切换、删除文件、脏标签关闭的 `confirm()` 保留。`apply-blocks` 事务未改。
+
+### 验证
+
+| 命令 | 结果 | 证明范围 |
+| --- | --- | --- |
+| `node --test tests/desktop-ai-harness.test.mjs tests/desktop-work-mode.test.mjs` | 14/14 pass | 真实阶段机、无关键字启发式、Apply 无 `confirm()`、双模式契约未回归 |
+| `node --test` | 313/314 pass；`tests/git-status-api.test.mjs` 满载读到 `HEAD` 而非 `paper-draft`；单独重跑 1/1 pass（26s） | 全 Node suite；该失败与 S3 无关 |
+| `npm run ide:build` | exit 0；IDE bundle 4.6 MB | `ai-execution` alias 打入桌面 bundle |
+| `npm run desktop-ai-smoke` | OK | chips 为 Workspace/Pack/File；runtime=`mock-local`；Diff 含 Revised note；confirm=0；Apply 后文件含 Revised note；Apply/Diff 在视口内 |
+| `npm run desktop-compile-smoke` | OK | 2a 回归：成功最新 / 失败过期且 PDF 仍在 |
+| `git diff --check` | exit 0 | 仅有既有 LF/CRLF 警告 |
+
+证据文件：`dist/visual-qa/desktop-ai-ready.png`（121548 B）、`desktop-ai-applied.png`（138270 B）、`desktop-ai-behavior.json`。
+
+### 未做与边界
+
+- 没有配置真实 provider；smoke 验收的是诚实的 `mock-local` 兜底，不是模型推理。
+- 不是 hunk 级编辑器，也没有持久 transaction / undo。
+- 桌面终端/Git（切片 4）、`.vsix`（切片 5）未做。
 
 ## 已知风险
 
-0. **切片 2b 未提交**：pdf-preview、Live 草稿、SyncTeX 客户端、server MIME/CSP、render smoke 仍在 dirty worktree。
+0. **切片 3 未提交**：`ai-harness` 模块、桌面接线、`desktop-ai-smoke`、文档仍在 dirty worktree。
 1. **尚无 PR / tag / 签名发布**：重设计、文档、09-integrations Epic 1–4b、文件夹管理与 0.6.0 版本对齐均已在 `1546dab` 之上分组提交，dirty worktree 风险已消除；仍缺少 PR 审阅、git tag 和签名安装包，结果尚未绑定 tag/release。
 2. **发布版本治理**：根、Tauri config、desktop package、Cargo 已统一 bump 为 `0.6.0`（2026-08-12），Web UI 版本号改由 Vite `define` 从根 `package.json` 注入；打 tag 仍待执行。
 3. **发布声明超前**：Windows ZIP 缺少 Node 生产依赖和 self-contained .NET runtime；macOS/Linux 清单与实际产物不一致；原生代码签名未完成。
@@ -417,7 +447,7 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 
 | 优先级 | 工作 | 完成判据 |
 | --- | --- | --- |
-| P0 | 提交切片 2b 并进入切片 3（可见 AI Harness：真实 Context/Plan/Tools/Diff） | 见 `plans/2026-09-18-desktop-ide-dual-mode-plan.md` §1 |
+| P0 | 提交切片 3 并进入切片 4（桌面终端 + git 状态栏） | 见 `plans/2026-09-18-desktop-ide-dual-mode-plan.md` §1 |
 | P0 | 形成可审阅提交和完整验证基线 | dirty 变更分组审阅；全测试/构建结果绑定 SHA |
 | P0 | 修正版本和发布资产一致性 | 单一版本源；清单不声明缺失资产；签名边界明确 |
 | P1 | 完成 T3.6 真实 Workbench 产品截图 | 以真实 AI 面板和 Workspace/file 状态拍摄 web/public/hero-ide.png，并通过桌面/移动截图审查 |

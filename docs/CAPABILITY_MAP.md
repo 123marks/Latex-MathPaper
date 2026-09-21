@@ -72,9 +72,10 @@ evidence is tracked separately in `STATUS.md` and `TRACEABILITY.md`.
 | Capability | Owner | Status | Current evidence / remaining work |
 | --- | --- | --- | --- |
 | User-owned compatible model provider | AI service | **Partial** | Local configuration and runtime path work; provider failure can fall back to `mock-local` and must be surfaced explicitly |
-| Assistant with Workspace/file context | AI service + Workbench | **Partial** | File and semantic chips exist; context budgeting and provider-neutral contracts need work |
+| Assistant with Workspace/file context | AI service + Workbench | **Partial** | Desktop slice 3 and Web Workbench both show Workspace/Pack/file/selection/error chips; context budgeting and provider-neutral contracts need work |
+| Visible AI harness (desktop) | Workbench (desktop) | **Partial** | Slice 3: real phase Plan via `ai-execution`, SSE runtime label, unified Diff, Apply/Reject/Refresh/Cancel without `confirm()`, `paperos.aiTrace`. Not a hunk editor or durable undo |
 | Selection-based inline action | Workbench | **Implemented** | Current `Ctrl+K` selection flow |
-| Transactional file-block Apply | AI service | **Partial** | Preview baselines, mtime conflicts and in-process rollback exist; stable versions, hunk UI, durable journal and undo remain |
+| Transactional file-block Apply | AI service | **Partial** | Preview baselines, mtime conflicts and in-process rollback exist; desktop and Web review UIs share `apply-blocks`; stable versions, hunk UI, durable journal and undo remain |
 | General `EditTransaction` for all multi-file writes | Kernel/AI service | **Contract** | Requires Resource versions, transaction identity, hunk decisions, crash recovery, and undo |
 | Apply/Reject hunk diff | Workbench | **Planned** | Must consume EditTransaction rather than a parallel AI-only path |
 | MCP connection/permission management | Tool runtime | **Planned** | Side-panel concepts are not a production permission boundary |

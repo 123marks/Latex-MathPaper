@@ -45,6 +45,7 @@ await build({
     "monaco-editor": join(root, "web", "node_modules", "monaco-editor"),
     "katex": join(root, "web", "node_modules", "katex"),
     "pdfjs-dist": join(root, "web", "node_modules", "pdfjs-dist"),
+    "ai-execution": join(root, "web", "src", "lib", "ai-execution.js"),
   },
   // Minify by default (pass --dev to keep it readable); ship without source
   // maps unless explicitly developing, so the distributed IDE bundle is not

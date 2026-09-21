@@ -29,6 +29,24 @@ import {
 import { describeSynctexError, preferSynctexHit, synctexQuery } from "./synctex-client.mjs";
 import DesktopPdfPreview from "./pdf-preview.jsx";
 import LiveMathDrafts from "./live-math-drafts.jsx";
+import AiHarnessPanel from "./ai-harness-panel.jsx";
+import {
+  annotatePlanDurations,
+  appendHarnessTrace,
+  buildHarnessContext,
+  describeChatRuntime,
+  loadHarnessTrace,
+  saveHarnessTrace,
+  stampDuration,
+} from "./ai-harness.mjs";
+import {
+  buildApplyRequest,
+  buildExecutionPlan,
+  buildReplacementDiff,
+  normalizeProviderState,
+  parseFileBlocks,
+  parseSSEBuffer,
+} from "ai-execution";
 
 // Bundle monaco locally (WebView2 must not depend on CDN). Theme is defined
 // in setupLatex beforeMount so we never paint dark chrome with light "vs" text.
@@ -351,16 +369,6 @@ function parseProblems(logLines) {
     problems.push({ file, line: ln, text, severity });
   }
   return problems.slice(0, 80);
-}
-
-function parseFileBlocks(text) {
-  const blocks = [];
-  const re = /BEGIN_FILE:\s*([^\r\n]+)\r?\n([\s\S]*?)END_FILE/g;
-  let m;
-  while ((m = re.exec(String(text || ""))) !== null) {
-    blocks.push({ path: m[1].trim().replace(/\\/g, "/"), content: m[2].replace(/\n$/, "") });
-  }
-  return blocks;
 }
 
 function parseSelectionBlock(text) {
@@ -790,16 +798,6 @@ const DEFAULT_SKILLS = [
   { id: "math-review", name: "Math Review", desc: "推导与证明审阅" },
 ];
 
-function buildExecutionPlan(userText) {
-  const steps = [
-    { id: 1, text: "读取当前工作区与打开文件上下文", status: "done" },
-    { id: 2, text: /引用|cite|文献|bib/i.test(userText) ? "检索参考文献与引用上下文" : "扫描章节结构与标签", status: "done" },
-    { id: 3, text: /图|figure|plot/i.test(userText) ? "检查插图资源与引用一致性" : "起草修改建议与 diff", status: "running" },
-    { id: 4, text: "等待你确认后 apply 到工作区", status: "pending" },
-  ];
-  return steps;
-}
-
 // ───────────── Compile target selection ─────────────
 // Deterministic entry choice shared by the compile command and the Render
 // stage so the UI always names the file that would actually be compiled.
@@ -1014,7 +1012,12 @@ function IDE() {
   const [recentProjects, setRecentProjects] = useState([]);
   const [expanded, setExpanded] = useState(() => new Set(["paper", "sections", "figures", "src", "docs", "notes"]));
   const [bottomTab, setBottomTab] = useState("output");
-  const [aiPlan, setAiPlan] = useState(null);
+  const [aiPhase, setAiPhase] = useState("idle");
+  const [chatRuntime, setChatRuntime] = useState(null);
+  const [proposal, setProposal] = useState(null);
+  const [selectionText, setSelectionText] = useState("");
+  const [harnessTrace, setHarnessTrace] = useState([]);
+  const [harnessTimings, setHarnessTimings] = useState({});
   const [provider, setProvider] = useState(null); // real gateway config (GET /api/provider)
   const [aiTool, setAiTool] = useState("files");
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
@@ -1040,6 +1043,9 @@ function IDE() {
   const editorRef = useRef(null);
   const splitRef = useRef(null);
   const syncAnchorsRef = useRef([]);
+  const chatAbortRef = useRef(null);
+  const chatRuntimeRef = useRef(null);
+  const harnessClockRef = useRef({ request: 0, preview: 0, apply: 0 });
   const compiledTexRef = useRef(null);
   // Monotonic request tokens: any in-flight openFile()/loadTree() response
   // whose token no longer matches is stale (workspace switched, another file
@@ -1116,6 +1122,13 @@ function IDE() {
     setPdfVer(0);
     setShowPdf(true);
     setCompileJob(createCompileState());
+    setAiPhase("idle");
+    setChatRuntime(null);
+    setProposal(null);
+    setSelectionText("");
+    setHarnessTimings({});
+    chatRuntimeRef.current = null;
+    chatAbortRef.current?.abort();
   }
 
   function switchWorkspace(nextId, options = {}) {
@@ -1322,6 +1335,7 @@ function IDE() {
     try { setEngine(await api.get("/api/engine/status")); } catch (e) { /* */ }
   }
   useEffect(() => { if (user) loadEngine(); }, [user]); // eslint-disable-line
+  useEffect(() => { setHarnessTrace(loadHarnessTrace()); }, []);
 
   // Real AI gateway status — drives the model chip in the AI panel.
   async function loadProviderInfo() {
@@ -2085,38 +2099,139 @@ function IDE() {
     }
   }
 
-  async function applyBlocksFromText(text, key) {
-    if (!text || applyBusy) return;
+  function recordHarness(phase, extra = {}) {
+    const durationMs = extra.durationMs ?? stampDuration(harnessClockRef.current[extra.clock]);
+    const entry = {
+      at: new Date().toISOString(),
+      workspace: contest,
+      runtime: extra.runtime || chatRuntimeRef.current?.kind || chatRuntime?.kind || "unknown",
+      phase,
+      blockCount: extra.blockCount ?? proposal?.blocks?.length ?? 0,
+      durationMs,
+    };
+    setHarnessTrace((prev) => {
+      const next = appendHarnessTrace(prev, entry);
+      saveHarnessTrace(next);
+      return next;
+    });
+    if (extra.clock && durationMs != null) {
+      setHarnessTimings((prev) => ({ ...prev, [extra.clock]: durationMs }));
+    }
+  }
+
+  async function previewFileProposal(text) {
+    const parsed = parseFileBlocks(text);
+    if (!parsed.length) {
+      setProposal(null);
+      setAiPhase("complete");
+      recordHarness("complete", { blockCount: 0, clock: "request" });
+      return;
+    }
+    setAiPhase("previewing");
+    harnessClockRef.current.preview = Date.now();
     try {
-      setApplyBusy(key || "apply");
-      const preview = await api.post("/api/editor/apply-blocks", { workspace: contest, text, apply: false });
-      const summary = (preview.blocks || [])
-        .map((b) => `${b.exists ? "改写" : "新建"} ${b.path}`)
-        .join("\n");
-      if (!confirm(`将写入 ${preview.blocks?.length || 0} 个文件:\n${summary}\n\n确认 Apply？`)) return;
-      // EditTransaction: send back the previewed mtimes; the server aborts
-      // with 409 if any target changed between preview and apply.
-      const baseline = (preview.blocks || []).map((b) => ({ path: b.path, mtime: b.mtime }));
-      const done = await api.post("/api/editor/apply-blocks", { workspace: contest, text, apply: true, baseline });
-      setLog((l) => [`[apply] wrote ${(done.written || []).join(", ")}`, ...l].slice(0, 200));
+      const preview = await api.post("/api/editor/apply-blocks", buildApplyRequest({ workspace: contest, text }));
+      const blocks = await Promise.all((preview.blocks || []).map(async (meta) => {
+        const proposed = parsed.find((block) => block.path === meta.path);
+        let previous = "";
+        if (meta.exists) {
+          try {
+            const current = await api.get(`/api/editor/file?workspace=${encodeURIComponent(contest)}&path=${encodeURIComponent(meta.path)}`);
+            previous = current.content || "";
+          } catch { previous = ""; }
+        }
+        return {
+          ...meta,
+          content: proposed?.content || "",
+          diff: buildReplacementDiff(previous, proposed?.content || ""),
+        };
+      }));
+      setProposal({
+        state: "ready",
+        text,
+        baseline: (preview.blocks || []).map(({ path, mtime }) => ({ path, mtime })),
+        blocks,
+      });
+      setAiPhase("ready");
+      recordHarness("ready", { blockCount: blocks.length, clock: "preview" });
+    } catch (error) {
+      setProposal({
+        state: "preview-error",
+        text,
+        error: error.message,
+        blocks: parsed.map((block) => ({
+          ...block,
+          exists: false,
+          diff: buildReplacementDiff("", block.content),
+        })),
+      });
+      setAiPhase("failed");
+      recordHarness("failed", { blockCount: parsed.length, clock: "preview" });
+    }
+  }
+
+  async function applyProposal() {
+    if (!proposal || proposal.state !== "ready" || applyBusy) return;
+    setApplyBusy("apply");
+    setAiPhase("applying");
+    setProposal((current) => ({ ...current, state: "applying", error: "" }));
+    harnessClockRef.current.apply = Date.now();
+    try {
+      const result = await api.post("/api/editor/apply-blocks", buildApplyRequest({
+        workspace: contest,
+        text: proposal.text,
+        baseline: proposal.baseline,
+        apply: true,
+      }));
+      setProposal((current) => ({ ...current, state: "applied", result }));
+      setAiPhase("applied");
+      recordHarness("applied", { blockCount: proposal.blocks?.length || 0, clock: "apply" });
+      setLog((l) => [`[apply] wrote ${(result.written || []).join(", ")}`, ...l].slice(0, 200));
       await loadTree();
-      if (active && (done.written || []).includes(active.path)) {
+      if (active && (result.written || []).includes(active.path)) {
         await openFile(active, { reload: true });
       }
-    } catch (e) {
-      if (e.code === "APPLY_CONFLICT") {
-        setLog((l) => [`[apply] ✗ 冲突: ${(e.payload?.conflicts || []).join(", ")}`, ...l].slice(0, 200));
+    } catch (error) {
+      if (error.code === "APPLY_CONFLICT") {
+        setProposal((current) => ({
+          ...current,
+          state: "conflict",
+          error: error.message,
+          conflicts: error.payload?.conflicts || [],
+        }));
+        recordHarness("conflict", { clock: "apply" });
         flash("文件在预览后被修改，Apply 已中止；请重新预览");
-      } else if (e.code === "APPLY_ROLLBACK") {
-        setLog((l) => [`[apply] ✗ ${e.message}`, ...l].slice(0, 200));
+      } else if (error.code === "APPLY_ROLLBACK") {
+        setProposal((current) => ({ ...current, state: "rollback", error: error.message }));
+        recordHarness("rollback", { clock: "apply" });
         flash("写入失败，所有更改已回滚");
       } else {
-        setLog((l) => [`[apply] ${e.message}`, ...l].slice(0, 200));
-        alert(e.message);
+        setProposal((current) => ({ ...current, state: "preview-error", error: error.message }));
+        recordHarness("failed", { clock: "apply" });
       }
+      setAiPhase("ready");
     } finally {
       setApplyBusy("");
     }
+  }
+
+  function rejectProposal() {
+    if (!proposal || applyBusy) return;
+    setProposal((current) => ({ ...current, state: "rejected", error: "", conflicts: [] }));
+    setAiPhase("rejected");
+    recordHarness("rejected");
+  }
+
+  async function refreshProposalPreview() {
+    if (!proposal?.text || applyBusy) return;
+    setApplyBusy("preview");
+    await previewFileProposal(proposal.text);
+    setApplyBusy("");
+  }
+
+  function cancelChat() {
+    chatAbortRef.current?.abort();
+    setAiPhase((phase) => (phase === "requesting" || phase === "streaming" ? "idle" : phase));
   }
 
   // "Save All": persist every dirty text buffer with its own snapshot.
@@ -2254,20 +2369,61 @@ function IDE() {
 
 
   async function sendChat() {
-    if (!msg.trim() || busy) return;
+    const unresolvedProposal = ["ready", "conflict", "rollback"].includes(proposal?.state);
+    if (!msg.trim() || busy || applyBusy || unresolvedProposal) return;
     const userText = msg.trim();
+    const controller = new AbortController();
+    chatAbortRef.current?.abort();
+    chatAbortRef.current = controller;
+    chatRuntimeRef.current = null;
+    setChatRuntime(null);
+    setProposal(null);
+    setHarnessTimings({});
+    setAiPhase("requesting");
+    harnessClockRef.current.request = Date.now();
     setChat((c) => [...c, { who: "你", text: userText, streaming: false }]);
     setMsg("");
     setBusy(true);
-    setAiPlan(buildExecutionPlan(userText));
     setChat((c) => [...c, { who: "Paper OS Assistant", text: "", streaming: true }]);
+
+    let acc = "";
+    let buffer = "";
+    const updateLastAssistant = (updates) => {
+      setChat((c) => {
+        const out = c.slice();
+        const last = out[out.length - 1];
+        if (last?.streaming) out[out.length - 1] = { ...last, ...updates };
+        return out;
+      });
+    };
+    const consume = (events) => {
+      for (const event of events) {
+        if (event.error) {
+          throw new Error(event.error.message || event.error.code || "Provider stream failed");
+        }
+        if (event.meta) {
+          const runtime = describeChatRuntime(event.meta);
+          chatRuntimeRef.current = runtime;
+          setChatRuntime(runtime);
+          setAiPhase("streaming");
+        }
+        if (event.delta) {
+          acc += event.delta;
+          updateLastAssistant({ text: acc });
+        }
+        if (event.done) updateLastAssistant({ streaming: false });
+      }
+    };
+
     try {
       esRef.current?.close();
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
+        signal: controller.signal,
         body: JSON.stringify({
+          workspace: contest,
           messages: [
             ...chat.filter((c) => !c.streaming).map((c) => ({
               role: c.who === "你" ? "user" : "assistant",
@@ -2285,47 +2441,34 @@ function IDE() {
       if (!res.ok || !res.body) throw new Error("chat 失败");
       const reader = res.body.getReader();
       const dec = new TextDecoder();
-      let acc = "";
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-        const chunk = dec.decode(value, { stream: true });
-        for (const line of chunk.split("\n")) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (!data || data === "[DONE]") continue;
-          try {
-            const obj = JSON.parse(data);
-            if (obj.delta) {
-              acc += obj.delta;
-              setChat((c) => {
-                const out = c.slice();
-                const last = out[out.length - 1];
-                if (last && last.streaming) out[out.length - 1] = { ...last, text: acc };
-                return out;
-              });
-            } else if (obj.done) {
-              setChat((c) => {
-                const out = c.slice();
-                const last = out[out.length - 1];
-                if (last && last.streaming) out[out.length - 1] = { ...last, streaming: false };
-                return out;
-              });
-              setAiPlan((plan) => (plan || []).map((s) => ({ ...s, status: "done" })));
-            }
-          } catch { /* */ }
-        }
+        const parsed = parseSSEBuffer(buffer + dec.decode(value, { stream: true }));
+        buffer = parsed.rest;
+        consume(parsed.events);
       }
-      setAiPlan((plan) => (plan || []).map((s) => ({ ...s, status: s.status === "pending" ? "done" : "done" })));
-    } catch (e) {
-      setChat((c) => {
-        const out = c.slice();
-        const last = out[out.length - 1];
-        if (last && last.streaming) out[out.length - 1] = { ...last, text: `⚠ ${e.message}`, streaming: false };
-        return out;
+      const tail = parseSSEBuffer(buffer + dec.decode());
+      consume(tail.events);
+      updateLastAssistant({ text: acc, streaming: false });
+      recordHarness("streaming", {
+        runtime: chatRuntimeRef.current?.kind,
+        clock: "request",
+        blockCount: parseFileBlocks(acc).length,
       });
-      setAiPlan(null);
-    } finally { setBusy(false); }
+      await previewFileProposal(acc);
+    } catch (e) {
+      if (e.name === "AbortError") {
+        updateLastAssistant({ text: acc || "已取消", streaming: false });
+        return;
+      }
+      updateLastAssistant({ text: `⚠ ${e.message}`, streaming: false });
+      setAiPhase("failed");
+      recordHarness("failed", { clock: "request", runtime: chatRuntimeRef.current?.kind });
+    } finally {
+      if (chatAbortRef.current === controller) chatAbortRef.current = null;
+      setBusy(false);
+    }
   }
 
   // Auth handlers
@@ -2399,6 +2542,24 @@ function IDE() {
   const activeIsMedia = Boolean(active && mediaPreview && mediaPreview.path === active.path);
   const showRenderStage = workMode === "render" && !pdfVisible && !activeIsMedia;
   const compileTarget = canCompile ? pickCompileTarget(tree, active) : null;
+  const providerState = normalizeProviderState(provider);
+  const harnessContext = buildHarnessContext({
+    workspaceId: contest,
+    workspaceName: currentWorkspace?.name || currentWorkspace?.id || "",
+    pack: currentWorkspace?.packName || currentWorkspace?.pack || "",
+    path: active?.path || "",
+    selection: selectionText,
+    errorCount,
+  });
+  const aiPlan = aiPhase === "idle"
+    ? []
+    : annotatePlanDurations(buildExecutionPlan({
+        phase: aiPhase,
+        runtime: chatRuntime?.kind || "unknown",
+        activePath: active?.path || "",
+        blockCount: proposal?.blocks?.length || 0,
+      }), harnessTimings);
+  const proposalBlocking = ["ready", "conflict", "rollback"].includes(proposal?.state);
   return (
     <div className="ide-app">
       {/* Title bar — Cursor-style: brand · menu · project · Cmd+K · status */}
@@ -2763,6 +2924,17 @@ function IDE() {
                       setCursorPos({ line: e.position.lineNumber, col: e.position.column });
                       updateSyncFromLine(e.position.lineNumber);
                     });
+                    const syncSelection = () => {
+                      const model = ed.getModel();
+                      const sel = ed.getSelection();
+                      if (!model || !sel || sel.isEmpty()) {
+                        setSelectionText("");
+                        return;
+                      }
+                      setSelectionText(model.getValueInRange(sel));
+                    };
+                    syncSelection();
+                    ed.onDidChangeCursorSelection(syncSelection);
                     ed.addAction({
                       id: "paperos.evidence",
                       label: "Paper OS: Evidence Lookup",
@@ -2923,43 +3095,31 @@ function IDE() {
                 <span className="ctx" title={active ? active.path : ""}>{active ? active.path : "no file"}</span>
               </div>
             </div>
+            <AiHarnessPanel
+              context={harnessContext}
+              providerLabel={providerState.label}
+              runtime={chatRuntime}
+              plan={aiPlan}
+              proposal={proposal}
+              trace={harnessTrace[0] || null}
+              busy={Boolean(applyBusy)}
+              streaming={busy || aiPhase === "requesting" || aiPhase === "streaming"}
+              onApply={applyProposal}
+              onReject={rejectProposal}
+              onRefresh={refreshProposalPreview}
+              onCancel={cancelChat}
+            />
             <div className="ai-stream">
-              {chat.map((m, i) => {
-                const blocks = m.who !== "你" && !m.streaming ? parseFileBlocks(m.text) : [];
-                return (
-                  <div key={i} className={`msg ${m.who === "你" ? "user" : "assistant"}`}>
-                    <div className="who">{m.who}{m.streaming ? " · 正在输入…" : ""}</div>
-                    <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
-                    {blocks.length > 0 && (
-                      <div className="apply-bar">
-                        <span>{blocks.length} 个文件块</span>
-                        <button
-                          disabled={!!applyBusy}
-                          onClick={() => applyBlocksFromText(m.text, `msg-${i}`)}
-                        >
-                          {applyBusy === `msg-${i}` ? "写入中…" : "Apply 到工作区"}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {aiPlan && (
-                <div className="exec-plan">
-                  <div className="exec-plan-title">执行计划</div>
-                  {aiPlan.map((s) => (
-                    <div key={s.id} className={`exec-step ${s.status}`}>
-                      <span className="exec-ico">
-                        {s.status === "done" ? <Icon name="check" size={12} /> : s.status === "running" ? <Icon name="refresh" size={12} /> : <Icon name="circle" size={12} />}
-                      </span>
-                      <span>{s.text}</span>
-                    </div>
-                  ))}
+              {chat.map((m, i) => (
+                <div key={i} className={`msg ${m.who === "你" ? "user" : "assistant"}`}>
+                  <div className="who">{m.who}{m.streaming ? " · 正在输入…" : ""}</div>
+                  <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
                 </div>
-              )}
+              ))}
             </div>
             <form className="ai-input" onSubmit={(e) => { e.preventDefault(); sendChat(); }}>
               <textarea
+                data-testid="ai-input"
                 placeholder="描述你想完成的文档任务…"
                 value={msg}
                 onChange={(e) => setMsg(e.target.value)}
@@ -3013,7 +3173,7 @@ function IDE() {
                     }}
                   >{t.label}</button>
                 ))}
-                <button type="submit" className="send" disabled={!msg.trim() || busy}>
+                <button type="submit" className="send" data-testid="ai-send" disabled={!msg.trim() || busy || Boolean(applyBusy) || proposalBlocking}>
                   {busy ? "…" : <><Icon name="send" size={13} /> 发送</>}
                 </button>
               </div>
