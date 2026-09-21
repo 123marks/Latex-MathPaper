@@ -190,6 +190,13 @@ test("releases manifest lists platforms and reports unavailable downloads", asyn
   for (const asset of manifest.assets) {
     assert.equal(typeof asset.available, "boolean");
     assert.match(asset.url, /^\/api\/download\//);
+    if (asset.available) {
+      assert.ok(asset.size > 0);
+      assert.ok(String(asset.sha256).length >= 64);
+    } else {
+      assert.equal(asset.size, 0);
+      assert.equal(asset.sha256, "");
+    }
   }
   // Windows download: if the packaged artifact exists it streams (200 + a
   // SHA-256 header); otherwise it returns a friendly not-ready 404. Accept

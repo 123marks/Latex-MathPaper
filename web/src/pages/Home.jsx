@@ -139,7 +139,7 @@ const FAQ_ITEMS = [
   {
     id: "platform",
     question: "现在支持哪些桌面平台？",
-    answer: "Windows 当前提供开发预览；macOS 和 Linux 仍在规划。下载页会按真实发布清单显示可用资产。",
+    answer: "Windows 提供未签名的自包含开发预览。macOS / Linux 目前是需要 Node.js 20+ 的便携 tar.gz，不是原生 App。下载页只在本机发布目录有文件时给出下载按钮。",
   },
   {
     id: "packs",
@@ -269,7 +269,7 @@ export default function Home() {
               custom={5}
               {...entranceMotion}
             >
-              Windows 开发预览 · macOS/Linux 规划中
+              Windows 开发预览 · macOS/Linux 便携包（需 Node.js）
               <span className="dot signal" style={{ margin: "0 8px 0 14px" }} />
               文件留在本机
             </motion.div>

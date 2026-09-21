@@ -6,6 +6,7 @@
 
 ### Added
 
+- 发布页诚实：下载按钮只在 `/api/releases` 的 `available:true`（磁盘上有文件）时出现。缺产物显示「尚未打包 / 产物未就绪」，并写明下载接口会返回 `ASSET_NOT_READY`，不再把 GitHub releases 页当成下载入口。`/api/releases` 优先读旁路 `.sha256`，避免整包哈希拖住页面。Home 不再把 macOS/Linux 写成「仍在规划」。契约 `tests/release-assets.test.mjs`、`tests/release-digest.test.mjs`。
 - 桌面 IDE 切片 6 · 视口 / DPI / 键盘 / 性能预算：抽出 `apps/desktop/src/ui-budget.mjs`（日志 200 / 终端 800 / 聊天 80 / 打开 2MB，与服务端 `FILE_TOO_LARGE` 对齐）。超大文件 413 且不进 Monaco。键盘补 Ctrl+Alt+M（切换 Agent/Render）与 Ctrl+Alt+P（切换 PDF）。无头 CDP 采 1920/1440/1280/1024/800 与 `deviceScaleFactor` 1.25/1.5；证据标明 `cdp-css-pixel`，不是 `PaperOS.exe` 真机窗口或物理 DPI（ADR-0006）。原生窗口下限仍是 1100×720。契约 `tests/desktop-ui-budget.test.mjs`；smoke `npm run desktop-ui-smoke`。
 - 桌面 IDE 切片 5 · `.vsix` 兼容层第一层：解包（zip，拒绝越界/符号链接）、`package.json` 校验、安装到数据目录、启用/禁用/卸载/换版本。只映射 `editor.*` 主题色子集到 Monaco，并注册语言 id/扩展名。`main`/`browser`/`activationEvents` 只记录，**不执行扩展 JS**。桌面 Extensions 面板替换装饰性 `DEFAULT_SKILLS`，展示兼容矩阵（supported / planned / unsupported），文案写明不是完整 VS Code 插件兼容。契约 `tests/extensions.test.mjs`、`tests/extensions-api.test.mjs`、`tests/desktop-extensions.test.mjs`；smoke `npm run desktop-vsix-smoke`。
 - 桌面 IDE 切片 4 · 终端与 Git 基础：底部 TERMINAL tab 接既有 `POST /api/editor/terminal`（白名单、argv-only、cwd=工作区根、中止、120s/512KB）；`git reset`/`npm` 等危险命令先 `confirm()`；状态栏接 `GET /api/editor/git-status`，非仓库显示「非 git」，不假装分支。Pack catalog 仍不声明 `terminal` Capability，文案写明不是完整 shell。契约 `tests/desktop-terminal-git.test.mjs`；smoke `npm run desktop-term-smoke`。

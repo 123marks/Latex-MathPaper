@@ -40,6 +40,7 @@ import { forwardLookup, inverseLookup, parseSyncTeX } from "./lib/synctex.mjs";
 import { COMPILE_TIMEOUT_MS, CompileJobError, classifyArtifact, createCompileJobManager, selectEngine, spawnArgsForEngine } from "./lib/compile-jobs.mjs";
 import { COMPATIBILITY_MATRIX, VSIX_HOST } from "./lib/extensions.mjs";
 import { createExtensionRegistry, ExtensionError } from "./lib/extension-registry.mjs";
+import { readReleaseDigest } from "./lib/release-digest.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
@@ -1020,20 +1021,11 @@ function readReleases() {
   const assets = (manifest.assets || []).map((asset) => {
     const rel = String(asset.file || "");
     const absolutePath = rel ? join(root, rel) : "";
-    let available = false;
-    let size = 0;
-    let sha256 = "";
-    let filename = rel ? rel.split("/").pop() : "";
-    try {
-      if (absolutePath && statSync(absolutePath).isFile()) {
-        const data = readFileSync(absolutePath);
-        size = data.length;
-        sha256 = createHash("sha256").update(data).digest("hex");
-        available = true;
-      }
-    } catch {
-      available = false;
-    }
+    const digest = absolutePath ? readReleaseDigest(absolutePath) : { available: false, size: 0, sha256: "" };
+    const available = digest.available;
+    const size = digest.size;
+    const sha256 = digest.sha256;
+    const filename = rel ? rel.split("/").pop() : "";
     return {
       os: asset.os,
       label: asset.label || "",

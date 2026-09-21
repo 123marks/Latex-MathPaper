@@ -3,14 +3,14 @@ title: Paper OS current status
 status: active
 as_of: 2026-09-21
 branch: main
-baseline_commit: d79e455
+baseline_commit: 5b948c3
 worktree: dirty
 product_version: 0.7.0
 ---
 
 # Paper OS 当前状态
 
-本页最新一节是 2026-09-21 的桌面 IDE 切片 6（视口 / DPI / 键盘 / 性能预算）实测快照；HEAD 为 `d79e455`（切片 5 `.vsix` 第一层已提交），工作区 **dirty**（切片 6 尚未提交）。更早的 2026-09-21 / 2026-09-18 / 2026-08 章节是历史快照。它仍不是发布证明：没有 PR、tag 或签名安装包。任何接手者都应先运行本页的基线命令，再相信能力声明。
+本页最新一节是 2026-09-21 的发布页诚实切片（缺产物显示「尚未打包」）实测快照；HEAD 为 `5b948c3`（桌面 IDE 切片 1–6 已提交），工作区 **dirty**（本切片尚未提交）。更早的 2026-09-21 / 2026-09-18 / 2026-08 章节是历史快照。它仍不是发布证明：没有 PR、tag 或签名安装包。T3.6 Hero 实拍仍因无头 Monaco 不合成而保持 open，本切片没有替换 `HeroIdeMock`。任何接手者都应先运行本页的基线命令，再相信能力声明。
 
 ## 状态口径
 
@@ -26,15 +26,15 @@ product_version: 0.7.0
 | 项目 | 当前事实 |
 | --- | --- |
 | 产品方向 | 本地优先、Workspace Kernel + Packs 的通用文档 IDE |
-| 当前分支/提交 | `main` / `d79e455`（切片 1–5 已提交；其上是 Wave 1–3 与 Windows 自包含打包管线） |
-| 工作区 | dirty：切片 6 视口/DPI/键盘/预算（`apps/desktop/src/ui-budget.mjs`、`ide.jsx` 快捷键与超大文件、`app/desktop-ui-perf-smoke.mjs`、`docs/adr/0006-desktop-chrome-evidence.md`），以及上一轮遗留的 `findings.md`/`progress.md`/`task_plan.md`（未删除，由用户决定） |
+| 当前分支/提交 | `main` / `5b948c3`（桌面 IDE 切片 1–6 已提交；其上是 Wave 1–3 与 Windows 自包含打包管线） |
+| 工作区 | dirty：发布页诚实（`web/src/lib/release-assets.js`、`app/lib/release-digest.mjs`、`Download.jsx`、`Home.jsx`），以及上一轮遗留的 `findings.md`/`progress.md`/`task_plan.md`（未删除，由用户决定） |
 | 两个前端 | 桌面 IDE（`PaperOS.exe` → `/ide/`，源码 `apps/desktop/src/ide.jsx`）与 Web Workbench（`/app/workbench`，源码 `web/src/pages/app/Workbench.jsx`）共用 `app/server.mjs`；桌面已接编译、pdf.js/SyncTeX/Live 草稿、可见 AI Harness、策略门控终端、git 状态栏、`.vsix` 第一层，以及切片 6 的视口/DPI/键盘证据 |
 | 根版本 | `package.json` 为 `0.7.0` |
 | 桌面版本 | 根、Tauri config、desktop package、Cargo 均为 `0.7.0`（2026-08-31 随 0.7.0 发布统一 bump），Web UI 版本号由 Vite `define` 注入单一来源 |
 | 当前 Windows 入口 | 根目录 `PaperOS.exe`，WinForms + WebView2 + 本地 Node 服务 |
 | Tauri | 已有脚手架和构建产物，但不是 README 声明的稳定主入口 |
-| Windows 发布产物 | ZIP 和 `.sha256` 存在；ZIP 排除 `app/node_modules`，launcher 依赖系统 .NET 8 Desktop Runtime，不是 self-contained/零依赖 portable |
-| macOS/Linux 发布产物 | `product/releases.json` 有声明，但仓库中对应 DMG/AppImage 不存在 |
+| Windows 发布产物 | 本机 `dist/release/PaperOS-0.7.0-windows-x64-selfcontained.zip` 约 109MB，旁路 `.sha256` 存在。`/api/releases` 标 `available:true`；未签名 |
+| macOS/Linux 发布产物 | 同一份 `PaperOS-0.7.0-portable-node.tar.gz`（需 Node.js 20+），不是 DMG/AppImage；清单与下载页按磁盘存在性显示「已打包」 |
 
 ## 能力快照
 
@@ -56,6 +56,7 @@ product_version: 0.7.0
 | 桌面终端 / git 状态栏（切片 4） | Partial | TERMINAL tab 接 `/api/editor/terminal`（白名单、中止、危险 confirm）；状态栏 `/api/editor/git-status`（非 git / 真实分支）；`npm run desktop-term-smoke` | 不是完整 shell；无 staging/commit/diff UI；Pack 不声明 `terminal` Capability |
 | VS Code `.vsix` 第一层（切片 5） | Partial | 解包/manifest/安装目录/启用禁用卸载；只映射主题色子集与语言 id；`npm run desktop-vsix-smoke` | **不执行扩展 JS**；无 TextMate/命令/webview/debug；不是完整 VS Code 插件兼容 |
 | 桌面视口 / DPI / 键盘 / 预算（切片 6） | Partial | `apps/desktop/src/ui-budget.mjs`；`GET /api/editor/file` 413 `FILE_TOO_LARGE`；`npm run desktop-ui-smoke`；[`adr/0006-desktop-chrome-evidence.md`](adr/0006-desktop-chrome-evidence.md) | 800px 与 125%/150% 是 CDP CSS 像素，不是 `PaperOS.exe` / 物理 DPI；原生窗口下限 1100×720；cap 不是虚拟化 60fps |
+| 下载页发布诚实 | Partial | `web/src/lib/release-assets.js`；`/api/releases` 的 `available` 与磁盘对齐；缺文件显示「尚未打包」，不链到 GitHub 冒充下载 | 本工作区 `dist/release/` 无安装包；T3.6 Hero 实拍仍 open |
 | Team/community/admin API | Partial | server routes 与部分测试 | 不是生产级实时协作、队列或多代理编排 |
 | Ed25519 发布清单 | Implemented | `app/lib/signer.mjs`、release endpoints、signer/admin tests | 不替代 Authenticode/notarization；launcher 尚未验证更新链 |
 | 企业级视觉重设计 | Active implementation | docs/redesign、tokens/motion/Horizon、五个 motif、十四个 UI primitives、两端统一 Icon registry、T1.1–T1.5、T3.3 Web AI 面板、T3.4 放大镜通用化、T3.5 团队/市场/社区/总览；Home/公共页/认证页/Workbench 的响应式、键盘、reduced-motion 和浏览器证据已完成 | `HeroIdeMock` 仍是临时界面示意；T3.6 Workbench 实拍、实体 GPU、移动真机、像素基准、桌面壳与 P0-P6 整体仍未完成 |
@@ -432,7 +433,36 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 - 不是 hunk 级编辑器，也没有持久 transaction / undo。
 - 桌面终端/Git 已在切片 4 落地。`.vsix` 第一层见切片 5 节。
 
-## 2026-09-21 切片 6 视口 / DPI / 键盘 / 性能预算证据（当前）
+## 2026-09-21 发布页诚实证据（当前）
+
+基线：`main` / `5b948c3` + dirty worktree；Windows 10.0.26200；Node v24.12.0。T3.6 仍按 [`plans/2026-08-11-t3-6-hero-capture.md`](plans/2026-08-11-t3-6-hero-capture.md) 保持 blocked（无头 Monaco 不合成），本切片没有替换 `HeroIdeMock`。
+
+### 做了什么
+
+- 抽出 `describeReleaseAsset`：只有 `available === true` 才给出 `/api/download/{os}`。缺文件状态是「尚未打包 / 产物未就绪」，提示 `ASSET_NOT_READY`。
+- 下载页不再把 GitHub releases 当成缺产物时的下载按钮。版本说明与「本机是否有文件」分开。
+- `/api/releases` 优先读 `{file}.sha256` sidecar，避免每次整包哈希让页面长时间停在「尚未打包」。
+- Home 平台文案改为：Windows 未签名自包含开发预览；macOS/Linux 是需 Node.js 的便携 tar.gz，不再写「仍在规划」。
+
+### 验证
+
+| 命令 | 结果 | 证明范围 |
+| --- | --- | --- |
+| `node --test tests/release-assets.test.mjs` | 4/4 pass | 已打包才有 href；缺文件 href 为空；源码不含「前往发布页」 |
+| `node --test tests/release-digest.test.mjs` | 3/3 pass | sidecar 优先；缺文件 unavailable；无 sidecar 才整包哈希 |
+| `node --test tests/web-public-pages.test.mjs` | 7/7 pass | 首屏 3 张卡均为 `download-unavailable`，无 `/api/download/` 链接 |
+| `node --test tests/web-home-hero.test.mjs` | 6/6 pass | 不再写 macOS/Linux 规划中 |
+| `npm run web:build` | exit 0；2328 modules | 新下载页进入 `app/public` |
+| 浏览器 `/download`（本机 8766） | 三平台「已打包」；下载链到 `/api/download/{os}`；无「前往发布页」 | 本机 `dist/release` 确有 0.7.0 自包含 ZIP 与 portable tar.gz |
+| `git diff --check` | exit 0 | 仅有既有 LF/CRLF 警告 |
+
+### 未做与边界
+
+- 没有新打安装包，也没有代码签名。macOS/Linux 仍不是原生 App。
+- 没有把 `HeroIdeMock` 换成 `hero-ide.png`。T3.6 仍需有头 GPU + 合格合成，不能用黑屏编辑器冒充产品截图。
+- 双模式计划 S1–S6 已提交，不发明 S7。
+
+## 2026-09-21 切片 6 视口 / DPI / 键盘 / 性能预算证据
 
 基线：`main` / `d79e455` + dirty worktree；Windows 10.0.26200；Node v24.12.0。计划见 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md) §1 S6。证据口径见 [`adr/0006-desktop-chrome-evidence.md`](adr/0006-desktop-chrome-evidence.md)。
 
@@ -524,7 +554,7 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 
 ## 已知风险
 
-0. **切片 6 未提交**：视口/DPI/键盘/预算、`desktop-ui-smoke`、ADR-0006 与交接文档仍在 dirty worktree。双模式计划 S1–S6 到此结束，不发明 S7。
+0. **发布页诚实未提交**：`release-assets.js`、Download 页与文档仍在 dirty worktree。T3.6 仍 blocked。
 1. **尚无 PR / tag / 签名发布**：重设计、文档、09-integrations Epic 1–4b、文件夹管理与 0.6.0 版本对齐均已在 `1546dab` 之上分组提交，dirty worktree 风险已消除；仍缺少 PR 审阅、git tag 和签名安装包，结果尚未绑定 tag/release。
 2. **发布版本治理**：根、Tauri config、desktop package、Cargo 已统一 bump 为 `0.6.0`（2026-08-12），Web UI 版本号改由 Vite `define` 从根 `package.json` 注入；打 tag 仍待执行。
 3. **发布声明超前**：Windows ZIP 缺少 Node 生产依赖和 self-contained .NET runtime；macOS/Linux 清单与实际产物不一致；原生代码签名未完成。
@@ -540,10 +570,10 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 
 | 优先级 | 工作 | 完成判据 |
 | --- | --- | --- |
-| P0 | 提交切片 6（不含 `findings.md`/`progress.md`/`task_plan.md`）；双模式计划结束，下一产品工作是 T3.6 / 发布治理，不发明 S7 | dirty 变更审阅后提交；`STATUS.md` 绑定新 SHA |
+| P0 | 提交发布页诚实切片（不含 `findings.md`/`progress.md`/`task_plan.md`） | dirty 变更审阅后提交；`STATUS.md` 绑定新 SHA |
 | P0 | 形成可审阅提交和完整验证基线 | dirty 变更分组审阅；全测试/构建结果绑定 SHA |
 | P0 | 修正版本和发布资产一致性 | 单一版本源；清单不声明缺失资产；签名边界明确 |
-| P1 | 完成 T3.6 真实 Workbench 产品截图 | 以真实 AI 面板和 Workspace/file 状态拍摄 web/public/hero-ide.png，并通过桌面/移动截图审查 |
+| P1 | T3.6 真实 Workbench 产品截图 | 有头 GPU 采到合格 `hero-ide.png` 后再替换 `HeroIdeMock`；黑屏编辑器不得替换 |
 | P1 | 桌面信任与部署加固 | CSP、内嵌 runtime、日志、退出/崩溃恢复、签名更新链 |
 | P1 | 完成重设计 P0-P1 | T0.3、T0.4、T0.5、T0.6、T1.1–T1.5、T3.3、T3.4、T3.5 已完成；下一严格顺序为 T3.6；项目整体仍为 Active |
 | P1 | 模块化 server/IDE | 小步搬运、每步测试护栏，不改变安全语义 |

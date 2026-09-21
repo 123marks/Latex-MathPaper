@@ -133,6 +133,20 @@ test("T1.4 page CSS protects responsive layout, touch targets, and reduced motio
   assert.ok(componentsCss.includes("@container (max-width: 560px)"));
 });
 
+test("Download first paint does not offer missing artifacts", async () => {
+  const Download = await loadPage("Download");
+  const markup = render(Download, "/download");
+  const visibleText = markup.replace(/<[^>]+>/g, "");
+
+  assert.equal((markup.match(/data-testid="download-unavailable"/g) || []).length, 3);
+  assert.equal((markup.match(/产物未就绪/g) || []).length, 3);
+  assert.ok(visibleText.includes("ASSET_NOT_READY"));
+  assert.equal(markup.includes('href="/api/download/'), false);
+  assert.equal(visibleText.includes("前往发布页"), false);
+  assert.equal(visibleText.includes("下载 Windows 版"), false);
+  assert.ok(visibleText.includes("已打包 / 尚未打包"));
+});
+
 test("Features product capture is a repository asset", () => {
   assert.equal(existsSync(resolve(webRoot, "public/assets/feature-workbench.png")), true);
 });

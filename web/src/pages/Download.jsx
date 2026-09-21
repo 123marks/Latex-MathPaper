@@ -3,13 +3,12 @@ import { Link } from "react-router-dom";
 import Reveal from "../components/Reveal.jsx";
 import { api } from "../lib/api.js";
 import Icon from "../components/Icon.jsx";
-
-const RELEASES = "https://github.com/123marksgithub/Latex-MathPaper/releases";
+import { describeReleaseAsset, fallbackReleaseNotes, platformLabel } from "../lib/release-assets.js";
 
 const OS_META = {
-  windows: { label: "Windows", icon: "windows", key: "win" },
-  macos: { label: "macOS", icon: "macos", key: "mac" },
-  linux: { label: "Linux", icon: "linux", key: "linux" },
+  windows: { icon: "windows", key: "win" },
+  macos: { icon: "macos", key: "mac" },
+  linux: { icon: "linux", key: "linux" },
 };
 
 function detectOS() {
@@ -67,10 +66,12 @@ export default function Download() {
           ? assets
           : Object.keys(OS_META).map((os) => ({ os, available: false }))
         ).map((asset, i) => {
-          const meta = OS_META[asset.os] || { label: asset.os, icon: "linux", key: asset.os };
-          const ready = asset.available;
+          const meta = OS_META[asset.os] || { icon: "linux", key: asset.os };
+          const offer = describeReleaseAsset(asset);
+          const name = platformLabel(asset.os);
           return (
             <Reveal key={asset.os} delay={i * 0.06} className="card lift market-card" style={{ textAlign: "center" }}>
+              <div data-testid={`download-card-${asset.os}`}>
               {meta.key === OS_META[current]?.key && (
                 <span className="chip" style={{ position: "absolute", top: 14, right: 14 }}>
                   推荐给你
@@ -79,19 +80,25 @@ export default function Download() {
               <div className="ico" style={{ margin: "8px auto 12px", display: "flex", justifyContent: "center" }}>
                 <Icon name={meta.icon} size={30} strokeWidth={1.5} />
               </div>
-              <div className="name">{meta.label}</div>
+              <div className="name">{name}</div>
               <div className="desc">{asset.label || "桌面客户端"}</div>
               <div className="meta" style={{ justifyContent: "center" }}>
+                <span className={`chip ${offer.ready ? "signal" : "muted"}`}>{offer.statusLabel}</span>
                 {asset.ext || ""}{asset.size ? ` · ${formatSize(asset.size)}` : ""}
               </div>
-              {ready ? (
-                <a className="btn btn-primary btn-block" href={asset.url}>
-                  下载 {meta.label} 版
+              {offer.ready ? (
+                <a className="btn btn-primary btn-block" href={offer.href} data-testid="download-ready">
+                  {offer.buttonLabel}
                 </a>
               ) : (
-                <a className="btn btn-glass btn-block" href={RELEASES} target="_blank" rel="noreferrer">
-                  前往发布页
-                </a>
+                <span className="btn btn-glass btn-block" aria-disabled="true" data-testid="download-unavailable">
+                  {offer.buttonLabel}
+                </span>
+              )}
+              {offer.hint && (
+                <p className="meta" data-testid="download-hint" style={{ justifyContent: "center", marginTop: 8, textAlign: "center" }}>
+                  {offer.hint}
+                </p>
               )}
               {asset.sha256 && (
                 <div
@@ -102,6 +109,7 @@ export default function Download() {
                   SHA-256 · {asset.sha256.slice(0, 16)}…
                 </div>
               )}
+              </div>
             </Reveal>
           );
         })}
@@ -116,6 +124,9 @@ export default function Download() {
             {manifest?.publishedAt && (
               <span className="chip muted" style={{ marginLeft: 10 }}>{manifest.publishedAt}</span>
             )}
+            <p style={{ color: "var(--muted)", fontSize: 12.5, marginTop: 8, maxWidth: 560 }}>
+              下列说明描述已声明的打包形态；实际能否下载以各平台「已打包 / 尚未打包」为准。
+            </p>
             {manifest?.notes?.length ? (
               <ul style={{ color: "var(--muted)", fontSize: 13, marginTop: 10, maxWidth: 560, paddingLeft: 18, lineHeight: 1.7 }}>
                 {manifest.notes.slice(0, 4).map((note, i) => (
@@ -124,8 +135,7 @@ export default function Download() {
               </ul>
             ) : (
               <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 6, maxWidth: 540 }}>
-                Windows 自包含包已内嵌 .NET 与 Node 运行时，解压即用；macOS / Linux
-                便携版仍需 Node.js 20+。安装包未做代码签名，首次运行系统会提示。
+                {fallbackReleaseNotes()}
               </p>
             )}
           </div>

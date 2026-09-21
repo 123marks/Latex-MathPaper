@@ -195,6 +195,11 @@
 .btn-block {
   width: 100%;
 }
+.btn[aria-disabled="true"] {
+  pointer-events: none;
+  opacity: 0.62;
+  cursor: not-allowed;
+}
 .btn-lg {
   padding: 15px 30px;
   font-size: 15px;

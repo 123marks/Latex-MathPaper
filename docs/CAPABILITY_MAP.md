@@ -115,7 +115,7 @@ but every item in this section is conditional on the `math-modeling` Pack.
 
 | Capability | Status | Product truth |
 | --- | --- | --- |
-| Public site and Windows development archive | **Partial** | Web surface and Windows ZIP exist; the archive omits Node dependencies and a self-contained .NET runtime, and platform installers/signing remain |
+| Public site and Windows development archive | **Partial** | Download page enables `/api/download` only when the artifact is on disk (`available:true`). Missing files show 尚未打包, not a GitHub releases CTA. This machine currently has the 0.7.0 Windows self-contained ZIP and a Node-required portable tar.gz for macOS/Linux. Signing remains undone |
 | Account and local team/task surfaces | **Partial** | Routes/pages exist; not production real-time collaboration or a durable execution queue |
 | Deep-link flow | **Planned** | `paperos://` appears in Tauri config but is not a verified shipped contract |
 | Real-time collaboration and roles | **Planned** | Requires TextDocument checkpoints and EditTransaction semantics first |

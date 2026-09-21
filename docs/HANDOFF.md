@@ -2,7 +2,7 @@
 title: Paper OS engineering handoff
 status: active
 as_of: 2026-09-21
-baseline_commit: d79e455
+baseline_commit: 5b948c3
 worktree: dirty
 owner: next maintainer
 ---
@@ -19,26 +19,26 @@ Paper OS 要成为一个**本地优先、Workspace Kernel 驱动、Pack 可扩�
 
 ## 2. 交接基线
 
-### 2.0 当前基线（2026-09-21，桌面 IDE 切片 6）
+### 2.0 当前基线（2026-09-21，发布页诚实）
 
-- `HEAD`：`d79e455`（切片 1–5 已提交）。
-- 工作区：**dirty**。本轮切片 6：`apps/desktop/src/ui-budget.mjs`、`apps/desktop/src/ide.jsx` 快捷键与超大文件、`app/server.mjs` `FILE_TOO_LARGE`、`app/desktop-ui-perf-smoke.mjs`、`docs/adr/0006-desktop-chrome-evidence.md`。根目录 `findings.md`/`progress.md`/`task_plan.md` 未动。
-- 本轮主线：切片 6 已完成并实测；双模式计划 S1–S6 到此结束，不发明 S7。下一步是提交切片 6，然后 T3.6 / 发布治理。计划见 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md)。
+- `HEAD`：`5b948c3`（桌面 IDE 切片 1–6 已提交）。
+- 工作区：**dirty**。本轮：`web/src/lib/release-assets.js`、`web/src/pages/Download.jsx`、`tests/release-assets.test.mjs`。根目录 `findings.md`/`progress.md`/`task_plan.md` 未动。
+- 本轮主线：T3.6 仍 blocked（无头 Monaco 不合成），没有替换 `HeroIdeMock`。先收口下载页：缺产物显示「尚未打包」，不链到 GitHub 冒充下载。
 
 交接表（任务书要求格式）：
 
 ```text
 日期：2026-09-21
-变更目标：桌面 IDE 切片 6 —— 视口 / DPI / 键盘 / 性能预算
-修改文件：apps/desktop/src/ui-budget.mjs（新）；tests/desktop-ui-budget.test.mjs（新）；app/desktop-ui-perf-smoke.mjs（新）；docs/adr/0006-desktop-chrome-evidence.md（新）；apps/desktop/src/ide.jsx；apps/desktop/build-ide.mjs；app/server.mjs；package.json；docs/adr/README.md；docs/STATUS.md；docs/HANDOFF.md；docs/CAPABILITY_MAP.md；CHANGELOG.md；docs/plans/2026-09-18-desktop-ide-dual-mode-plan.md
-新增/修复能力：统一 cap（日志 200 / 终端 800 / 聊天 80 / 打开 2MB）；超大文件 413 FILE_TOO_LARGE 且不进 Monaco；Ctrl+Alt+M/P；CDP 视口矩阵 + 模拟 DPI；ADR-0006 诚实口径
-运行命令：node --test；npm run ide:build；npm run desktop-ui-smoke；npm run desktop-compile-smoke；git diff --check
-测试结果：desktop-ui-budget 4/4；全量 Node 329/330（git-status-api 满载 flake，单独 1/1 · 78s）；IDE bundle 4.7 MB；ui smoke OK（五视口 + DPI 1.25/1.5 无横向溢出；模式 agent→render；huge.txt 未进编辑器）；compile smoke 回归 OK
-人工验证：无头 Chrome 截图 desktop-ui-1920x1080.png / 1440x900 / 1280x800 / 1024x768 / 800x600 / 1440x900-dpi-125 / 1440x900-dpi-15
+变更目标：发布页诚实 —— 缺产物不得看起来能下载
+修改文件：web/src/lib/release-assets.js（新）；app/lib/release-digest.mjs（新）；tests/release-assets.test.mjs（新）；tests/release-digest.test.mjs（新）；web/src/pages/Download.jsx；web/src/pages/Home.jsx；web/src/styles/components.css；app/server.mjs；tests/web-public-pages.test.mjs；tests/web-home-hero.test.mjs；tests/account-api.test.mjs；docs/STATUS.md；docs/HANDOFF.md；docs/CAPABILITY_MAP.md；CHANGELOG.md
+新增/修复能力：describeReleaseAsset 只在 available 时给 /api/download；sidecar sha256；Home 不再写 macOS/Linux 仍在规划
+运行命令：node --test tests/release-assets.test.mjs tests/release-digest.test.mjs tests/web-public-pages.test.mjs tests/web-home-hero.test.mjs；npm run web:build；git diff --check
+测试结果：release-assets 4/4；release-digest 3/3；web-public-pages 7/7；web-home-hero 6/6
+人工验证：本机 /download 三平台已打包并链到 /api/download/{os}；Home 下载入口仍指向 /download
 已知失败：git-status-api 满载 flake（既有）
-未实现/降级：800px 与 125%/150% 是 CDP CSS 像素，不是 PaperOS.exe / 物理 DPI；原生窗口下限 1100×720；cap 不是虚拟化 60fps；文件树未虚拟化
-风险与后续：ide.jsx 仍是单体；下一步提交切片 6（不含 findings/progress/task_plan），然后 T3.6 / 发布治理，不发明 S7
-回滚方式：git checkout -- app/server.mjs apps/desktop/src/ide.jsx apps/desktop/build-ide.mjs package.json docs/STATUS.md docs/HANDOFF.md docs/CAPABILITY_MAP.md docs/adr/README.md CHANGELOG.md docs/plans/2026-09-18-desktop-ide-dual-mode-plan.md；删除 ui-budget / desktop-ui-budget 测试 / desktop-ui-perf-smoke / adr/0006
+未实现/降级：未生成安装包；未签名；T3.6 未完成
+风险与后续：下一步提交本切片（不含 findings/progress/task_plan）；T3.6 仍需有头 GPU 合格截图
+回滚方式：git checkout -- web/src/pages/Download.jsx web/src/pages/Home.jsx web/src/styles/components.css app/server.mjs tests/web-public-pages.test.mjs tests/web-home-hero.test.mjs tests/account-api.test.mjs docs/STATUS.md docs/HANDOFF.md docs/CAPABILITY_MAP.md CHANGELOG.md；删除 release-assets.js、release-digest.mjs 与对应测试
 ```
 
 ### 2.1 历史基线（2026-08-12）
@@ -280,8 +280,8 @@ T1.1 收口时：`web/src/pages/Home.jsx` 使用可核实的 `4 内置 Pack`、`
 
 按 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md) §1 逐切片推进，每个切片都必须：写契约/e2e 测试 → 实现 → `npm run ide:build` → `node --test` → 对应 smoke 真实启动 → 更新 `STATUS.md`/本文件。
 
-1. 先审阅并提交切片 6（上方 2.0 的交接表即提交说明素材；不要纳入 `findings.md`/`progress.md`/`task_plan.md`）。
-2. 双模式计划 S1–S6 已完成，不要发明 S7。下一产品工作是 T3.6 真实 Workbench 截图与发布治理。
+1. 先审阅并提交发布页诚实切片（上方 2.0 的交接表即提交说明素材；不要纳入 `findings.md`/`progress.md`/`task_plan.md`）。
+2. 双模式计划 S1–S6 已提交，不要发明 S7。T3.6 仍 blocked：无头 Monaco 不合成，不得用黑屏编辑器替换 `HeroIdeMock`。
 
 不要做：在前端另起编译器；绕过 `apply-blocks` 事务写文件；把 Render 做成只读；为公式渲染新增依赖；一次重写 `ide.jsx`。
 

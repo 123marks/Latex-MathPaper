@@ -58,7 +58,9 @@ test("Home hero states current product truth and links to the workflow", () => {
   assert.match(markup, /<dt>内置 Pack<\/dt><dd><b>4<\/b><\/dd>/);
   assert.match(markup, /Preview → Apply/);
   assert.match(markup, /Windows 开发预览/);
-  assert.match(markup, /macOS\/Linux 规划中/);
+  assert.match(markup, /macOS\/Linux 便携包/);
+  assert.doesNotMatch(markup, /macOS\/Linux 规划中/);
+  assert.doesNotMatch(markup, /仍在规划/);
   assert.match(markup, /模型请求按你配置的 provider 处理/);
   assert.doesNotMatch(
     markup,
