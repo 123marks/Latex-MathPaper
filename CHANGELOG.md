@@ -6,6 +6,7 @@
 
 ### Added
 
+- 桌面 IDE 切片 2a · 编译生命周期诚实：`app/lib/compile-jobs.mjs` 管理每 Workspace 一个编译任务（默认 180s 超时、显式取消、1MB 输出封顶）；`POST /api/editor/compile-live` 立即 202，进行中再提交 409 `COMPILE_BUSY`；新增 `POST /api/editor/compile-cancel` 与 `GET /api/editor/compile-status`。`done` 只在任务开始之后写出的 PDF 上带 `pdf`/`pdfFresh`，失败返回 `previousPdfPath` 且不广播旧文件当新产物。桌面 `compile-lifecycle.mjs` 状态机 idle→running→succeeded/failed/timeout/cancelled/no-engine，编译不再占用共享 `busy`；失败保留上次 PDF 并在预览头标「过期」。契约测试 `tests/compile-jobs.test.mjs`、`tests/compile-live-api.test.mjs`、`tests/desktop-compile-lifecycle.test.mjs`；真实启动 smoke `npm run desktop-compile-smoke`（假引擎夹具，成功/失败双样本）。
 - 桌面 IDE 切片 1 · Agent/Render 双模式工作台（`apps/desktop/src/ide.jsx`）：顶栏 `role="group"` 分段控制（`aria-pressed`/`aria-label`/`title`，≤920px 只收缩文字标签）；模式是布局重心而非权限墙——Workspace、标签、缓冲、聊天、编译状态全部共享，编辑器在两种模式下都挂载；`localStorage["paperos.workMode"]` 持久化并在刷新后恢复；Assistant 头部与状态栏重复显示模式；命令面板新增「切换到 Agent/Render 模式」。Render 模式无 PDF 时显示诚实空状态 `RenderStage`：真实编译目标（与 `compile()` 共用 `pickCompileTarget`）、`/api/engine/status` 探测结果、编译/安装 Tectonic 入口、无 LaTeX Capability 的 Pack 说明、隐藏 PDF 的恢复入口。契约测试 `tests/desktop-work-mode.test.mjs`，真实启动 smoke `npm run desktop-mode-visual-smoke`（隔离数据目录、Monaco 真实输入、mock-local 聊天往返、刷新持久化、Agent/Render × 1440/1280/1024/800 几何断言与截图）。
 - 桌面 IDE 菜单栏紧凑模式：≤1100px 时同一份菜单数据折叠进一个「≡」下拉（按菜单分节），条目与 Capability 门控不变。
 - 编辑器谱系调研 `docs/redesign/10-editor-lineage-study.md`：Mimir / latex-stickies / LaTeX Editor / Pine / OverCite / KaoNotes 逐项理解、可迁移项与 Wave 路线、exe 安装包诚实边界。

@@ -16,6 +16,16 @@ import {
   markTextBufferSaved,
   renameTextBuffer,
 } from "./text-buffer.mjs";
+import {
+  applyCompileAccepted,
+  applyCompileEvent,
+  applyCompileHttpError,
+  applyCompileStatus,
+  compileIsRunning,
+  compilePhaseLabel,
+  createCompileState,
+  keepExistingPdf,
+} from "./compile-lifecycle.mjs";
 
 // Bundle monaco locally (WebView2 must not depend on CDN). Theme is defined
 // in setupLatex beforeMount so we never paint dark chrome with light "vs" text.
@@ -808,9 +818,10 @@ function RenderStage({
   canCompile,
   compileTarget,
   engine,
-  busy,
+  compileJob,
   hiddenPdfVersion,
   onCompile,
+  onCancel,
   onShowPdf,
   onInstallEngine,
   activePath,
@@ -819,6 +830,7 @@ function RenderStage({
   const latexmkReady = Boolean(engine?.latexmk?.present);
   const engineKnown = engine != null;
   const engineReady = tectonicReady || latexmkReady;
+  const running = compileIsRunning(compileJob);
   const engineLabel = !engineKnown
     ? "正在探测本地引擎…"
     : tectonicReady
@@ -839,10 +851,55 @@ function RenderStage({
     body = (
       <div className="render-empty">
         <strong>PDF 预览已隐藏</strong>
-        <span>最近一次编译产物 v{hiddenPdfVersion} 仍然可用。</span>
+        <span>
+          最近一次编译产物 v{hiddenPdfVersion} 仍然可用。
+          {compileJob?.pdfFresh === false ? " 它来自更早的成功运行，本次编译没有写出新 PDF。" : ""}
+        </span>
         <button type="button" className="ghost-btn sm amber" onClick={onShowPdf}>
           <Icon name="pdf" size={12} /> 显示 PDF
         </button>
+      </div>
+    );
+  } else if (running) {
+    body = (
+      <div className="render-empty">
+        <strong>正在编译</strong>
+        <span>
+          {compileJob?.entry ? <>正在编译 <code>{compileJob.entry}</code>。</> : "编译已开始。"}
+          成功后 PDF 会显示在这里；失败会保留上次成功的产物并标为过期。
+        </span>
+        <div className="render-actions">
+          <button type="button" className="ghost-btn sm" onClick={onCancel} data-testid="compile-cancel">
+            取消编译
+          </button>
+        </div>
+      </div>
+    );
+  } else if (canCompile && (compileJob?.phase === "failed" || compileJob?.phase === "timeout" || compileJob?.phase === "cancelled" || compileJob?.phase === "no-engine")) {
+    body = (
+      <div className="render-empty">
+        <strong>{compilePhaseLabel(compileJob.phase)}</strong>
+        <span>{compileJob.message || "这次运行没有写出新的 PDF。"}</span>
+        <span className={`render-engine ${engineReady ? "ok" : engineKnown ? "missing" : ""}`} data-testid="render-engine">
+          {engineLabel}
+        </span>
+        <div className="render-actions">
+          <button
+            type="button"
+            className="ghost-btn sm amber"
+            onClick={onCompile}
+            disabled={!compileTarget || !engineReady}
+            data-testid="compile-run"
+            title={!engineReady ? "先安装或配置 LaTeX 引擎" : "重新编译"}
+          >
+            <Icon name="play" size={12} /> 重新编译
+          </button>
+          {engineKnown && !tectonicReady ? (
+            <button type="button" className="ghost-btn sm" onClick={onInstallEngine}>
+              <Icon name="download" size={12} /> 安装 Tectonic
+            </button>
+          ) : null}
+        </div>
       </div>
     );
   } else if (canCompile) {
@@ -857,15 +914,28 @@ function RenderStage({
           {engineLabel}
         </span>
         <div className="render-actions">
-          <button
-            type="button"
-            className="ghost-btn sm amber"
-            onClick={onCompile}
-            disabled={busy || !compileTarget || !engineReady}
-            title={!engineReady ? "先安装或配置 LaTeX 引擎" : "编译并预览 PDF（Ctrl+Shift+B）"}
-          >
-            <Icon name="play" size={12} /> 编译 PDF
-          </button>
+          {running ? (
+            <button
+              type="button"
+              className="ghost-btn sm"
+              onClick={onCancel}
+              data-testid="compile-cancel"
+              title="取消正在进行的编译"
+            >
+              取消编译
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="ghost-btn sm amber"
+              onClick={onCompile}
+              disabled={!compileTarget || !engineReady}
+              data-testid="compile-run"
+              title={!engineReady ? "先安装或配置 LaTeX 引擎" : "编译并预览 PDF（Ctrl+Shift+B）"}
+            >
+              <Icon name="play" size={12} /> 编译 PDF
+            </button>
+          )}
           {engineKnown && !tectonicReady ? (
             <button type="button" className="ghost-btn sm" onClick={onInstallEngine}>
               <Icon name="download" size={12} /> 安装 Tectonic
@@ -911,6 +981,7 @@ function IDE() {
   const [pdfUrl, setPdfUrl] = useState(null);
   const [mediaPreview, setMediaPreview] = useState(null); // { path, kind, url }
   const [pdfVer, setPdfVer] = useState(0);
+  const [compileJob, setCompileJob] = useState(createCompileState);
   const [newFileName, setNewFileName] = useState("");
   const [creating, setCreating] = useState(false);
   const [chat, setChat] = useState([
@@ -975,6 +1046,7 @@ function IDE() {
   const canUseEvidence = currentCapabilities.includes("evidence");
 
   const canRunPaperctl = currentCapabilities.includes("paperctl");
+  const compileRunning = compileIsRunning(compileJob);
 
   function switchWorkMode(nextMode) {
     const next = nextMode === "render" ? "render" : "agent";
@@ -1025,9 +1097,12 @@ function IDE() {
       return null;
     });
     setPdfUrl((previous) => {
-      if (previous) URL.revokeObjectURL(previous);
+      if (previous) URL.revokeObjectURL(previous.split("#")[0]);
       return null;
     });
+    setPdfVer(0);
+    setShowPdf(true);
+    setCompileJob(createCompileState());
   }
 
   function switchWorkspace(nextId, options = {}) {
@@ -1119,6 +1194,45 @@ function IDE() {
     boot();
   }, []);
 
+  function handleCompileMessage(msg) {
+    if (msg.event === "stdout" || msg.event === "stderr") {
+      const lines = String(msg.text).split("\n");
+      setLog((l) => [...lines.filter(Boolean), ...l].slice(0, 200));
+      return;
+    }
+    if (msg.event === "start") {
+      setCompileJob((prev) => applyCompileEvent(prev, msg));
+      setLog((l) => [`[compile] start ${msg.engine}`, ...l].slice(0, 200));
+      setBottomTab("latex");
+      return;
+    }
+    if (msg.event === "error") {
+      setCompileJob((prev) => applyCompileEvent(prev, msg));
+      setLog((l) => [`[compile] ✗ ${msg.message || "engine error"}`, ...l].slice(0, 200));
+      return;
+    }
+    if (msg.event === "done") {
+      setCompileJob((prev) => applyCompileEvent(prev, msg));
+      setLog((l) => [
+        `[compile] done exit=${msg.code} ${msg.durationMs}ms pdf=${msg.pdf ? "ready" : "stale-or-none"}${msg.pdfPath ? ` ${msg.pdfPath}` : ""}${msg.timedOut ? " timedOut" : ""}${msg.cancelled ? " cancelled" : ""}`,
+        ...l,
+      ].slice(0, 200));
+      if (msg.pdf && !keepExistingPdf(msg)) {
+        const blob = base64ToBlob(msg.pdf, "application/pdf");
+        const next = URL.createObjectURL(blob) + `#v=${Date.now()}`;
+        setPdfUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev.split("#")[0]);
+          return next;
+        });
+        setPdfVer((v) => v + 1);
+        setShowPdf(true);
+        setBottomTab("latex");
+      } else if (!msg.succeeded) {
+        setBottomTab("problems");
+      }
+    }
+  }
+
   // WebSocket: live compile log + team events
   useEffect(() => {
     if (!user || !contest) return;
@@ -1135,37 +1249,21 @@ function IDE() {
       let msg;
       try { msg = JSON.parse(e.data); } catch { return; }
       if (!msg.channel) return;
-      if (msg.channel.startsWith("compile:")) {
-        if (msg.event === "stdout" || msg.event === "stderr") {
-          const lines = String(msg.text).split("\n");
-          setLog((l) => [...lines.filter(Boolean), ...l].slice(0, 200));
-        } else if (msg.event === "done") {
-          setLog((l) => [
-            `[compile] done exit=${msg.code} ${msg.durationMs}ms pdf=${msg.pdf ? "ready" : "none"}${msg.pdfPath ? ` ${msg.pdfPath}` : ""}`,
-            ...l,
-          ].slice(0, 200));
-          if (msg.pdf) {
-            const blob = base64ToBlob(msg.pdf, "application/pdf");
-            const next = URL.createObjectURL(blob) + `#v=${Date.now()}`;
-            setPdfUrl((prev) => {
-              if (prev) URL.revokeObjectURL(prev.split("#")[0]);
-              return next;
-            });
-            setPdfVer((v) => v + 1);
-            setShowPdf(true);
-            setBottomTab("latex");
-          } else if (msg.code !== 0) {
-            setBottomTab("problems");
-          }
-        } else if (msg.event === "start") {
-          setLog((l) => [`[compile] start ${msg.engine}`, ...l].slice(0, 200));
-          setBottomTab("latex");
-        } else if (msg.event === "error") {
-          setLog((l) => [`[compile] ✗ ${msg.message || "engine error"}`, ...l].slice(0, 200));
-        }
-      }
+      if (msg.channel.startsWith("compile:")) handleCompileMessage(msg);
     };
     return () => { try { ws.close(); } catch { /* */ } };
+  }, [user, contest]);
+
+  useEffect(() => {
+    if (!user || !contest) return;
+    let cancelled = false;
+    api.get(`/api/editor/compile-status?workspace=${encodeURIComponent(contest)}`)
+      .then((status) => {
+        if (cancelled) return;
+        setCompileJob((prev) => applyCompileStatus(prev, status));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, [user, contest]);
 
   // Load the Workspace catalog once authentication is ready.
@@ -1554,20 +1652,37 @@ function IDE() {
       flash("当前 Workspace 未启用 LaTeX Capability");
       return;
     }
+    if (compileIsRunning(compileJob)) {
+      flash("编译进行中 — 先取消再重新编译");
+      return;
+    }
     const texPath = pickCompileTarget(tree, active);
     if (!texPath) {
       setLog((l) => ["[compile] 未找到 .tex 文件", ...l].slice(0, 200));
       setBottomTab("latex");
       return;
     }
+    setBottomTab("latex");
+    setLog((l) => [`[compile] ${texPath} ...`, ...l].slice(0, 200));
     try {
-      setBusy(true);
-      setBottomTab("latex");
-      setLog((l) => [`[compile] ${texPath} ...`, ...l].slice(0, 200));
-      await api.post("/api/editor/compile-live", { workspace: contest, path: texPath });
+      const accepted = await api.post("/api/editor/compile-live", { workspace: contest, path: texPath });
+      setCompileJob((prev) => applyCompileAccepted(prev, accepted, texPath));
     } catch (e) {
+      setCompileJob((prev) => applyCompileHttpError(prev, e));
       setLog((l) => [`[compile] ${e.message}`, ...l].slice(0, 200));
-    } finally { setBusy(false); }
+    }
+  }
+
+  async function cancelCompile() {
+    if (!compileIsRunning(compileJob)) return;
+    try {
+      await api.post("/api/editor/compile-cancel", { workspace: contest });
+      setLog((l) => ["[compile] 正在取消…", ...l].slice(0, 200));
+    } catch (e) {
+      if (e.code !== "NO_ACTIVE_COMPILE") {
+        setLog((l) => [`[compile] 取消失败: ${e.message}`, ...l].slice(0, 200));
+      }
+    }
   }
 
   function openInlineEdit() {
@@ -2461,6 +2576,7 @@ function IDE() {
                   e.stopPropagation();
                   if (pdfUrl) URL.revokeObjectURL(pdfUrl.split("#")[0]);
                   setPdfUrl(null);
+                  setCompileJob((prev) => ({ ...prev, pdfFresh: null }));
                 }}><Icon name="close" size={11} /></span>
               </div>
             )}
@@ -2629,9 +2745,10 @@ function IDE() {
               canCompile={canCompile}
               compileTarget={compileTarget}
               engine={engine}
-              busy={busy}
+              compileJob={compileJob}
               hiddenPdfVersion={pdfUrl && !showPdf ? pdfVer : 0}
               onCompile={compile}
+              onCancel={cancelCompile}
               onShowPdf={() => setShowPdf(true)}
               onInstallEngine={installTectonic}
               activePath={active?.path || ""}
@@ -2639,17 +2756,35 @@ function IDE() {
           )}
 
           {pdfVisible && (
-            <div className="pdf-pane">
+            <div
+              className={`pdf-pane ${compileJob.pdfFresh === false ? "is-stale" : ""}`}
+              data-testid="pdf-pane"
+              data-fresh={compileJob.pdfFresh === false ? "stale" : "fresh"}
+            >
               {syncHit && <div className="sync-bridge" aria-hidden="true" />}
               <div className="pdf-pane-head">
                 <span>PDF 预览</span>
                 <span className="badge">v{pdfVer}</span>
+                {compileJob.pdfFresh === false ? (
+                  <span
+                    className="badge stale"
+                    data-testid="pdf-stale-badge"
+                    title="这是上次成功编译的 PDF，不是本次运行的产物"
+                  >
+                    过期
+                  </span>
+                ) : (
+                  <span className="badge" data-testid="pdf-fresh-badge" title="本次编译写出的 PDF">
+                    最新
+                  </span>
+                )}
                 {syncHit && <span className="sync-badge">sync · p.{syncHit.page}</span>}
                 <button onClick={() => setShowPdf(false)} title="隐藏预览">–</button>
                 <button
                   onClick={() => {
                     if (pdfUrl) URL.revokeObjectURL(pdfUrl.split("#")[0]);
                     setPdfUrl(null);
+                    setCompileJob((prev) => ({ ...prev, pdfFresh: null }));
                   }}
                   title="关闭预览"
                 >×</button>
@@ -2791,9 +2926,15 @@ function IDE() {
             <span style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
               <button onClick={() => setLog([])} className="ghost-btn sm">清空</button>
               {canCompile ? (
-                <button onClick={compile} disabled={busy} className="ghost-btn sm amber">
-                  <Icon name="play" size={12} /> 编译
-                </button>
+                compileRunning ? (
+                  <button type="button" onClick={cancelCompile} className="ghost-btn sm" data-testid="compile-cancel">
+                    取消编译
+                  </button>
+                ) : (
+                  <button type="button" onClick={compile} className="ghost-btn sm amber" data-testid="compile-run">
+                    <Icon name="play" size={12} /> 编译
+                  </button>
+                )
               ) : null}
               <button onClick={save} disabled={!active || !dirty} className="ghost-btn sm amber">
                 <Icon name="save" size={12} /> 保存
@@ -2895,6 +3036,18 @@ function IDE() {
           <Icon name={workMode === "agent" ? "sparkle" : "pdf"} size={12} />
           {workMode === "agent" ? "Agent 模式" : "Render 模式"}
         </button>
+        {canCompile ? (
+          <button
+            type="button"
+            className={`seg status-btn compile-seg ${compileJob.phase}`}
+            data-testid="status-compile"
+            onClick={() => setBottomTab("latex")}
+            title={compileJob.message || compilePhaseLabel(compileJob.phase)}
+          >
+            {compileRunning ? <span className="dot" /> : null}
+            {compilePhaseLabel(compileJob.phase)}
+          </button>
+        ) : null}
         {canCompile ? (
           engine?.tectonic?.present ? (
             <span className="seg live"><span className="dot" />Tectonic</span>
@@ -3039,6 +3192,7 @@ function IDE() {
           { id: "cmd.save",    cat: "File",    label: "保存当前文件",       hint: "Ctrl+S", run: () => save() },
           { id: "cmd.saveall", cat: "File",    label: "全部保存",           hint: "Ctrl+Shift+S", run: () => commitAllDirty() },
           { id: "cmd.compile", cat: "Run",     label: "编译 LaTeX",         hint: "Ctrl+Shift+B", capability: "latex", run: () => compile() },
+          { id: "cmd.compile.cancel", cat: "Run", label: "取消编译", hint: "", capability: "latex", run: () => cancelCompile() },
           { id: "cmd.mode.agent", cat: "View", label: "切换到 Agent 模式",  hint: "", run: () => switchWorkMode("agent") },
           { id: "cmd.mode.render", cat: "View", label: "切换到 Render 模式", hint: "", run: () => switchWorkMode("render") },
           { id: "cmd.inline",  cat: "AI",      label: "Inline Edit 选区",   hint: "Ctrl+K", run: () => openInlineEdit() },

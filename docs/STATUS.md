@@ -1,16 +1,16 @@
 ---
 title: Paper OS current status
 status: active
-as_of: 2026-09-18
+as_of: 2026-09-21
 branch: main
-baseline_commit: 8c62e93
+baseline_commit: fb8fac2
 worktree: dirty
 product_version: 0.7.0
 ---
 
 # Paper OS 当前状态
 
-本页最新一节是 2026-09-18 的桌面 IDE 切片 1（Agent/Render 双模式）实测快照；HEAD 为 `8c62e93`（其上是 Wave 1–3：编辑器血统、终端、@file、SyncTeX、真实 git 状态栏，均落在 Web Workbench），工作区 **dirty**（切片 1 的桌面 IDE 改动、新测试、新 smoke 和计划文档尚未提交）。更早的 2026-08 章节是历史快照。它仍不是发布证明：没有 PR、tag 或签名安装包。任何接手者都应先运行本页的基线命令，再相信能力声明。
+本页最新一节是 2026-09-21 的桌面 IDE 切片 2a（编译生命周期）实测快照；HEAD 为 `fb8fac2`（切片 1 Agent/Render 双模式已提交），工作区 **dirty**（切片 2a 的 compile-jobs、compile-live 超时/取消/并发、桌面状态机与 stale PDF 尚未提交）。更早的 2026-09-18 / 2026-08 章节是历史快照。它仍不是发布证明：没有 PR、tag 或签名安装包。任何接手者都应先运行本页的基线命令，再相信能力声明。
 
 ## 状态口径
 
@@ -26,8 +26,8 @@ product_version: 0.7.0
 | 项目 | 当前事实 |
 | --- | --- |
 | 产品方向 | 本地优先、Workspace Kernel + Packs 的通用文档 IDE |
-| 当前分支/提交 | `main` / `8c62e93`（在 `2629f33` 之上：Wave 1 编辑器血统、Wave 2 终端 + @file/公式描述/tex 入口探测、Wave 3 SyncTeX、Windows 自包含打包管线、Workbench 去装饰 + 真实 git 状态栏；这些全部只落在 Web Workbench 与服务端） |
-| 工作区 | dirty：切片 1 桌面 IDE 双模式（`apps/desktop/src/ide.jsx`、`ide.css`）、`tests/desktop-work-mode.test.mjs`、`app/desktop-mode-visual-smoke.mjs`、`docs/plans/2026-09-18-desktop-ide-dual-mode-plan.md`、`docs/PRODUCT_SPEC_CURSOR.md`、`docs/CURSOR_DEVELOPMENT_BRIEF.md`，以及上一轮遗留的 `findings.md`/`progress.md`/`task_plan.md`（未删除，由用户决定） |
+| 当前分支/提交 | `main` / `fb8fac2`（切片 1 已提交；其上是 Wave 1–3 与 Windows 自包含打包管线，这些能力仍主要落在 Web Workbench 与服务端） |
+| 工作区 | dirty：切片 2a 编译生命周期（`app/lib/compile-jobs.mjs`、`app/server.mjs`、`apps/desktop/src/compile-lifecycle.mjs`、`ide.jsx`/`ide.css`、`tests/compile-*.test.mjs`、`app/desktop-compile-smoke.mjs`），以及上一轮遗留的 `findings.md`/`progress.md`/`task_plan.md`（未删除，由用户决定） |
 | 两个前端 | 桌面 IDE（`PaperOS.exe` → `/ide/`，源码 `apps/desktop/src/ide.jsx`）与 Web Workbench（`/app/workbench`，源码 `web/src/pages/app/Workbench.jsx`）共用 `app/server.mjs`；Wave 1–3 的终端/SyncTeX/公式浮层/git 状态栏尚未接入桌面 IDE |
 | 根版本 | `package.json` 为 `0.7.0` |
 | 桌面版本 | 根、Tauri config、desktop package、Cargo 均为 `0.7.0`（2026-08-31 随 0.7.0 发布统一 bump），Web UI 版本号由 Vite `define` 注入单一来源 |
@@ -48,8 +48,9 @@ product_version: 0.7.0
 | stale tree/open response guard | Implemented | `treeRequestRef`、`openRequestRef` | 仅覆盖当前 desktop 请求路径 |
 | local auth bootstrap | Implemented | `/api/auth/bootstrap`、desktop boot、auth test | 本地信任模型仍需正式威胁模型和桌面 CSP 收口 |
 | Apply blocks 冲突与回滚 | Partial | baseline mtime、409 `APPLY_CONFLICT`、500 `APPLY_ROLLBACK`、transaction test、Web AI Preview/Reject/Apply | 尚无持久 transaction ID、通用内容版本、用户级 undo/hunk UI |
-| LaTeX compile/PDF preview | Partial | compile routes、Tectonic/latexmk、IDE preview、`--synctex` + 编译快照（服务端） | 桌面：`compile-live` 无超时/取消/并发保护，失败仍可能把旧 `build/*.pdf` 当新产物广播且无 stale 标记，PDF 为 `<iframe>` 无页码/缩放；真实 SyncTeX 路由只接入 Web Workbench；BuildProfile/BuildJob/ArtifactSet 未完成 |
-| 桌面 IDE Agent/Render 双模式（切片 1） | Implemented（布局重心，非权限墙） | `apps/desktop/src/ide.jsx` 顶栏 `role="group"` 分段控制 + 状态栏/Assistant 模式标签 + 命令面板两条命令；`localStorage["paperos.workMode"]`；`RenderStage` 诚实空状态（编译目标、引擎探测、编译/安装入口、无 LaTeX Capability 说明）；`tests/desktop-work-mode.test.mjs` 9/9；`npm run desktop-mode-visual-smoke` | 编辑器在两模式下都挂载；1240px 以下 Render 折叠为“预览 + Assistant”两栏（编辑列隐藏，一键切回 Agent）；实时公式草稿、PDF 工具条、SyncTeX 接入属切片 2；标签页不跨刷新持久化 |
+| LaTeX compile/PDF preview | Partial | compile routes、Tectonic/latexmk、IDE preview、`--synctex` + 编译快照（服务端）；切片 2a：超时/取消/COMPILE_BUSY、done 只在新鲜产物上带 `pdf` | 桌面 PDF 仍为 `<iframe>`，无页码/缩放（切片 2b）；真实 SyncTeX 路由只接入 Web Workbench；BuildProfile/BuildJob/ArtifactSet 未完成 |
+| 桌面 IDE Agent/Render 双模式（切片 1） | Implemented（布局重心，非权限墙） | `apps/desktop/src/ide.jsx` 顶栏 `role="group"` 分段控制 + 状态栏/Assistant 模式标签 + 命令面板两条命令；`localStorage["paperos.workMode"]`；`RenderStage` 诚实空状态；`tests/desktop-work-mode.test.mjs` 9/9；`npm run desktop-mode-visual-smoke` | 编辑器在两模式下都挂载；1240px 以下 Render 折叠为两栏；实时公式草稿、PDF 工具条、SyncTeX 接入属切片 2b；标签页不跨刷新持久化 |
+| 桌面编译生命周期（切片 2a） | Implemented | `app/lib/compile-jobs.mjs`（超时 180s、取消、每 Workspace 一任务、输出封顶、`classifyArtifact`）；`POST /api/editor/compile-live` 202 + `compile-cancel` + `compile-status`；桌面 `compile-lifecycle.mjs` 状态机 idle→running→succeeded/failed/timeout/cancelled/no-engine；失败保留上次 PDF 并标过期；`tests/compile-jobs.test.mjs` 10/10、`tests/compile-live-api.test.mjs` 2/2、`tests/desktop-compile-lifecycle.test.mjs` 6/6；`npm run desktop-compile-smoke` | 验收用假引擎夹具（`tests/fixtures/fake-latexmk.mjs`），不是本机 Tectonic 排版证明；PDF 仍无页码/缩放/SyncTeX |
 | AI provider 与 Web AI 审查流 | Partial | OpenAI-compatible provider path、账户密钥加密、`/api/chat` runtime metadata、真实 `ActionTimeline`、BEGIN_FILE preview/diff、显式 Reject/Apply | provider 失败会回退并明确标识 `mock-local`；仍不是本机模型推理，也没有通用 undo/hunk 编辑器 |
 | Team/community/admin API | Partial | server routes 与部分测试 | 不是生产级实时协作、队列或多代理编排 |
 | Ed25519 发布清单 | Implemented | `app/lib/signer.mjs`、release endpoints、signer/admin tests | 不替代 Authenticode/notarization；launcher 尚未验证更新链 |
@@ -331,14 +332,44 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 
 ### 切片 1：未做与边界
 
-- 没有实时公式草稿、PDF 页码/缩放工具条、SyncTeX 桌面接入、编译状态机/stale 标记：这些是切片 2a/2b，Render stage 目前只是诚实空状态。
+- 没有实时公式草稿、PDF 页码/缩放工具条、SyncTeX 桌面接入：这些是切片 2b；切片 2a 已补编译状态机与 stale 标记。
 - 桌面 IDE 标签页不跨刷新持久化（smoke 依赖 IDE 自身的 `main.tex` 自动打开）。
 - 1240px 以下 Render 模式隐藏编辑列（一键切回 Agent 可编辑）；这是折叠优先级，不是能力限制。
 - 125%/150% DPI 与 1920x1080 尚未实测（属阶段 6）；Windows 真机窗口尺寸 ≥ `MinimumSize 1100x720`，800px 视口只在浏览器中验证。
 
+## 2026-09-21 切片 2a 编译生命周期证据（当前）
+
+基线：`main` / `fb8fac2` + dirty worktree；Windows 10.0.26200；Node v24.12.0。计划见 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md) §1 S2a。
+
+### 做了什么
+
+- 抽出 `app/lib/compile-jobs.mjs`：每 Workspace 一个运行任务、默认 180s 超时（`PAPER_OS_COMPILE_TIMEOUT_MS` 可测）、显式 cancel、输出 1MB 封顶、`classifyArtifact` 只把“任务开始之后写出的 PDF”算作本次产物。
+- `POST /api/editor/compile-live` 立即 202；进行中再提交返回 409 `COMPILE_BUSY`；新增 `POST /api/editor/compile-cancel` 与 `GET /api/editor/compile-status`。`done` 只在 `succeeded && pdfFresh` 时带 base64 `pdf`，失败带 `previousPdfPath`。
+- 桌面 `apps/desktop/src/compile-lifecycle.mjs` 状态机 idle → running → succeeded / failed / timeout / cancelled / no-engine；编译不再占用共享 `busy`。失败/超时/取消保留上次 blob URL，PDF 头显示「过期」。
+- 验收双样本走 `tests/fixtures/fake-latexmk.mjs`（`% PAPEROS_FAKE: success|fail|hang`），不依赖本机 TeX 发行版。`.mjs` 引擎经 `spawnArgsForEngine` 用当前 Node 启动。
+
+### 验证
+
+| 命令 | 结果 | 证明范围 |
+| --- | --- | --- |
+| `node --test tests/compile-jobs.test.mjs tests/compile-live-api.test.mjs tests/desktop-compile-lifecycle.test.mjs tests/desktop-work-mode.test.mjs tests/desktop-workspace-ui.test.mjs tests/workspace-kernel.test.mjs` | 54/54 pass | 引擎选择、新鲜/过期产物、忙/取消/超时、HTTP 412/409/202、桌面状态机与接线契约 |
+| `node --test` | 297/297 pass，150s | 全 Node suite，无回归 |
+| `npm run ide:build` | exit 0；IDE bundle 4.4 MB | 桌面包含 `compile-lifecycle.mjs` |
+| `npm run desktop-compile-smoke` | OK | 隔离 PATH + 假引擎；成功 `.tex` → 状态「编译成功」+ `pdf-fresh-badge`；改写为失败后再编译 → 状态「编译失败」+ `pdf-stale-badge` 且 PDF 仍在 |
+| `git diff --check` | exit 0 | 仅有既有 LF/CRLF 警告 |
+
+证据文件：`dist/visual-qa/desktop-compile-success.png`（109403 B）、`dist/visual-qa/desktop-compile-stale.png`（108601 B）、`dist/visual-qa/desktop-compile-behavior.json`。
+
+### 未做与边界
+
+- 没有用本机 Tectonic 排版真实论文；夹具只证明生命周期与产物诚实，不证明排版质量。
+- PDF 仍是 `<iframe>`，无页码/缩放/SyncTeX（切片 2b）。
+- Web Workbench 仍用 30s 回退清 `compiling`；本次未改 Workbench。
+- 通用 `BuildJob` / `ArtifactSet` 仍是契约，不是完整作业模型。
+
 ## 已知风险
 
-0. **切片 1 未提交**：桌面双模式、测试、smoke、计划文档仍在 dirty worktree；下一步应审阅 diff 并按 Lore protocol 提交（`Tested`/`Not-tested` 见上节）。
+0. **切片 2a 未提交**：compile-jobs、compile-live 路由、桌面状态机、测试和 smoke 仍在 dirty worktree。
 1. **尚无 PR / tag / 签名发布**：重设计、文档、09-integrations Epic 1–4b、文件夹管理与 0.6.0 版本对齐均已在 `1546dab` 之上分组提交，dirty worktree 风险已消除；仍缺少 PR 审阅、git tag 和签名安装包，结果尚未绑定 tag/release。
 2. **发布版本治理**：根、Tauri config、desktop package、Cargo 已统一 bump 为 `0.6.0`（2026-08-12），Web UI 版本号改由 Vite `define` 从根 `package.json` 注入；打 tag 仍待执行。
 3. **发布声明超前**：Windows ZIP 缺少 Node 生产依赖和 self-contained .NET runtime；macOS/Linux 清单与实际产物不一致；原生代码签名未完成。
@@ -354,7 +385,7 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 
 | 优先级 | 工作 | 完成判据 |
 | --- | --- | --- |
-| P0 | 提交切片 1 并进入切片 2a（编译生命周期：`compile-live` 超时/取消/并发保护、新旧产物区分、stale 标记、前端状态机） | 见 `plans/2026-09-18-desktop-ide-dual-mode-plan.md` §1；成功 `.tex` 与故意失败 `.tex` 双样本验收 |
+| P0 | 提交切片 2a 并进入切片 2b（PDF 工具条、`/api/editor/synctex` 桌面接入、KaTeX 实时公式草稿） | 见 `plans/2026-09-18-desktop-ide-dual-mode-plan.md` §1 |
 | P0 | 形成可审阅提交和完整验证基线 | dirty 变更分组审阅；全测试/构建结果绑定 SHA |
 | P0 | 修正版本和发布资产一致性 | 单一版本源；清单不声明缺失资产；签名边界明确 |
 | P1 | 完成 T3.6 真实 Workbench 产品截图 | 以真实 AI 面板和 Workspace/file 状态拍摄 web/public/hero-ide.png，并通过桌面/移动截图审查 |

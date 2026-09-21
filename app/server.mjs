@@ -37,6 +37,7 @@ import { PLAN_LIMITS, effectivePlan, planLimits, trimUserThreads } from "./lib/p
 import { paymentProviderStatus } from "./lib/payments.mjs";
 import { TERMINAL_OUTPUT_CAP, TERMINAL_TIMEOUT_MS, validateTerminalCommand } from "./lib/terminal.mjs";
 import { forwardLookup, inverseLookup, parseSyncTeX } from "./lib/synctex.mjs";
+import { COMPILE_TIMEOUT_MS, CompileJobError, classifyArtifact, createCompileJobManager, selectEngine, spawnArgsForEngine } from "./lib/compile-jobs.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
@@ -55,6 +56,9 @@ const workspaceKernel = createWorkspaceKernel({
   registryPath: join(dataDir, "workspaces.json"),
   packsPath: join(root, "product", "workspace-packs.json"),
 });
+// One live LaTeX compile per Workspace, with timeout, cancel, and honest
+// artifact freshness (see lib/compile-jobs.mjs).
+const compileJobs = createCompileJobManager();
 
 const SESSION_COOKIE = "paper_os_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
@@ -169,8 +173,16 @@ const CONTENT_DEFAULTS = {
 
 const port = Number(process.env.PAPER_OS_PORT || 3719);
 const pythonCommand = process.env.PAPER_OS_PYTHON || "python";
-const latexmkCommand = process.env.PAPER_OS_LATEXMK || "latexmk";
 const runtimeProbeTimeoutMs = Number(process.env.PAPER_OS_RUNTIME_PROBE_TIMEOUT_MS || 2500);
+
+function resolveLatexmkCommand() {
+  return process.env.PAPER_OS_LATEXMK || "latexmk";
+}
+
+function resolveCompileTimeoutMs() {
+  const raw = Number(process.env.PAPER_OS_COMPILE_TIMEOUT_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : COMPILE_TIMEOUT_MS;
+}
 const debugServer = process.env.PAPER_OS_SERVER_DEBUG === "1";
 
 const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
@@ -256,7 +268,8 @@ export function runCommand(command, args = [], options = {}) {
       resolvePromise({ code, stdout, stderr, timedOut });
     };
 
-    const child = spawn(command, args, {
+    const launched = spawnArgsForEngine(command, args);
+    const child = spawn(launched.command, launched.args, {
       cwd: options.cwd || root,
       shell: false,
       stdio: ["ignore", "pipe", "pipe"],
@@ -1196,7 +1209,7 @@ async function api(req, res, path) {
       ? readModelingStatus(workspaceKernel.getWorkspace(activeMathModelingWorkspace).root)
       : null;
     const pythonStatus = commandAvailability(pythonCommand);
-    const latexmkStatus = commandAvailability(latexmkCommand);
+    const latexmkStatus = commandAvailability(resolveLatexmkCommand());
     return sendJson(res, 200, {
       root,
       runtime: {
@@ -3196,7 +3209,7 @@ async function api(req, res, path) {
     const localExists = existsSync(localBin);
     const [tectonic, latexmk, python] = await Promise.all([
       localExists ? probeEngine(localBin) : probeEngine("tectonic"),
-      probeEngine(latexmkCommand),
+      probeEngine(resolveLatexmkCommand()),
       commandStatus(pythonCommand),
     ]);
     return sendJson(res, 200, {
@@ -3293,44 +3306,46 @@ async function api(req, res, path) {
     }
     const filePath = workspacePath(workspaceId, relPath);
     if (!existsSync(filePath)) return sendJson(res, 404, { error: "file not found" });
-    // pick engine: bundled tectonic > system tectonic > latexmk
-    const localBin = engineBinaryPath();
-    let bin = null, args = null;
-    if (existsSync(localBin)) { bin = localBin; args = [relPath, "--keep-intermediates", "--synctex", "--outdir", "build"]; }
-    else {
-      const which = await runCommand("tectonic", ["--version"], { timeoutMs: 1500 });
-      if (which.code === 0) { bin = "tectonic"; args = [relPath, "--keep-intermediates", "--synctex", "--outdir", "build"]; }
-      else if (whichCommand(latexmkCommand)) { bin = latexmkCommand; args = ["-pdf", "-synctex=1", "-interaction=nonstopmode", "-halt-on-error", relPath]; }
-    }
-    if (!bin) {
+    const engine = selectEngine({
+      bundledBin: engineBinaryPath(), relPath, exists: existsSync, which: whichCommand, latexmkCommand: resolveLatexmkCommand(),
+    });
+    if (!engine) {
       return sendJson(res, 412, {
         error: "no LaTeX engine available",
-        hint: "Run: paperctl engine install-tectonic (or visit /app/workbench → Engine)",
+        code: "NO_ENGINE",
+        hint: "Install Tectonic from the IDE (Install Tectonic) or put tectonic/latexmk on PATH.",
+        install: "/api/engine/install/tectonic",
       });
     }
     const cwd = workspaceRoot(workspaceId);
     ensureBuildDir(cwd);
-    const result = await runCommand(bin, args, { cwd, timeoutMs: 180_000 });
-    // try to attach the produced PDF as base64
-    let pdfB64 = null;
-    const pdfPath = resolveCompiledPdf(cwd, relPath);
-    if (pdfPath) {
-      pdfB64 = readFileSync(pdfPath).toString("base64");
-    }
+    const startedAt = Date.now();
+    const timeoutMs = resolveCompileTimeoutMs();
+    const result = await runCommand(engine.bin, engine.args, { cwd, timeoutMs });
+    // Only a PDF written by this run is attached; an older build/*.pdf left
+    // over from a previous success is reported as stale, never as output.
+    const artifact = classifyArtifact({ pdfPath: resolveCompiledPdf(cwd, relPath), startedAt, stat: statSync });
+    const succeeded = result.code === 0 && !result.timedOut && artifact.fresh;
+    const rel = (p) => (p ? p.replace(cwd, "").replace(/\\/g, "/") : null);
     return sendJson(res, 200, {
-      engine: bin,
+      engine: engine.bin,
+      engineKind: engine.kind,
       code: result.code,
       timedOut: result.timedOut,
+      succeeded,
       stdout: (result.stdout || "").split("\n").slice(-40).join("\n"),
       stderr: (result.stderr || "").split("\n").slice(-40).join("\n"),
-      pdf: pdfB64,
-      pdfPath: pdfPath ? pdfPath.replace(cwd, "").replace(/\\/g, "/") : null,
+      pdf: succeeded ? readFileSync(artifact.path).toString("base64") : null,
+      pdfPath: succeeded ? rel(artifact.path) : null,
+      pdfFresh: artifact.fresh,
+      previousPdfPath: succeeded ? null : rel(artifact.path),
     });
   }
 
-  // Real-time compile: streams stdout/stderr via WS channel compile:<contest>
-  // and returns the final result in the HTTP response. This is what the
-  // Workbench calls when the user wants to see live progress.
+  // Real-time compile: accepts immediately (202), streams stdout/stderr/done
+  // on WS channel compile:<workspace>, and refuses a second job for the same
+  // Workspace with 409 COMPILE_BUSY. The done event only attaches a PDF when
+  // classifyArtifact says it was written after this job started.
   if (req.method === "POST" && path === "/api/editor/compile-live") {
     const user = requireUser(req, res);
     if (!user) return undefined;
@@ -3343,52 +3358,114 @@ async function api(req, res, path) {
     }
     const filePath = workspacePath(workspaceId, relPath);
     if (!existsSync(filePath)) return sendJson(res, 404, { error: "file not found" });
-    const localBin = engineBinaryPath();
-    let bin = null, args = null;
-    if (existsSync(localBin)) { bin = localBin; args = [relPath, "--keep-intermediates", "--synctex", "--outdir", "build"]; }
-    else if (whichCommand("tectonic")) { bin = "tectonic"; args = [relPath, "--keep-intermediates", "--synctex", "--outdir", "build"]; }
-    else if (whichCommand(latexmkCommand)) { bin = latexmkCommand; args = ["-pdf", "-synctex=1", "-interaction=nonstopmode", "-halt-on-error", relPath]; }
-    if (!bin) {
-      return sendJson(res, 412, { error: "no LaTeX engine available" });
+    const engine = selectEngine({
+      bundledBin: engineBinaryPath(), relPath, exists: existsSync, which: whichCommand, latexmkCommand: resolveLatexmkCommand(),
+    });
+    if (!engine) {
+      return sendJson(res, 412, {
+        error: "no LaTeX engine available",
+        code: "NO_ENGINE",
+        hint: "Install Tectonic from the IDE (Install Tectonic) or put tectonic/latexmk on PATH.",
+        install: "/api/engine/install/tectonic",
+      });
     }
     const activeWorkspaceRoot = workspaceRoot(workspaceId);
     ensureBuildDir(activeWorkspaceRoot);
     const channel = `compile:${workspaceId}`;
-    const child = spawn(bin, args, { cwd: activeWorkspaceRoot, windowsHide: true });
-    const startedAt = Date.now();
-    broadcast(channel, { event: "start", engine: bin, args, startedAt });
-    let stdoutBuf = "", stderrBuf = "";
-    child.stdout.on("data", (b) => {
-      const s = b.toString();
-      stdoutBuf += s;
-      broadcast(channel, { event: "stdout", text: s });
-    });
-    child.stderr.on("data", (b) => {
-      const s = b.toString();
-      stderrBuf += s;
-      broadcast(channel, { event: "stderr", text: s });
-    });
-    child.on("close", (code) => {
-      let pdfB64 = null;
-      const pdfPath = resolveCompiledPdf(activeWorkspaceRoot, relPath);
-      if (pdfPath) pdfB64 = readFileSync(pdfPath).toString("base64");
-      // Mimir lesson: a successful compile is a known-good state — snapshot the
-      // compiled source so the user can roll back to it later.
-      let snapshotId = null;
-      if (code === 0) {
-        try { snapshotId = saveSnapshot(workspaceId, relPath, "compile"); } catch { snapshotId = null; }
-      }
-      broadcast(channel, {
-        event: "done",
-        code,
-        snapshotId,
-        pdf: pdfB64,
-        pdfPath: pdfPath ? pdfPath.replace(activeWorkspaceRoot, "").replace(/\\/g, "/") : null,
-        durationMs: Date.now() - startedAt,
+    const timeoutMs = resolveCompileTimeoutMs();
+    const rel = (p) => (p ? p.replace(activeWorkspaceRoot, "").replace(/\\/g, "/") : null);
+    // Remembered before spawning so a failed run can still tell the client
+    // which older artifact it is looking at.
+    const previousPdf = resolveCompiledPdf(activeWorkspaceRoot, relPath);
+    let job;
+    try {
+      job = compileJobs.start({
+        workspaceId,
+        entry: relPath,
+        engine: engine.kind,
+        bin: engine.bin,
+        args: engine.args,
+        cwd: activeWorkspaceRoot,
+        timeoutMs,
+        onEvent: (event) => broadcast(channel, event),
+        onClose: (result) => {
+          const artifact = classifyArtifact({
+            pdfPath: resolveCompiledPdf(activeWorkspaceRoot, relPath), startedAt: result.startedAt, stat: statSync,
+          });
+          const succeeded = result.code === 0 && !result.timedOut && !result.cancelled && !result.error && artifact.fresh;
+          // Mimir lesson: a successful compile is a known-good state — snapshot
+          // the compiled source so the user can roll back to it later.
+          let snapshotId = null;
+          if (succeeded) {
+            try { snapshotId = saveSnapshot(workspaceId, relPath, "compile"); } catch { snapshotId = null; }
+          }
+          let pdfB64 = null;
+          if (succeeded) {
+            try { pdfB64 = readFileSync(artifact.path).toString("base64"); } catch { pdfB64 = null; }
+          }
+          const previousPdfPath = succeeded ? null : rel(previousPdf || artifact.path);
+          broadcast(channel, {
+            event: "done",
+            jobId: result.jobId,
+            entry: relPath,
+            engine: engine.bin,
+            engineKind: engine.kind,
+            code: result.code,
+            signal: result.signal,
+            timedOut: result.timedOut,
+            cancelled: result.cancelled,
+            error: result.error,
+            succeeded,
+            snapshotId,
+            pdf: pdfB64,
+            pdfPath: succeeded ? rel(artifact.path) : null,
+            pdfFresh: artifact.fresh,
+            previousPdfPath,
+            durationMs: result.durationMs,
+          });
+          return {
+            succeeded,
+            pdfPath: succeeded ? rel(artifact.path) : null,
+            previousPdfPath,
+            snapshotId,
+            pdfFresh: artifact.fresh,
+          };
+        },
       });
+    } catch (error) {
+      if (error instanceof CompileJobError && error.code === "COMPILE_BUSY") {
+        return sendJson(res, 409, { error: error.message, code: "COMPILE_BUSY", active: error.active, channel });
+      }
+      throw error;
+    }
+    audit(user, "compile.start", `${workspaceId}:${relPath} via ${engine.kind}`);
+    return sendJson(res, 202, {
+      accepted: true, channel, engine: engine.bin, engineKind: engine.kind,
+      jobId: job.jobId, startedAt: job.startedAt, timeoutMs: job.timeoutMs,
     });
-    child.on("error", (e) => broadcast(channel, { event: "error", message: String(e.message || e) }));
-    return sendJson(res, 202, { accepted: true, channel, engine: bin });
+  }
+
+  // Cancel the running compile for a Workspace (no-op when nothing runs).
+  if (req.method === "POST" && path === "/api/editor/compile-cancel") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const body = await readBody(req);
+    const workspaceId = bodyWorkspaceId(body);
+    workspaceRoot(workspaceId); // throws for unknown Workspaces
+    const cancelled = compileJobs.cancel(workspaceId);
+    if (!cancelled) return sendJson(res, 404, { error: "no compile is running for this Workspace", code: "NO_ACTIVE_COMPILE" });
+    audit(user, "compile.cancel", `${workspaceId}:${cancelled.jobId}`);
+    return sendJson(res, 200, { ok: true, ...cancelled });
+  }
+
+  // Active/last compile summary so a reloaded client can restore its state.
+  if (req.method === "GET" && path === "/api/editor/compile-status") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const url = new URL(req.url, `http://localhost:${port}`);
+    const workspaceId = queryWorkspaceId(url);
+    workspaceRoot(workspaceId);
+    return sendJson(res, 200, { channel: `compile:${workspaceId}`, timeoutMs: resolveCompileTimeoutMs(), ...compileJobs.status(workspaceId) });
   }
 
   if (req.method === "GET" && path === "/api/editor/evidence") {

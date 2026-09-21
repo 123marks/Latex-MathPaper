@@ -1,7 +1,7 @@
 # 桌面 IDE 增量开发计划：双模式、Render/LaTeX、AI Harness
 
 Date: 2026-09-18
-Status: Active（阶段 0 完成；切片 S1 完成并实测，证据见 `../STATUS.md` 2026-09-18 节；下一步 S2a）
+Status: Active（阶段 0 完成；切片 S1 完成并已提交 `fb8fac2`；切片 S2a 完成并实测，证据见 `../STATUS.md` 2026-09-21 节；下一步 S2b）
 Baseline: `main` / `8c62e93` + 上一轮遗留的未提交 `apps/desktop/src/ide.jsx`、`ide.css`、`docs/README.md` 修改
 
 本计划是 `PRODUCT_SPEC_CURSOR.md` 与 `CURSOR_DEVELOPMENT_BRIEF.md` 的执行分解。它先回答“现在真实是什么”，再给出每个切片的验收。计划本身不证明任何能力已完成；完成事实只写进 `STATUS.md`。
@@ -117,6 +117,15 @@ ide.jsx (IDE 组件)
 - 验收 12：人工目视 render 1440/1280/1024/800 与 agent 800 无重叠截断；`PaperOS.exe` 隔离环境真实启动（健康 4.2s、主窗口、`/ide/` 200、关闭释放端口）。
 - 计划外但必要：smoke 抓出两处既有布局缺陷（Monaco 网格列不可回缩；1024px 标题栏溢出），已修复并记入 `CHANGELOG.md`；标题栏折叠新增 ≤1100px 紧凑菜单。
 - 全量 `node --test` 279 中 278 pass，1 项 `listen EACCES`（Windows 随机端口保留段）复跑通过。
+
+### S2a 执行记录（2026-09-21）
+
+- 作业管理：`app/lib/compile-jobs.mjs` + `tests/compile-jobs.test.mjs` 10/10。
+- HTTP：`tests/compile-live-api.test.mjs` 2/2（412 NO_ENGINE、409 COMPILE_BUSY、cancel、新鲜成功、过期失败、700ms 超时）。
+- 桌面状态机：`apps/desktop/src/compile-lifecycle.mjs` + `tests/desktop-compile-lifecycle.test.mjs` 6/6。
+- 真实启动：`npm run desktop-compile-smoke` OK；成功样本标「最新」，失败样本保留 PDF 并标「过期」。
+- 全量 `node --test` 297/297；`npm run ide:build` 4.4 MB。
+- 验收引擎是 `tests/fixtures/fake-latexmk.mjs`，不是本机 Tectonic 排版证明。
 
 ## 3. 不做与假设
 

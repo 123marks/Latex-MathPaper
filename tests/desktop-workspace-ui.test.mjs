@@ -102,7 +102,11 @@ test("paperctl TASKS and LaTeX controls are gated by their Pack Capabilities", (
   assert.doesNotMatch(bottomSource, /label: "TERMINAL"/);
   assert.match(bottomSource, /\{bottomTab === "tasks" && canRunPaperctl && \(/);
   assert.match(bottomSource, /contestId: contest/);
-  assert.match(bottomSource, /\{canCompile \? \(\s*<button onClick=\{compile\}/);
+  assert.match(bottomSource, /canCompile \? \(/);
+  assert.match(bottomSource, /onClick=\{compile\}/);
+  assert.match(bottomSource, /onClick=\{cancelCompile\}/);
+  assert.match(bottomSource, /data-testid="compile-run"/);
+  assert.match(bottomSource, /data-testid="compile-cancel"/);
   assert.match(bottomSource, /canCompile \? \{ id: "latex", label: "LaTeX" \} : null/);
 });
 
