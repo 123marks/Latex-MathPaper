@@ -43,6 +43,8 @@ await build({
     "react-dom/client": join(root, "web", "node_modules", "react-dom", "client.js"),
     "@monaco-editor/react": join(root, "web", "node_modules", "@monaco-editor", "react"),
     "monaco-editor": join(root, "web", "node_modules", "monaco-editor"),
+    "katex": join(root, "web", "node_modules", "katex"),
+    "pdfjs-dist": join(root, "web", "node_modules", "pdfjs-dist"),
   },
   // Minify by default (pass --dev to keep it readable); ship without source
   // maps unless explicitly developing, so the distributed IDE bundle is not
@@ -59,5 +61,11 @@ const chromeCss = existsSync(cssSrc) ? readFileSync(cssSrc, "utf8") : "";
 writeFileSync(outCss, `${monacoCss}\n\n/* ── Paper OS chrome ── */\n${chromeCss}\n`);
 
 if (existsSync(htmlSrc)) copyFileSync(htmlSrc, join(outDir, "index.html"));
+
+const pdfBuild = join(root, "web", "node_modules", "pdfjs-dist", "build");
+for (const name of ["pdf.mjs", "pdf.worker.min.mjs"]) {
+  const src = join(pdfBuild, name);
+  if (existsSync(src)) copyFileSync(src, join(outDir, name));
+}
 
 console.log(`IDE bundled → ${outDir}/ide.js`);

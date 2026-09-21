@@ -15,6 +15,7 @@ import {
 
 const ideSource = readFileSync(new URL("../apps/desktop/src/ide.jsx", import.meta.url), "utf8");
 const ideCss = readFileSync(new URL("../apps/desktop/src/assets/ide.css", import.meta.url), "utf8");
+const pdfSource = readFileSync(new URL("../apps/desktop/src/pdf-preview.jsx", import.meta.url), "utf8");
 
 function slice(source, startMarker, endMarker) {
   const start = source.indexOf(startMarker);
@@ -128,8 +129,9 @@ test("desktop IDE wires the state machine, cancel route, and stale PDF badge", (
   assert.match(ideSource, /data-testid="compile-run"/);
   assert.match(ideSource, /data-testid="compile-cancel"/);
   assert.match(ideSource, /data-testid="status-compile"/);
-  assert.match(ideSource, /data-testid="pdf-stale-badge"/);
-  assert.match(ideSource, /data-testid="pdf-fresh-badge"/);
+  assert.match(pdfSource, /data-testid="pdf-stale-badge"/);
+  assert.match(pdfSource, /data-testid="pdf-fresh-badge"/);
+  assert.match(ideSource, /stale=\{compileJob\.pdfFresh === false\}/);
 
   const compileFn = slice(ideSource, "async function compile()", "async function cancelCompile(");
   assert.match(compileFn, /compileIsRunning\(compileJob\)/);

@@ -64,10 +64,11 @@ test("the Render stage appears only when no compiled PDF is on screen", () => {
   assert.match(ideSource, /const showRenderStage = workMode === "render" && !pdfVisible && !activeIsMedia/);
   const stage = slice(ideSource, "function RenderStage(", "function IDE(");
   assert.match(stage, /data-testid="render-stage"/);
-  // Honest empty states: compile entry only with the LaTeX Capability, and
-  // a plain "no preview" explanation otherwise; nothing pretends to render.
+  // Honest empty states: compile entry only with the LaTeX Capability.
+  // Live drafts are a separate component; RenderStage itself does not import KaTeX.
   assert.match(stage, /canCompile/);
   assert.match(stage, /onCompile/);
+  assert.match(stage, /LiveMathDrafts/);
   assert.doesNotMatch(stage, /katex|renderToString/);
 });
 

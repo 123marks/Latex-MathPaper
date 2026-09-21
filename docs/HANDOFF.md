@@ -2,7 +2,7 @@
 title: Paper OS engineering handoff
 status: active
 as_of: 2026-09-21
-baseline_commit: fb8fac2
+baseline_commit: 161d052
 worktree: dirty
 owner: next maintainer
 ---
@@ -19,26 +19,26 @@ Paper OS 要成为一个**本地优先、Workspace Kernel 驱动、Pack 可扩�
 
 ## 2. 交接基线
 
-### 2.0 当前基线（2026-09-21，桌面 IDE 切片 2a）
+### 2.0 当前基线（2026-09-21，桌面 IDE 切片 2b）
 
-- `HEAD`：`fb8fac2`（切片 1 Agent/Render 双模式已提交）。Wave 1–3 与 Windows 自包含打包仍主要落在 Web Workbench 与服务端。
-- 工作区：**dirty**。本轮切片 2a：`app/lib/compile-jobs.mjs`、`app/server.mjs`、`apps/desktop/src/compile-lifecycle.mjs`、`ide.jsx`/`ide.css`、`tests/compile-jobs.test.mjs`、`tests/compile-live-api.test.mjs`、`tests/desktop-compile-lifecycle.test.mjs`、`tests/fixtures/fake-latexmk.mjs`、`app/desktop-compile-smoke.mjs`、`package.json`。根目录 `findings.md`/`progress.md`/`task_plan.md` 未动。
-- 本轮主线：切片 2a 编译生命周期已完成并实测，下一步是切片 2b。计划见 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md)。
+- `HEAD`：`161d052`（切片 1 双模式 + 切片 2a 编译生命周期已提交）。Wave 1–3 的终端/git/可见 AI Harness 仍主要落在 Web Workbench。
+- 工作区：**dirty**。本轮切片 2b：`apps/desktop/src/pdf-preview.jsx`、`live-math-drafts.jsx`、`math-drafts.mjs`、`synctex-client.mjs`、`ide.jsx`/`ide.css`/`ide.html`、`build-ide.mjs`、`app/server.mjs`（`.mjs` MIME + `connect-src blob:`）、`app/desktop-render-smoke.mjs`、对应测试与假 PDF 夹具。根目录 `findings.md`/`progress.md`/`task_plan.md` 未动。
+- 本轮主线：切片 2b 已完成并实测，下一步是切片 3。计划见 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md)。
 
 交接表（任务书要求格式）：
 
 ```text
 日期：2026-09-21
-变更目标：桌面 IDE 切片 2a —— 编译生命周期诚实（超时/取消/并发、新旧产物区分、前端状态机、失败保留 stale PDF）
-修改文件：app/lib/compile-jobs.mjs（新）；app/server.mjs；apps/desktop/src/compile-lifecycle.mjs（新）；apps/desktop/src/ide.jsx；apps/desktop/src/assets/ide.css；tests/compile-jobs.test.mjs（新）；tests/compile-live-api.test.mjs（新）；tests/desktop-compile-lifecycle.test.mjs（新）；tests/fixtures/fake-latexmk.mjs（新）；tests/desktop-workspace-ui.test.mjs；app/desktop-compile-smoke.mjs（新）；package.json；docs/STATUS.md；docs/HANDOFF.md；docs/CAPABILITY_MAP.md；CHANGELOG.md；docs/plans/2026-09-18-desktop-ide-dual-mode-plan.md
-新增/修复能力：compile-live 202 + 180s 超时 + cancel + COMPILE_BUSY；done 只在新鲜 PDF 上带产物；桌面 idle/running/succeeded/failed/timeout/cancelled/no-engine；失败保留上次 PDF 并标过期；取消编译按钮与状态栏相位
-运行命令：node --test；node --test tests/compile-jobs.test.mjs tests/compile-live-api.test.mjs tests/desktop-compile-lifecycle.test.mjs；npm run ide:build；npm run desktop-compile-smoke；git diff --check
-测试结果：全量 Node 297/297；切片相关 54/54；IDE bundle 4.4 MB；compile smoke OK（success 最新 / fail 过期且 PDF 仍在）
-人工验证：无头 Edge 截图 desktop-compile-success.png / desktop-compile-stale.png
-已知失败：无。本轮全量 suite 无 EACCES
-未实现/降级：PDF 页码/缩放、SyncTeX 桌面接入、KaTeX 实时公式（切片 2b）；可见 AI Harness（切片 3）；桌面终端/Git（切片 4）；.vsix（切片 5）；验收用假引擎夹具，不是本机 Tectonic 排版证明
-风险与后续：ide.jsx 仍是单体；Web Workbench 仍有 30s compiling 回退；下一步提交切片 2a 后做 2b
-回滚方式：git checkout -- app/server.mjs apps/desktop/src/ide.jsx apps/desktop/src/assets/ide.css tests/desktop-workspace-ui.test.mjs package.json；删除 app/lib/compile-jobs.mjs、apps/desktop/src/compile-lifecycle.mjs、对应 tests 与 smoke
+变更目标：桌面 IDE 切片 2b —— pdf.js 预览工具条、真实 SyncTeX、KaTeX Live 公式草稿
+修改文件：apps/desktop/src/pdf-preview.jsx（新）；apps/desktop/src/live-math-drafts.jsx（新）；apps/desktop/src/math-drafts.mjs（新）；apps/desktop/src/synctex-client.mjs（新）；apps/desktop/src/ide.jsx；apps/desktop/src/assets/ide.css；apps/desktop/src/ide.html；apps/desktop/build-ide.mjs；app/server.mjs；app/desktop-render-smoke.mjs（新）；tests/desktop-math-drafts.test.mjs（新）；tests/desktop-render-preview.test.mjs（新）；tests/fake-compile-artifacts.test.mjs（新）；tests/fixtures/minimal-pdf.mjs（新）；tests/fixtures/fake-latexmk.mjs；tests/desktop-work-mode.test.mjs；tests/desktop-compile-lifecycle.test.mjs；package.json；docs/STATUS.md；docs/HANDOFF.md；docs/CAPABILITY_MAP.md；CHANGELOG.md；docs/plans/2026-09-18-desktop-ide-dual-mode-plan.md
+新增/修复能力：桌面 PDF 页码/缩放/版本/过期；GET /api/editor/synctex 正反向，缺失标估算；Render 无 PDF 时 KaTeX Live 草稿（逐公式错误，编辑器不卸载）；.mjs 以 JS MIME 提供；connect-src 允许 blob
+运行命令：node --test；npm run ide:build；npm run desktop-render-smoke；npm run desktop-compile-smoke；git diff --check
+测试结果：切片相关 43/43；全量 Node 308/309（git-status 满载 flake，单独重跑 1/1）；IDE bundle 4.6 MB；render smoke OK（草稿 1/1、pdf.js 1/1 110% canvas 440、先 SYNCTEX_MISSING 后 SyncTeX）；compile smoke 回归 OK
+人工验证：无头 Chrome 截图 desktop-render-drafts.png / desktop-render-pdf.png / desktop-render-synctex.png
+已知失败：满载 node --test 中 git-status-api 一次读到 HEAD 而非 paper-draft；单独重跑通过。与 2b 无关
+未实现/降级：可见 AI Harness（切片 3）；桌面终端/Git（切片 4）；.vsix（切片 5）；Live 草稿不是光标浮层；桌面 PDF 无问 AI/区域标注；验收用假引擎夹具
+风险与后续：ide.jsx 仍是单体；第二次连续编译曾在无头 Chrome 里把整页卸掉，smoke 改为写入 .synctex 而不是连编两次；下一步提交 2b 后做切片 3
+回滚方式：git checkout -- app/server.mjs apps/desktop/src/ide.jsx apps/desktop/src/assets/ide.css apps/desktop/src/ide.html apps/desktop/build-ide.mjs package.json tests/desktop-work-mode.test.mjs tests/desktop-compile-lifecycle.test.mjs tests/fixtures/fake-latexmk.mjs；删除本轮新增的 preview/drafts/synctex/smoke/test 文件
 ```
 
 ### 2.1 历史基线（2026-08-12）

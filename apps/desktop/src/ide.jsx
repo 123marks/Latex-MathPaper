@@ -26,6 +26,9 @@ import {
   createCompileState,
   keepExistingPdf,
 } from "./compile-lifecycle.mjs";
+import { describeSynctexError, preferSynctexHit, synctexQuery } from "./synctex-client.mjs";
+import DesktopPdfPreview from "./pdf-preview.jsx";
+import LiveMathDrafts from "./live-math-drafts.jsx";
 
 // Bundle monaco locally (WebView2 must not depend on CDN). Theme is defined
 // in setupLatex beforeMount so we never paint dark chrome with light "vs" text.
@@ -810,9 +813,9 @@ function pickCompileTarget(tree, active) {
 }
 
 // ───────────── Render stage ─────────────
-// Shown in Render mode when there is no compiled PDF on screen. It is an
-// honest empty state: it names the real compile target and engine state and
-// offers the real actions. Formula drafts and PDF tooling are later slices.
+// Shown in Render mode when there is no compiled PDF on screen. It names
+// the real compile target and engine state. When the buffer has math,
+// Live drafts fill the body; they never replace the editor.
 function RenderStage({
   workspace,
   canCompile,
@@ -820,6 +823,8 @@ function RenderStage({
   engine,
   compileJob,
   hiddenPdfVersion,
+  source,
+  onJumpLine,
   onCompile,
   onCancel,
   onShowPdf,
@@ -900,6 +905,7 @@ function RenderStage({
             </button>
           ) : null}
         </div>
+        <LiveMathDrafts source={source} onJump={onJumpLine} />
       </div>
     );
   } else if (canCompile) {
@@ -942,6 +948,7 @@ function RenderStage({
             </button>
           ) : null}
         </div>
+        <LiveMathDrafts source={source} onJump={onJumpLine} />
       </div>
     );
   } else {
@@ -1016,6 +1023,8 @@ function IDE() {
     try { return localStorage.getItem("paperos.workMode") === "render" ? "render" : "agent"; } catch { return "agent"; }
   });
   const [syncHit, setSyncHit] = useState(null);
+  const [pdfSyncTarget, setPdfSyncTarget] = useState(null);
+  const [synctexNote, setSynctexNote] = useState(null);
   const [magnifier, setMagnifier] = useState(false);
   const [evidence, setEvidence] = useState(null);
   const [evidenceBusy, setEvidenceBusy] = useState(false);
@@ -1031,6 +1040,7 @@ function IDE() {
   const editorRef = useRef(null);
   const splitRef = useRef(null);
   const syncAnchorsRef = useRef([]);
+  const compiledTexRef = useRef(null);
   // Monotonic request tokens: any in-flight openFile()/loadTree() response
   // whose token no longer matches is stale (workspace switched, another file
   // opened, file renamed) and must be dropped instead of overwriting state.
@@ -1090,6 +1100,9 @@ function IDE() {
     setEvidence(null);
     setMagnifier(false);
     setSyncHit(null);
+    setPdfSyncTarget(null);
+    setSynctexNote(null);
+    compiledTexRef.current = null;
     setCursorPos({ line: 1, col: 1 });
     setBottomTab("output");
     setMediaPreview((previous) => {
@@ -1662,6 +1675,7 @@ function IDE() {
       setBottomTab("latex");
       return;
     }
+    compiledTexRef.current = texPath;
     setBottomTab("latex");
     setLog((l) => [`[compile] ${texPath} ...`, ...l].slice(0, 200));
     try {
@@ -1940,24 +1954,111 @@ function IDE() {
   const dirtyTabs = useMemo(() => openTabs.filter((t) => t.dirty), [openTabs]);
   const syncAnchors = useMemo(() => buildSyncAnchors(editor), [editor]);
   useEffect(() => { syncAnchorsRef.current = syncAnchors; }, [syncAnchors]);
+  useEffect(() => {
+    if (!editor) return;
+    updateSyncFromLine(cursorPos.line);
+  }, [editor, cursorPos.line, syncAnchors]);
 
   function updateSyncFromLine(line) {
-    const hit = nearestAnchor(syncAnchorsRef.current, line);
-    if (!hit) { setSyncHit(null); return; }
-    setSyncHit({ ...hit, sourceLine: line });
+    setSyncHit((previous) => {
+      if (previous?.source === "synctex" && (previous.sourceLine === line || previous.line === line)) {
+        return previous;
+      }
+      const hit = nearestAnchor(syncAnchorsRef.current, line);
+      if (!hit) return null;
+      return { ...hit, sourceLine: line, source: "estimate" };
+    });
   }
 
-  function jumpPdfToSync(hit) {
-    if (!hit || !pdfUrl) return;
-    const base = pdfUrl.split("#")[0];
-    const next = `${base}#page=${hit.page}`;
-    const frame = document.querySelector(".pdf-frame");
-    if (frame) frame.src = next;
-    else {
-      setPdfUrl(next);
-      setPdfVer((v) => v + 1);
+  function currentSyncEstimate(line) {
+    const hit = nearestAnchor(syncAnchorsRef.current, line);
+    if (hit) return { ...hit, sourceLine: line };
+    return {
+      page: 1,
+      title: active?.path || "line",
+      kind: "line",
+      line,
+      sourceLine: line,
+    };
+  }
+
+  async function jumpPdfToSync(hit) {
+    const estimate = hit || currentSyncEstimate(cursorPos.line);
+    if (!pdfUrl) {
+      flash("先编译出 PDF，再做源码定位");
+      return;
     }
     setShowPdf(true);
+    const tex = compiledTexRef.current || pickCompileTarget(tree, active) || active?.path;
+    try {
+      const payload = await api.get(synctexQuery({
+        workspace: contest,
+        tex,
+        mode: "forward",
+        path: active?.path || tex,
+        line: estimate.sourceLine || estimate.line || cursorPos.line,
+      }));
+      const preferred = preferSynctexHit(payload, estimate);
+      setSyncHit(preferred);
+      setSynctexNote(null);
+      setPdfSyncTarget({
+        page: preferred.page,
+        x: preferred.x,
+        y: preferred.y,
+        token: Date.now(),
+      });
+      setLog((l) => [`[synctex] ${active?.path || tex}:${preferred.line || estimate.sourceLine} → PDF p.${preferred.page}`, ...l].slice(0, 200));
+    } catch (error) {
+      const desc = describeSynctexError(error);
+      const fallback = preferSynctexHit(null, estimate);
+      setSyncHit(fallback);
+      setSynctexNote(desc);
+      if (fallback?.page) setPdfSyncTarget({ page: fallback.page, x: null, y: null, token: Date.now() });
+      flash(desc.message);
+      setLog((l) => [`[synctex] ${desc.code}: ${desc.message}`, ...l].slice(0, 200));
+    }
+  }
+
+  function forwardSyncFromCursor() {
+    jumpPdfToSync(currentSyncEstimate(cursorPos.line));
+  }
+
+  async function inverseSyncFromPdf({ page, x, y }) {
+    const tex = compiledTexRef.current || pickCompileTarget(tree, active) || active?.path;
+    if (!tex) {
+      flash("没有可对照的 .tex 入口");
+      return;
+    }
+    try {
+      const payload = await api.get(synctexQuery({
+        workspace: contest,
+        tex,
+        mode: "inverse",
+        page,
+        x,
+        y,
+      }));
+      const rel = String(payload.path || tex).replace(/^\.\//, "");
+      setSyncHit(preferSynctexHit({ ...payload, path: rel }, null));
+      setSynctexNote(null);
+      setLog((l) => [`[synctex] PDF p.${page} → ${rel}:${payload.line}`, ...l].slice(0, 200));
+      if (active?.path === rel) {
+        jumpToLine(payload.line);
+        return;
+      }
+      const file = flattenTree(tree).find((node) => node.path === rel) || {
+        name: rel.split("/").pop(),
+        path: rel,
+        type: "file",
+      };
+      await openFile(file);
+      setTimeout(() => jumpToLine(payload.line), 120);
+    } catch (error) {
+      const desc = describeSynctexError(error);
+      setSynctexNote(desc);
+      flash(desc.message);
+      setLog((l) => [`[synctex] ${desc.code}: ${desc.message}`, ...l].slice(0, 200));
+    }
   }
 
   async function lookupEvidence(line, q = "") {
@@ -2107,6 +2208,11 @@ function IDE() {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "E" || e.key === "e")) {
         e.preventDefault();
         lookupEvidence(cursorPos.line);
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.altKey && (e.key === "j" || e.key === "J")) {
+        e.preventDefault();
+        forwardSyncFromCursor();
         return;
       }
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === "B" || e.key === "b")) {
@@ -2719,11 +2825,20 @@ function IDE() {
               )}
               {syncHit && (
                 <div className="sync-chip">
-                  <span>L{syncHit.sourceLine} → {syncHit.kind} “{syncHit.title}”</span>
+                  <span>L{syncHit.sourceLine || syncHit.line} → {syncHit.kind} “{syncHit.title}”</span>
+                  <span className="sync-source" data-testid="sync-source" data-source={syncHit.source || "estimate"}>
+                    {syncHit.source === "synctex" ? "SyncTeX" : "估算"}
+                  </span>
                   {pdfUrl ? (
-                    <button className="sync-page" onClick={() => jumpPdfToSync(syncHit)}>PDF p.{syncHit.page}</button>
+                    <button
+                      className="sync-page"
+                      data-testid="sync-forward"
+                      onClick={() => jumpPdfToSync(syncHit)}
+                    >
+                      PDF p.{syncHit.page}
+                    </button>
                   ) : null}
-                  <button onClick={() => lookupEvidence(syncHit.sourceLine, syncHit.title)} title="证据反查">
+                  <button onClick={() => lookupEvidence(syncHit.sourceLine || syncHit.line, syncHit.title)} title="证据反查">
                     <Icon name="magnifier" size={13} />
                   </button>
                 </div>
@@ -2747,6 +2862,8 @@ function IDE() {
               engine={engine}
               compileJob={compileJob}
               hiddenPdfVersion={pdfUrl && !showPdf ? pdfVer : 0}
+              source={editor}
+              onJumpLine={jumpToLine}
               onCompile={compile}
               onCancel={cancelCompile}
               onShowPdf={() => setShowPdf(true)}
@@ -2762,34 +2879,30 @@ function IDE() {
               data-fresh={compileJob.pdfFresh === false ? "stale" : "fresh"}
             >
               {syncHit && <div className="sync-bridge" aria-hidden="true" />}
-              <div className="pdf-pane-head">
-                <span>PDF 预览</span>
-                <span className="badge">v{pdfVer}</span>
-                {compileJob.pdfFresh === false ? (
-                  <span
-                    className="badge stale"
-                    data-testid="pdf-stale-badge"
-                    title="这是上次成功编译的 PDF，不是本次运行的产物"
-                  >
-                    过期
-                  </span>
-                ) : (
-                  <span className="badge" data-testid="pdf-fresh-badge" title="本次编译写出的 PDF">
-                    最新
-                  </span>
-                )}
-                {syncHit && <span className="sync-badge">sync · p.{syncHit.page}</span>}
-                <button onClick={() => setShowPdf(false)} title="隐藏预览">–</button>
-                <button
-                  onClick={() => {
-                    if (pdfUrl) URL.revokeObjectURL(pdfUrl.split("#")[0]);
-                    setPdfUrl(null);
-                    setCompileJob((prev) => ({ ...prev, pdfFresh: null }));
-                  }}
-                  title="关闭预览"
-                >×</button>
-              </div>
-              <iframe key={pdfVer} src={pdfUrl} title="Compiled PDF" className="pdf-frame" />
+              {synctexNote ? (
+                <div
+                  className="synctex-note"
+                  data-testid="synctex-note"
+                  data-code={synctexNote.code}
+                  data-degraded={synctexNote.degraded ? "1" : "0"}
+                >
+                  {synctexNote.message}
+                </div>
+              ) : null}
+              <DesktopPdfPreview
+                url={pdfUrl}
+                version={pdfVer}
+                stale={compileJob.pdfFresh === false}
+                syncTarget={pdfSyncTarget}
+                onInverseSync={inverseSyncFromPdf}
+                onHide={() => setShowPdf(false)}
+                onClose={() => {
+                  if (pdfUrl) URL.revokeObjectURL(pdfUrl.split("#")[0]);
+                  setPdfUrl(null);
+                  setPdfSyncTarget(null);
+                  setCompileJob((prev) => ({ ...prev, pdfFresh: null }));
+                }}
+              />
             </div>
           )}
 
@@ -3192,6 +3305,7 @@ function IDE() {
           { id: "cmd.save",    cat: "File",    label: "保存当前文件",       hint: "Ctrl+S", run: () => save() },
           { id: "cmd.saveall", cat: "File",    label: "全部保存",           hint: "Ctrl+Shift+S", run: () => commitAllDirty() },
           { id: "cmd.compile", cat: "Run",     label: "编译 LaTeX",         hint: "Ctrl+Shift+B", capability: "latex", run: () => compile() },
+          { id: "cmd.synctex.forward", cat: "Go", label: "源码 → PDF（SyncTeX）", hint: "Ctrl+Alt+J", capability: "latex", run: () => forwardSyncFromCursor() },
           { id: "cmd.compile.cancel", cat: "Run", label: "取消编译", hint: "", capability: "latex", run: () => cancelCompile() },
           { id: "cmd.mode.agent", cat: "View", label: "切换到 Agent 模式",  hint: "", run: () => switchWorkMode("agent") },
           { id: "cmd.mode.render", cat: "View", label: "切换到 Render 模式", hint: "", run: () => switchWorkMode("render") },

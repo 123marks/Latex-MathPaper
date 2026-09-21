@@ -22,6 +22,7 @@
     "dom-ui-smoke": "node app/dom-ui-smoke.mjs",
     "desktop-mode-visual-smoke": "node app/desktop-mode-visual-smoke.mjs",
     "desktop-compile-smoke": "node app/desktop-compile-smoke.mjs",
+    "desktop-render-smoke": "node app/desktop-render-smoke.mjs",
     "headed-visual-smoke": "node app/headed-visual-smoke.mjs",
     "browser-visual-smoke": "node app/browser-visual-smoke.mjs --strict",
     "browser-visual-smoke:optional": "node app/browser-visual-smoke.mjs",

@@ -59,9 +59,9 @@ evidence is tracked separately in `STATUS.md` and `TRACEABILITY.md`.
 | Install/probe Tectonic | Local runtime | **Implemented** | Engine endpoint and IDE installation surface |
 | PDF discovery after compile | Build service | **Partial** | Works through current path heuristics; not a typed Artifact Set |
 | Parsed, navigable LaTeX diagnostics | Diagnostics | **Partial** | Logs/output exist; complete structured parsing and jump-to-source remain |
-| Source to PDF navigation | LaTeX Pack | **Partial** | Real SyncTeX (`--synctex`, `lib/synctex.mjs`, `GET /api/editor/synctex` forward/inverse) is wired in the Web Workbench; the desktop IDE still uses `\section`-based page estimation (slice 2b wires the route) |
+| Source to PDF navigation | LaTeX Pack | **Partial** | Real SyncTeX (`--synctex`, `lib/synctex.mjs`, `GET /api/editor/synctex`) is wired in both Workbench and the desktop IDE (slice 2b: Ctrl+Alt+J / double-click; `SYNCTEX_MISSING` degrades to a labelled section-page estimate) |
 | Compile lifecycle honesty (desktop) | Build service + desktop Workbench | **Implemented** | Slice 2a (2026-09-21): `compile-jobs` timeout/cancel/one-job-per-Workspace; `done` attaches `pdf` only when the file is fresh; desktop state machine + stale badge; `tests/compile-live-api.test.mjs`, `npm run desktop-compile-smoke` |
-| Live formula draft (desktop) | LaTeX Pack + desktop Workbench | **Planned** | Web Workbench has a KaTeX caret overlay; the desktop `RenderStage` is an honest empty state until slice 2b reuses KaTeX through the esbuild alias |
+| Live formula draft (desktop) | LaTeX Pack + desktop Workbench | **Implemented** | Slice 2b: `LiveMathDrafts` in Render-when-no-PDF; KaTeX via esbuild alias; per-formula errors; editor stays mounted. Not a caret overlay |
 | Declarative `BuildProfile` | Pack Host + Build service | **Contract** | Needed for entrypoint/tool/output rules without contest assumptions |
 | Cancellable, retained `BuildJob` lifecycle | Build service | **Contract** | Current live route streams a process but lacks the generic job model |
 | Typed `ArtifactSet` | Build service | **Contract** | Replace hard-coded PDF lookup and represent logs/SyncTeX/packages |

@@ -1,10 +1,34 @@
 // Deterministic stand-in for latexmk/tectonic. Used by compile-live HTTP
 // tests and the desktop compile smoke so those suites do not depend on a
 // real TeX distribution. Mode is taken from the source file
-// (`% PAPEROS_FAKE: success|fail|hang`) and falls back to PAPER_OS_FAKE_COMPILE.
+// (`% PAPEROS_FAKE: success|success-nosync|fail|hang`) and falls back to PAPER_OS_FAKE_COMPILE.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { buildMinimalPdf } from "./minimal-pdf.mjs";
+
+const SP = 65536;
+
+function writeFakeSynctex(buildDir, pdfName) {
+  const body = [
+    "SyncTeX Version:1",
+    "Input:1:./main.tex",
+    "Output:pdf",
+    "Magnification:1000",
+    "Unit:1",
+    "X Offset:0",
+    "Y Offset:0",
+    "Content:",
+    "{1",
+    `[1,1:${72 * SP},${100 * SP}:${300 * SP},${10 * SP},${2 * SP}`,
+    `[1,3:${72 * SP},${140 * SP}:${300 * SP},${10 * SP},${2 * SP}`,
+    "]",
+    "}1",
+    "Postamble:",
+    "",
+  ].join("\n");
+  writeFileSync(join(buildDir, pdfName.replace(/\.pdf$/i, ".synctex")), body);
+}
 
 if (process.argv.includes("--version") || process.argv.includes("-v") || process.argv.includes("-version")) {
   process.stdout.write("fake-latexmk 0.0.1 (Paper OS test fixture)\n");
@@ -18,7 +42,7 @@ const texPath = texArg.includes("\\") || texArg.includes("/") ? texArg : join(cw
 let mode = process.env.PAPER_OS_FAKE_COMPILE || "success";
 try {
   const source = readFileSync(texPath, "utf8");
-  const marked = source.match(/%\s*PAPEROS_FAKE:\s*(\w+)/);
+  const marked = source.match(/%\s*PAPEROS_FAKE:\s*([\w-]+)/);
   if (marked) mode = marked[1];
 } catch {
   // missing source still follows the env fallback
@@ -42,7 +66,8 @@ if (mode === "hang") {
   process.exit(1);
 } else {
   mkdirSync(buildDir, { recursive: true });
-  writeFileSync(join(buildDir, pdfName), "%PDF-1.4\n% paper-os fake compile artifact\n%%EOF\n");
+  writeFileSync(join(buildDir, pdfName), buildMinimalPdf("Paper OS"));
+  if (mode !== "success-nosync") writeFakeSynctex(buildDir, pdfName);
   process.stdout.write(`Output written on ${pdfName}\n`);
   process.exit(0);
 }

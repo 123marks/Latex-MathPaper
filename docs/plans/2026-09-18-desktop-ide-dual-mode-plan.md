@@ -1,7 +1,7 @@
 # 桌面 IDE 增量开发计划：双模式、Render/LaTeX、AI Harness
 
 Date: 2026-09-18
-Status: Active（阶段 0 完成；切片 S1 完成并已提交 `fb8fac2`；切片 S2a 完成并实测，证据见 `../STATUS.md` 2026-09-21 节；下一步 S2b）
+Status: Active（阶段 0 完成；切片 S1 已提交 `fb8fac2`；切片 S2a 已提交 `161d052`；切片 S2b 完成并实测，证据见 `../STATUS.md` 2026-09-21 节；下一步 S3）
 Baseline: `main` / `8c62e93` + 上一轮遗留的未提交 `apps/desktop/src/ide.jsx`、`ide.css`、`docs/README.md` 修改
 
 本计划是 `PRODUCT_SPEC_CURSOR.md` 与 `CURSOR_DEVELOPMENT_BRIEF.md` 的执行分解。它先回答“现在真实是什么”，再给出每个切片的验收。计划本身不证明任何能力已完成；完成事实只写进 `STATUS.md`。
@@ -126,6 +126,15 @@ ide.jsx (IDE 组件)
 - 真实启动：`npm run desktop-compile-smoke` OK；成功样本标「最新」，失败样本保留 PDF 并标「过期」。
 - 全量 `node --test` 297/297；`npm run ide:build` 4.4 MB。
 - 验收引擎是 `tests/fixtures/fake-latexmk.mjs`，不是本机 Tectonic 排版证明。
+
+### S2b 执行记录（2026-09-21）
+
+- 契约：`tests/desktop-math-drafts.test.mjs`、`tests/desktop-render-preview.test.mjs`、`tests/fake-compile-artifacts.test.mjs` 与既有 compile/SyncTeX 测试合计 43/43。
+- 真实启动：`npm run desktop-render-smoke` OK。Render 无 PDF 时 Live 草稿 1 好 / 1 坏且 Monaco 仍在；编译后 pdf.js 工具条 `1 / 1` · `110%` · canvas 440px；无 `.synctex` 时芯片为「估算」+ `SYNCTEX_MISSING`；写入记录后芯片变为 SyncTeX。
+- 回归：`npm run desktop-compile-smoke` OK；`npm run ide:build` 4.6 MB。
+- 全量 `node --test` 308/309：`git-status-api` 满载 flake（`HEAD` vs `paper-draft`），单独重跑通过。
+- 计划外但必要：`.mjs` 曾被当成 `application/octet-stream`；`connect-src` 缺 `blob:` 导致 fetch(blob) 失败；pdf.js worker 无法拉取 blob URL，改为主线程读字节。
+- 连续第二次编译曾在无头 Chrome 里把整页卸掉；smoke 改为在第一次成功 PDF 上写入 `.synctex` 验收正向命中，而不是连编两次。
 
 ## 3. 不做与假设
 

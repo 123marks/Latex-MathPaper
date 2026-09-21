@@ -437,7 +437,107 @@ a { color: inherit; text-decoration: none; }
 .pdf-pane-head { display: flex; align-items: center; gap: 10px; padding: 0 12px; height: 28px; background: var(--bg-1); border-bottom: 1px solid var(--ink-line); font-size: 11px; color: var(--muted); }
 .pdf-pane-head .badge { font-family: var(--font-mono); font-size: 10px; color: var(--amber); padding: 1px 5px; border: 1px solid rgba(212,163,65,0.3); border-radius: 3px; }
 .pdf-pane-head .badge.stale { color: #d27a68; border-color: rgba(210, 122, 104, 0.45); }
-.pdf-pane.is-stale .pdf-frame { box-shadow: inset 0 0 0 1px rgba(210, 122, 104, 0.28); }
+.pdf-pane.is-stale .pdf-preview { box-shadow: inset 0 0 0 1px rgba(210, 122, 104, 0.28); }
+.pdf-preview { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.pdf-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 28px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--ink-line);
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pdf-toolbar .badge { font-family: var(--font-mono); font-size: 10px; color: var(--amber); padding: 1px 5px; border: 1px solid rgba(212,163,65,0.3); border-radius: 3px; }
+.pdf-toolbar .badge.stale { color: #d27a68; border-color: rgba(210, 122, 104, 0.45); }
+.pdf-toolbar button { color: var(--muted); padding: 0 6px; }
+.pdf-toolbar button:disabled { opacity: 0.4; cursor: default; }
+.pdf-toolbar button:hover:not(:disabled) { color: var(--text); }
+.pdf-toolbar button:last-child { margin-left: auto; }
+.pdf-toolbar-hint { color: var(--faint); font-size: 10px; overflow: hidden; text-overflow: ellipsis; }
+.pdf-preview-scroll { flex: 1; min-height: 0; overflow: auto; display: flex; justify-content: center; padding: 16px; background: #121214; }
+.pdf-preview-status { flex: 1; display: grid; place-items: center; color: var(--faint); font-size: 12px; }
+.pdf-page { position: relative; background: #fff; box-shadow: 0 8px 28px rgba(0,0,0,0.35); }
+.pdf-page canvas { display: block; }
+.pdf-sync-mark {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(212, 163, 65, 0.85);
+  box-shadow: 0 0 0 2px rgba(212, 163, 65, 0.25);
+  pointer-events: none;
+}
+.synctex-note {
+  padding: 4px 12px;
+  font-size: 11px;
+  color: var(--amber-bright);
+  background: rgba(212, 163, 65, 0.08);
+  border-bottom: 1px solid var(--ink-line);
+}
+.sync-chip .sync-source {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--faint);
+}
+.sync-chip .sync-source[data-source="synctex"] { color: var(--jade-bright); }
+.live-math-drafts {
+  width: 100%;
+  text-align: left;
+  margin-top: 18px;
+}
+.live-math-drafts.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--faint);
+  font-size: 12px;
+}
+.live-math-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--faint);
+  font-size: 11px;
+}
+.live-badge {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--amber-bright);
+  border: 1px solid rgba(212, 163, 65, 0.35);
+}
+.live-math-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.live-math-item {
+  padding: 10px 12px;
+  border: 1px solid var(--ink-line);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.02);
+}
+.live-math-item.is-bad { border-color: rgba(251, 92, 138, 0.35); }
+.live-math-jump {
+  display: inline-flex;
+  margin-bottom: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--faint);
+}
+.live-math-jump:hover { color: var(--text); }
+.live-math-html { overflow-x: auto; color: var(--text); }
+.live-math-html .katex { color: var(--text); }
+.live-math-html.is-display { display: flex; justify-content: center; }
+.live-math-error { color: #fb5c8a; font-size: 12px; line-height: 1.45; user-select: text; }
+.render-empty--drafts, .render-empty .live-math-drafts { max-width: 640px; }
 .statusbar .compile-seg.running { color: var(--amber-bright); }
 .statusbar .compile-seg.succeeded { color: var(--jade-bright); }
 .statusbar .compile-seg.failed,
