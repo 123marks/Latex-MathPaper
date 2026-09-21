@@ -45,9 +45,9 @@ evidence is tracked separately in `STATUS.md` and `TRACEABILITY.md`.
 | `EditorProvider` registry | Workbench/Pack Host | **Contract** | Replace hard-coded type branches; keep text fallback |
 | `PreviewProvider` registry | Workbench/Pack Host | **Contract** | Generalize PDF/image and add Markdown/formula providers |
 | Outline / Go to Symbol | Provider + Workbench | **Partial** | Section outline exists in both the desktop IDE (`OutlinePanel`) and the Web Workbench; no language-server symbols |
-| Source control integration | Workbench | **Partial** | Read-only `GET /api/editor/git-status` (branch, dirty count, `isRepo:false` when absent) shown in the Web Workbench status bar; the desktop IDE status bar is not wired yet; no staging/commit/diff UI |
+| Source control integration | Workbench | **Partial** | Read-only `GET /api/editor/git-status` (branch, dirty count, `isRepo:false` when absent) shown in the Web Workbench and desktop IDE status bars (slice 4); no staging/commit/diff UI |
 | Output/problems panel | Workbench | **Implemented** | Shows current command/build output and parsed problems; this is not a terminal session |
-| Interactive terminal | Tool runtime + Workbench | **Partial** | `POST /api/editor/terminal` (allowlist, argv-only, cwd pinned, 120s/512KB caps, SSE) plus a Web Workbench panel; the desktop IDE has no terminal tab yet (slice 4); not a full shell |
+| Interactive terminal | Tool runtime + Workbench | **Partial** | `POST /api/editor/terminal` (allowlist, argv-only, cwd pinned, 120s/512KB caps, SSE) plus Web and desktop (slice 4) panels; dangerous git/npm commands confirm first; not a full shell and Packs do not claim a `terminal` Capability |
 | Desktop Agent/Render work modes | Workbench (desktop) | **Implemented** | Slice 1 (2026-09-18): layout emphasis only, shared state, `localStorage` persistence, honest `RenderStage` empty state, 1440/1280/1024/800 folding without overlap; `tests/desktop-work-mode.test.mjs`, `npm run desktop-mode-visual-smoke` |
 
 ## Build, Diagnostics, and Artifacts

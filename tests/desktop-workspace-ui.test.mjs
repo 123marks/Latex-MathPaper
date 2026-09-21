@@ -99,7 +99,8 @@ test("paperctl TASKS and LaTeX controls are gated by their Pack Capabilities", (
 
   assert.match(ideSource, /const canRunPaperctl = currentCapabilities\.includes\("paperctl"\)/);
   assert.match(bottomSource, /canRunPaperctl \? \{ id: "tasks", label: "TASKS" \} : null/);
-  assert.doesNotMatch(bottomSource, /label: "TERMINAL"/);
+  assert.match(bottomSource, /id: "terminal", label: "TERMINAL"/);
+  assert.match(bottomSource, /terminal-tab/);
   assert.match(bottomSource, /\{bottomTab === "tasks" && canRunPaperctl && \(/);
   assert.match(bottomSource, /contestId: contest/);
   assert.match(bottomSource, /canCompile \? \(/);

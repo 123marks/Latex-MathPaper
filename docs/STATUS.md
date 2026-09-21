@@ -3,14 +3,14 @@ title: Paper OS current status
 status: active
 as_of: 2026-09-21
 branch: main
-baseline_commit: 759648b
+baseline_commit: 4cbabb6
 worktree: dirty
 product_version: 0.7.0
 ---
 
 # Paper OS 当前状态
 
-本页最新一节是 2026-09-21 的桌面 IDE 切片 3（可见 AI Harness）实测快照；HEAD 为 `759648b`（切片 2b PDF / SyncTeX / Live 草稿已提交），工作区 **dirty**（切片 3 尚未提交）。更早的 2026-09-18 / 2026-08 章节是历史快照。它仍不是发布证明：没有 PR、tag 或签名安装包。任何接手者都应先运行本页的基线命令，再相信能力声明。
+本页最新一节是 2026-09-21 的桌面 IDE 切片 4（终端 / git 状态栏）实测快照；HEAD 为 `4cbabb6`（切片 3 可见 AI Harness 已提交），工作区 **dirty**（切片 4 尚未提交）。更早的 2026-09-18 / 2026-08 章节是历史快照。它仍不是发布证明：没有 PR、tag 或签名安装包。任何接手者都应先运行本页的基线命令，再相信能力声明。
 
 ## 状态口径
 
@@ -26,9 +26,9 @@ product_version: 0.7.0
 | 项目 | 当前事实 |
 | --- | --- |
 | 产品方向 | 本地优先、Workspace Kernel + Packs 的通用文档 IDE |
-| 当前分支/提交 | `main` / `759648b`（切片 1 + 2a + 2b 已提交；其上是 Wave 1–3 与 Windows 自包含打包管线） |
-| 工作区 | dirty：切片 3 可见 AI Harness（`apps/desktop/src/{ai-harness,ai-harness-panel}.*`、`ide.jsx`/`ide.css`、`build-ide.mjs` alias `ai-execution`、`app/desktop-ai-harness-smoke.mjs`、`tests/desktop-ai-harness.test.mjs`），以及上一轮遗留的 `findings.md`/`progress.md`/`task_plan.md`（未删除，由用户决定） |
-| 两个前端 | 桌面 IDE（`PaperOS.exe` → `/ide/`，源码 `apps/desktop/src/ide.jsx`）与 Web Workbench（`/app/workbench`，源码 `web/src/pages/app/Workbench.jsx`）共用 `app/server.mjs`；桌面已接编译生命周期、pdf.js 预览、SyncTeX、Live 公式草稿与可见 AI Harness；终端/git 状态栏仍未接入桌面 |
+| 当前分支/提交 | `main` / `4cbabb6`（切片 1–3 已提交；其上是 Wave 1–3 与 Windows 自包含打包管线） |
+| 工作区 | dirty：切片 4 终端/git（`app/lib/terminal.mjs` 危险分类、`ide.jsx` TERMINAL tab + 状态栏、`tests/desktop-terminal-git.test.mjs`、`app/desktop-terminal-git-smoke.mjs`），以及上一轮遗留的 `findings.md`/`progress.md`/`task_plan.md`（未删除，由用户决定） |
+| 两个前端 | 桌面 IDE（`PaperOS.exe` → `/ide/`，源码 `apps/desktop/src/ide.jsx`）与 Web Workbench（`/app/workbench`，源码 `web/src/pages/app/Workbench.jsx`）共用 `app/server.mjs`；桌面已接编译、pdf.js/SyncTeX/Live 草稿、可见 AI Harness、策略门控终端与 git 状态栏 |
 | 根版本 | `package.json` 为 `0.7.0` |
 | 桌面版本 | 根、Tauri config、desktop package、Cargo 均为 `0.7.0`（2026-08-31 随 0.7.0 发布统一 bump），Web UI 版本号由 Vite `define` 注入单一来源 |
 | 当前 Windows 入口 | 根目录 `PaperOS.exe`，WinForms + WebView2 + 本地 Node 服务 |
@@ -53,6 +53,7 @@ product_version: 0.7.0
 | 桌面编译生命周期（切片 2a） | Implemented | `app/lib/compile-jobs.mjs`（超时 180s、取消、每 Workspace 一任务、输出封顶、`classifyArtifact`）；`POST /api/editor/compile-live` 202 + `compile-cancel` + `compile-status`；桌面 `compile-lifecycle.mjs` 状态机 idle→running→succeeded/failed/timeout/cancelled/no-engine；失败保留上次 PDF 并标过期；`tests/compile-jobs.test.mjs` 10/10、`tests/compile-live-api.test.mjs` 2/2、`tests/desktop-compile-lifecycle.test.mjs` 6/6；`npm run desktop-compile-smoke` | 验收用假引擎夹具（`tests/fixtures/fake-latexmk.mjs`），不是本机 Tectonic 排版证明 |
 | 桌面 PDF / SyncTeX / Live 草稿（切片 2b） | Implemented | 桌面 `DesktopPdfPreview`（pdf.js 页码/缩放/版本/过期）；`GET /api/editor/synctex` 正反向，缺失标 `估算` + `SYNCTEX_MISSING`；Render 无 PDF 时 `LiveMathDrafts`（KaTeX esbuild alias，逐公式错误）；`npm run desktop-render-smoke` | 公式草稿不是光标浮层；章节估算在无 SyncTeX 时仍可用且标明「估算」；pdf.js 在主线程读 blob 字节（worker 无法 fetch `blob:`） |
 | AI provider 与审查流 | Partial | OpenAI-compatible provider path、账户密钥加密、`/api/chat` runtime metadata、Web `ActionTimeline`、桌面切片 3 `AiHarnessPanel`（真实阶段 Plan、Diff、Apply/Reject、`paperos.aiTrace`） | provider 失败会回退并明确标识 `mock-local`；仍不是本机模型推理，也没有通用 undo/hunk 编辑器 |
+| 桌面终端 / git 状态栏（切片 4） | Partial | TERMINAL tab 接 `/api/editor/terminal`（白名单、中止、危险 confirm）；状态栏 `/api/editor/git-status`（非 git / 真实分支）；`npm run desktop-term-smoke` | 不是完整 shell；无 staging/commit/diff UI；Pack 不声明 `terminal` Capability |
 | Team/community/admin API | Partial | server routes 与部分测试 | 不是生产级实时协作、队列或多代理编排 |
 | Ed25519 发布清单 | Implemented | `app/lib/signer.mjs`、release endpoints、signer/admin tests | 不替代 Authenticode/notarization；launcher 尚未验证更新链 |
 | 企业级视觉重设计 | Active implementation | docs/redesign、tokens/motion/Horizon、五个 motif、十四个 UI primitives、两端统一 Icon registry、T1.1–T1.5、T3.3 Web AI 面板、T3.4 放大镜通用化、T3.5 团队/市场/社区/总览；Home/公共页/认证页/Workbench 的响应式、键盘、reduced-motion 和浏览器证据已完成 | `HeroIdeMock` 仍是临时界面示意；T3.6 Workbench 实拍、实体 GPU、移动真机、像素基准、桌面壳与 P0-P6 整体仍未完成 |
@@ -427,11 +428,40 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 
 - 没有配置真实 provider；smoke 验收的是诚实的 `mock-local` 兜底，不是模型推理。
 - 不是 hunk 级编辑器，也没有持久 transaction / undo。
-- 桌面终端/Git（切片 4）、`.vsix`（切片 5）未做。
+- 桌面终端/Git 已在切片 4 落地（见下一节）。`.vsix`（切片 5）未做。
+
+## 2026-09-21 切片 4 终端 / Git 证据（当前）
+
+基线：`main` / `4cbabb6` + dirty worktree；Windows 10.0.26200；Node v24.12.0。计划见 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md) §1 S4。
+
+### 做了什么
+
+- 底部 TERMINAL tab 接既有 `POST /api/editor/terminal`：白名单、argv-only、工作区 cwd、中止、超时与输出上限由服务端执行。桌面文案写明「白名单 · 无 shell」，Pack catalog 仍不声明 `terminal` Capability。
+- `git reset` / `npm` / `git push` 等危险命令在发送前 `confirm()`；`git status` / `node -e` 不弹窗。`rm` 等不在白名单的命令由服务端 `TERMINAL_REJECTED` 拒绝。
+- 状态栏接 `GET /api/editor/git-status`：非仓库显示「非 git」，仓库显示真实分支与脏计数；8s 轮询，终端结束后刷新。
+
+### 验证
+
+| 命令 | 结果 | 证明范围 |
+| --- | --- | --- |
+| `node --test tests/desktop-terminal-git.test.mjs tests/desktop-workspace-ui.test.mjs tests/desktop-work-mode.test.mjs` | 28/28 pass | 危险分类、SSE 帧、无完整 shell 宣称、双模式/capability 未回归 |
+| `node --test` | 319/319 pass | 全 Node suite；本轮满载下 `git-status-api` 也通过 |
+| `npm run ide:build` | exit 0；IDE bundle 4.6 MB | `terminal-policy` alias 打入桌面 bundle |
+| `npm run desktop-term-smoke` | OK | 先「非 git」；`node -e` 打出 TERM_OK 且 confirm=0；`rm -rf .` 报不在允许列表；`git init` 后芯片为 `paper-os-term`；`git reset --hard` confirm=1 且未执行 |
+| `npm run desktop-compile-smoke` | OK | 编译生命周期未回归 |
+| `git diff --check` | exit 0 | 仅有既有 LF/CRLF 警告 |
+
+证据文件：`dist/visual-qa/desktop-term-ready.png` / `desktop-term-git.png`（各 120229 B）、`desktop-term-behavior.json`。
+
+### 未做与边界
+
+- 不是完整 shell，没有管道、重定向、任意程序路径。
+- 没有 staging / commit / diff UI，只有只读 git 状态。
+- `.vsix`（切片 5）未做。
 
 ## 已知风险
 
-0. **切片 3 未提交**：`ai-harness` 模块、桌面接线、`desktop-ai-smoke`、文档仍在 dirty worktree。
+0. **切片 4 未提交**：终端接线、危险分类、`desktop-term-smoke`、文档仍在 dirty worktree。
 1. **尚无 PR / tag / 签名发布**：重设计、文档、09-integrations Epic 1–4b、文件夹管理与 0.6.0 版本对齐均已在 `1546dab` 之上分组提交，dirty worktree 风险已消除；仍缺少 PR 审阅、git tag 和签名安装包，结果尚未绑定 tag/release。
 2. **发布版本治理**：根、Tauri config、desktop package、Cargo 已统一 bump 为 `0.6.0`（2026-08-12），Web UI 版本号改由 Vite `define` 从根 `package.json` 注入；打 tag 仍待执行。
 3. **发布声明超前**：Windows ZIP 缺少 Node 生产依赖和 self-contained .NET runtime；macOS/Linux 清单与实际产物不一致；原生代码签名未完成。
@@ -447,7 +477,7 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 
 | 优先级 | 工作 | 完成判据 |
 | --- | --- | --- |
-| P0 | 提交切片 3 并进入切片 4（桌面终端 + git 状态栏） | 见 `plans/2026-09-18-desktop-ide-dual-mode-plan.md` §1 |
+| P0 | 提交切片 4 并进入切片 5（`.vsix` 兼容层第一层） | 见 `plans/2026-09-18-desktop-ide-dual-mode-plan.md` §1 |
 | P0 | 形成可审阅提交和完整验证基线 | dirty 变更分组审阅；全测试/构建结果绑定 SHA |
 | P0 | 修正版本和发布资产一致性 | 单一版本源；清单不声明缺失资产；签名边界明确 |
 | P1 | 完成 T3.6 真实 Workbench 产品截图 | 以真实 AI 面板和 Workspace/file 状态拍摄 web/public/hero-ide.png，并通过桌面/移动截图审查 |

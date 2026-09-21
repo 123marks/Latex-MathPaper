@@ -47,6 +47,12 @@ import {
   parseFileBlocks,
   parseSSEBuffer,
 } from "ai-execution";
+import {
+  describeDangerousTerminalCommand,
+  isDangerousTerminalCommand,
+  parseTerminalSse,
+  validateTerminalCommand,
+} from "terminal-policy";
 
 // Bundle monaco locally (WebView2 must not depend on CDN). Theme is defined
 // in setupLatex beforeMount so we never paint dark chrome with light "vs" text.
@@ -581,6 +587,7 @@ function MenuBar({ onAction, capabilities = [] }) {
         { id: "view-search", label: "搜索" },
         { id: "view-outline", label: "大纲" },
         { id: "view-tasks", label: "Paperctl 任务", capability: "paperctl" },
+        { id: "view-terminal", label: "终端", hint: "Ctrl+`" },
         { id: "cmd", label: "命令面板", hint: "Ctrl+Shift+P" },
         { id: "magnifier", label: "证据放大镜", hint: "Ctrl+Shift+E", capability: "evidence" },
       ],
@@ -1018,6 +1025,11 @@ function IDE() {
   const [selectionText, setSelectionText] = useState("");
   const [harnessTrace, setHarnessTrace] = useState([]);
   const [harnessTimings, setHarnessTimings] = useState({});
+  const [gitStatus, setGitStatus] = useState(null);
+  const [termLines, setTermLines] = useState([]);
+  const [termInput, setTermInput] = useState("");
+  const [termHistory, setTermHistory] = useState([]);
+  const [termBusy, setTermBusy] = useState(false);
   const [provider, setProvider] = useState(null); // real gateway config (GET /api/provider)
   const [aiTool, setAiTool] = useState("files");
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
@@ -1046,6 +1058,8 @@ function IDE() {
   const chatAbortRef = useRef(null);
   const chatRuntimeRef = useRef(null);
   const harnessClockRef = useRef({ request: 0, preview: 0, apply: 0 });
+  const termAbortRef = useRef(null);
+  const termEndRef = useRef(null);
   const compiledTexRef = useRef(null);
   // Monotonic request tokens: any in-flight openFile()/loadTree() response
   // whose token no longer matches is stale (workspace switched, another file
@@ -1129,6 +1143,11 @@ function IDE() {
     setHarnessTimings({});
     chatRuntimeRef.current = null;
     chatAbortRef.current?.abort();
+    termAbortRef.current?.abort();
+    setGitStatus(null);
+    setTermLines([]);
+    setTermInput("");
+    setTermBusy(false);
   }
 
   function switchWorkspace(nextId, options = {}) {
@@ -1342,6 +1361,20 @@ function IDE() {
     try { setProvider(await api.get("/api/provider")); } catch { setProvider(null); }
   }
   useEffect(() => { if (user) loadProviderInfo(); }, [user]); // eslint-disable-line
+  useEffect(() => {
+    if (!user || !contest) {
+      setGitStatus(null);
+      return undefined;
+    }
+    let cancelled = false;
+    const load = () => api.get(`/api/editor/git-status?workspace=${encodeURIComponent(contest)}`)
+      .then((data) => { if (!cancelled) setGitStatus(data); })
+      .catch(() => { if (!cancelled) setGitStatus({ isRepo: false }); });
+    load();
+    const timer = setInterval(load, 8000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [user, contest]);
+  useEffect(() => { termEndRef.current?.scrollIntoView?.({ block: "end" }); }, [termLines]);
 
   // File watching — poll mtime every 3s; show a "Reload?" banner when the
   // open file changed externally (e.g. the user edited it in another tool,
@@ -1888,6 +1921,10 @@ function IDE() {
         setBottomTab("tasks");
         flash("任务面板已打开");
         break;
+      case "view-terminal":
+        openTerminal();
+        flash("终端：白名单程序，无 shell 语法");
+        break;
       case "cmd":
         setShowCmd(true);
         break;
@@ -2234,6 +2271,92 @@ function IDE() {
     setAiPhase((phase) => (phase === "requesting" || phase === "streaming" ? "idle" : phase));
   }
 
+  function openTerminal() {
+    setBottomTab("terminal");
+  }
+
+  async function refreshGitStatus() {
+    if (!contest) {
+      setGitStatus(null);
+      return;
+    }
+    try {
+      setGitStatus(await api.get(`/api/editor/git-status?workspace=${encodeURIComponent(contest)}`));
+    } catch {
+      setGitStatus({ isRepo: false });
+    }
+  }
+
+  function abortTerminal() {
+    termAbortRef.current?.abort();
+  }
+
+  async function runTerminal(commandText) {
+    const command = String(commandText ?? termInput).trim();
+    if (!command || termBusy || !contest) return;
+    if (isDangerousTerminalCommand(command)) {
+      let parsed;
+      try { parsed = validateTerminalCommand(command); } catch { parsed = null; }
+      const reason = parsed ? describeDangerousTerminalCommand(parsed) : "该命令可能改写工作区。";
+      if (!confirm(`${reason}\n\n确认运行：${command}`)) return;
+    }
+    setTermHistory((history) => [command, ...history.filter((item) => item !== command)].slice(0, 50));
+    setTermLines((lines) => [...lines, { kind: "cmd", text: `$ ${command}` }].slice(-800));
+    setTermInput("");
+    setTermBusy(true);
+    const controller = new AbortController();
+    termAbortRef.current = controller;
+    try {
+      const response = await fetch("/api/editor/terminal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        signal: controller.signal,
+        body: JSON.stringify({ workspace: contest, command }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        setTermLines((lines) => [...lines, { kind: "err", text: err.error || `HTTP ${response.status}` }].slice(-800));
+        return;
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      const consume = (raw) => {
+        const parsed = parseTerminalSse(raw);
+        buffer = parsed.rest;
+        for (const frame of parsed.frames) {
+          if (frame.event === "stdout") {
+            setTermLines((lines) => [...lines, { kind: "out", text: frame.data.text || "" }].slice(-800));
+          } else if (frame.event === "stderr") {
+            setTermLines((lines) => [...lines, { kind: "err", text: frame.data.text || "" }].slice(-800));
+          } else if (frame.event === "exit") {
+            setTermLines((lines) => [...lines, {
+              kind: "sys",
+              text: frame.data.error ? `✗ ${frame.data.error}` : `↳ 退出码 ${frame.data.code} · ${frame.data.durationMs}ms`,
+            }].slice(-800));
+          }
+        }
+      };
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        consume(buffer + decoder.decode(value, { stream: true }));
+      }
+      consume(buffer + decoder.decode());
+    } catch (error) {
+      if (error.name === "AbortError") {
+        setTermLines((lines) => [...lines, { kind: "sys", text: "↳ 已中断" }].slice(-800));
+      } else {
+        setTermLines((lines) => [...lines, { kind: "err", text: error.message }].slice(-800));
+      }
+    } finally {
+      if (termAbortRef.current === controller) termAbortRef.current = null;
+      setTermBusy(false);
+      refreshGitStatus();
+    }
+  }
+
   // "Save All": persist every dirty text buffer with its own snapshot.
   // Buffers whose write fails keep their dirty flag — no silent data loss.
   async function commitAllDirty() {
@@ -2353,6 +2476,11 @@ function IDE() {
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === "k" || e.key === "K")) {
         e.preventDefault();
         openInlineEdit();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === "`" || e.code === "Backquote")) {
+        e.preventDefault();
+        openTerminal();
         return;
       }
       if (e.key === "Escape") {
@@ -3186,18 +3314,34 @@ function IDE() {
             {[
               { id: "problems", label: `PROBLEMS${problems.length ? ` (${problems.length})` : ""}` },
               { id: "output", label: "OUTPUT" },
+              { id: "terminal", label: "TERMINAL" },
               canRunPaperctl ? { id: "tasks", label: "TASKS" } : null,
               canCompile ? { id: "latex", label: "LaTeX" } : null,
             ].filter(Boolean).map((t) => (
               <button
                 key={t.id}
+                type="button"
                 className={bottomTab === t.id ? "label on" : "label"}
+                data-testid={t.id === "terminal" ? "terminal-tab" : undefined}
                 onClick={() => setBottomTab(t.id)}
               >{t.label}</button>
             ))}
-            <span className="term-path">{active ? active.path : "—"}</span>
+            <span className="term-path">
+              {bottomTab === "terminal"
+                ? "白名单程序 · 无 shell · cwd = 工作区根"
+                : (active ? active.path : "—")}
+            </span>
             <span style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
-              <button onClick={() => setLog([])} className="ghost-btn sm">清空</button>
+              {bottomTab === "terminal" ? (
+                <>
+                  <button type="button" className="ghost-btn sm" data-testid="terminal-abort" onClick={abortTerminal} disabled={!termBusy}>
+                    中断
+                  </button>
+                  <button type="button" onClick={() => setTermLines([])} className="ghost-btn sm">清空</button>
+                </>
+              ) : (
+                <button onClick={() => setLog([])} className="ghost-btn sm">清空</button>
+              )}
               {canCompile ? (
                 compileRunning ? (
                   <button type="button" onClick={cancelCompile} className="ghost-btn sm" data-testid="compile-cancel">
@@ -3215,7 +3359,20 @@ function IDE() {
             </span>
           </div>
           <div className="terminal-stream">
-            {bottomTab === "problems" ? (
+            {bottomTab === "terminal" ? (
+              <div data-testid="terminal-stream">
+                {termLines.length === 0 ? (
+                  <span style={{ color: "var(--faint)" }}>
+                    集成终端不是完整 shell。只运行 python / git / node / tectonic 等白名单程序，例如：git status
+                  </span>
+                ) : termLines.map((line, index) => (
+                  <div key={index} className={line.kind === "err" ? "err" : line.kind === "sys" ? "warn" : line.kind === "cmd" ? "ok" : ""}>
+                    {line.text}
+                  </div>
+                ))}
+                <span ref={termEndRef} />
+              </div>
+            ) : bottomTab === "problems" ? (
               problems.length === 0 ? (
                 <span style={{ color: "var(--faint)" }}>No problems</span>
               ) : problems.map((p, i) => (
@@ -3245,6 +3402,27 @@ function IDE() {
               </div>
             ))}
           </div>
+          {bottomTab === "terminal" ? (
+            <form className="terminal-input" onSubmit={(e) => { e.preventDefault(); runTerminal(termInput); }}>
+              <span className="prompt">{termBusy ? "…" : "$"}</span>
+              <input
+                data-testid="terminal-input"
+                value={termInput}
+                disabled={termBusy || !contest}
+                placeholder="git status"
+                spellCheck={false}
+                autoComplete="off"
+                onChange={(e) => setTermInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowUp" && termHistory.length) {
+                    e.preventDefault();
+                    setTermInput(termHistory[0]);
+                  }
+                }}
+              />
+              <button type="submit" data-testid="terminal-run" disabled={termBusy || !termInput.trim() || !contest}>↵</button>
+            </form>
+          ) : null}
           {bottomTab === "tasks" && canRunPaperctl && (
             <div className="terminal-input">
               <span className="prompt">$</span>
@@ -3273,12 +3451,27 @@ function IDE() {
 
       {toast ? <div className="toast" role="status">{toast}</div> : null}
 
-      {/* Status bar — only real state: no pretend Git/SCM until implemented */}
+      {/* Status bar — git chip is live /api/editor/git-status, never a fake branch */}
       <div className="statusbar">
         <span className="seg" title={currentWorkspace?.path || "No Workspace"}>
           <Icon name="folder" size={12} />
           {currentWorkspace ? `${currentWorkspace.name || currentWorkspace.id} · ${currentWorkspace.packName || currentWorkspace.pack}` : "No Workspace"}
         </span>
+        <button
+          type="button"
+          className="seg status-btn"
+          data-testid="status-git"
+          data-repo={gitStatus?.isRepo ? "1" : "0"}
+          title={gitStatus?.isRepo
+            ? `git 分支 ${gitStatus.branch}${gitStatus.dirtyCount ? ` · ${gitStatus.dirtyCount} 个未提交变更` : " · 工作树干净"}${gitStatus.ahead ? ` · 领先远端 ${gitStatus.ahead}` : ""}`
+            : "此工作区不是 git 仓库（可在终端里 git init）"}
+          onClick={() => { refreshGitStatus(); openTerminal(); }}
+        >
+          <Icon name="git-branch" size={12} />
+          {gitStatus == null ? "…" : gitStatus.isRepo
+            ? `${gitStatus.branch}${gitStatus.dirtyCount ? ` ·${gitStatus.dirtyCount}` : ""}`
+            : "非 git"}
+        </button>
         {dirtyTabs.length > 0 ? (
           <button
             className="seg amber status-btn"
@@ -3469,6 +3662,7 @@ function IDE() {
           { id: "cmd.compile.cancel", cat: "Run", label: "取消编译", hint: "", capability: "latex", run: () => cancelCompile() },
           { id: "cmd.mode.agent", cat: "View", label: "切换到 Agent 模式",  hint: "", run: () => switchWorkMode("agent") },
           { id: "cmd.mode.render", cat: "View", label: "切换到 Render 模式", hint: "", run: () => switchWorkMode("render") },
+          { id: "cmd.terminal", cat: "View", label: "打开终端", hint: "Ctrl+`", run: () => openTerminal() },
           { id: "cmd.inline",  cat: "AI",      label: "Inline Edit 选区",   hint: "Ctrl+K", run: () => openInlineEdit() },
           { id: "cmd.snippets", cat: "Editor", label: "插入 LaTeX 片段",    hint: "Ctrl+Shift+K", capability: "latex", run: () => setShowSnippets(true) },
           { id: "cmd.search",  cat: "Search",  label: "在文件中搜索",       hint: "Ctrl+Shift+F", run: () => { setView("search"); setSearchOpen(true); } },

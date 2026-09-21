@@ -24,6 +24,7 @@
     "desktop-compile-smoke": "node app/desktop-compile-smoke.mjs",
     "desktop-render-smoke": "node app/desktop-render-smoke.mjs",
     "desktop-ai-smoke": "node app/desktop-ai-harness-smoke.mjs",
+    "desktop-term-smoke": "node app/desktop-terminal-git-smoke.mjs",
     "headed-visual-smoke": "node app/headed-visual-smoke.mjs",
     "browser-visual-smoke": "node app/browser-visual-smoke.mjs --strict",
     "browser-visual-smoke:optional": "node app/browser-visual-smoke.mjs",

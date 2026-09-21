@@ -1,7 +1,7 @@
 # 桌面 IDE 增量开发计划：双模式、Render/LaTeX、AI Harness
 
 Date: 2026-09-18
-Status: Active（阶段 0 完成；切片 S1 已提交 `fb8fac2`；切片 S2a 已提交 `161d052`；切片 S2b 已提交 `759648b`；切片 S3 完成并实测，证据见 `../STATUS.md` 2026-09-21 节；下一步 S4）
+Status: Active（阶段 0 完成；切片 S1–S3 已提交 `fb8fac2` / `161d052` / `759648b` / `4cbabb6`；切片 S4 完成并实测，证据见 `../STATUS.md` 2026-09-21 节；下一步 S5）
 Baseline: `main` / `8c62e93` + 上一轮遗留的未提交 `apps/desktop/src/ide.jsx`、`ide.css`、`docs/README.md` 修改
 
 本计划是 `PRODUCT_SPEC_CURSOR.md` 与 `CURSOR_DEVELOPMENT_BRIEF.md` 的执行分解。它先回答“现在真实是什么”，再给出每个切片的验收。计划本身不证明任何能力已完成；完成事实只写进 `STATUS.md`。
@@ -143,6 +143,13 @@ ide.jsx (IDE 组件)
 - 回归：`npm run desktop-compile-smoke` OK；`npm run ide:build` 4.6 MB。
 - 全量 `node --test` 313/314：`git-status-api` 满载 flake（`HEAD` vs `paper-draft`），单独重跑 1/1。
 - 计划外但必要：审查区曾被 Plan 长文挤出可视区，无头点击 Apply 落空；改为单行 Plan、提案滚入视野、Apply/Diff 必须在视口内。
+
+### S4 执行记录（2026-09-21）
+
+- 契约：`tests/desktop-terminal-git.test.mjs` + workspace-ui / work-mode 合计 28/28。Pack 仍不声明 `terminal` Capability。
+- 真实启动：`npm run desktop-term-smoke` OK。先「非 git」；`node -e` 打出 `TERM_OK` 且 confirm=0；`rm -rf .` 报不在允许列表；`git init` 后芯片为 `paper-os-term`；`git reset --hard` confirm=1 且未执行。
+- 回归：`npm run desktop-compile-smoke` OK；`npm run ide:build` 4.6 MB。
+- 全量 `node --test` 319/319。
 
 ## 3. 不做与假设
 

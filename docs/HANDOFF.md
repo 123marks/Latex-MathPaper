@@ -2,7 +2,7 @@
 title: Paper OS engineering handoff
 status: active
 as_of: 2026-09-21
-baseline_commit: 759648b
+baseline_commit: 4cbabb6
 worktree: dirty
 owner: next maintainer
 ---
@@ -19,26 +19,26 @@ Paper OS 要成为一个**本地优先、Workspace Kernel 驱动、Pack 可扩�
 
 ## 2. 交接基线
 
-### 2.0 当前基线（2026-09-21，桌面 IDE 切片 3）
+### 2.0 当前基线（2026-09-21，桌面 IDE 切片 4）
 
-- `HEAD`：`759648b`（切片 1 双模式 + 切片 2a 编译生命周期 + 切片 2b PDF/SyncTeX/Live 草稿已提交）。
-- 工作区：**dirty**。本轮切片 3：`apps/desktop/src/ai-harness.mjs`、`ai-harness-panel.jsx`、`ide.jsx`/`ide.css`、`build-ide.mjs`（`ai-execution` alias）、`app/desktop-ai-harness-smoke.mjs`、`tests/desktop-ai-harness.test.mjs`。根目录 `findings.md`/`progress.md`/`task_plan.md` 未动。
-- 本轮主线：切片 3 已完成并实测，下一步是切片 4。计划见 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md)。
+- `HEAD`：`4cbabb6`（切片 1–3 已提交）。
+- 工作区：**dirty**。本轮切片 4：`app/lib/terminal.mjs`（危险分类 + SSE 解析）、`apps/desktop/src/ide.jsx`、`build-ide.mjs`（`terminal-policy` alias）、`tests/desktop-terminal-git.test.mjs`、`app/desktop-terminal-git-smoke.mjs`。根目录 `findings.md`/`progress.md`/`task_plan.md` 未动。
+- 本轮主线：切片 4 已完成并实测，下一步是切片 5。计划见 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md)。
 
 交接表（任务书要求格式）：
 
 ```text
 日期：2026-09-21
-变更目标：桌面 IDE 切片 3 —— 可见 AI Harness（真实阶段 Plan、Diff 审查、无 confirm 的 Apply）
-修改文件：apps/desktop/src/ai-harness.mjs（新）；apps/desktop/src/ai-harness-panel.jsx（新）；apps/desktop/src/ide.jsx；apps/desktop/src/assets/ide.css；apps/desktop/build-ide.mjs；app/desktop-ai-harness-smoke.mjs（新）；tests/desktop-ai-harness.test.mjs（新）；package.json；docs/STATUS.md；docs/HANDOFF.md；docs/CAPABILITY_MAP.md；CHANGELOG.md；docs/plans/2026-09-18-desktop-ide-dual-mode-plan.md
-新增/修复能力：Context chips；Plan 复用 web/src/lib/ai-execution.js；SSE mock-local/provider 标识；统一 Diff + Apply/Reject/Refresh/Cancel；Apply 不再 confirm()；paperos.aiTrace；APPLY_CONFLICT/APPLY_ROLLBACK 显式状态
-运行命令：node --test；npm run ide:build；npm run desktop-ai-smoke；npm run desktop-compile-smoke；git diff --check
-测试结果：desktop-ai-harness 5/5；全量 Node 313/314（git-status 满载 flake，单独重跑 1/1）；IDE bundle 4.6 MB；AI smoke OK（runtime=mock-local，confirm=0，文件含 Revised note）；compile smoke 回归 OK
-人工验证：无头 Chrome 截图 desktop-ai-ready.png / desktop-ai-applied.png
-已知失败：满载 node --test 中 git-status-api 一次读到 HEAD 而非 paper-draft；单独重跑通过。与 S3 无关
-未实现/降级：桌面终端/Git（切片 4）；.vsix（切片 5）；无 hunk 编辑器/持久 undo；smoke 未配置真实 provider
-风险与后续：审查区曾被 Plan 长文挤出可视区，已改为单行 Plan + 提案滚入视野；ide.jsx 仍是单体；下一步提交 3 后做切片 4
-回滚方式：git checkout -- apps/desktop/src/ide.jsx apps/desktop/src/assets/ide.css apps/desktop/build-ide.mjs package.json；删除本轮新增的 ai-harness/smoke/test 文件
+变更目标：桌面 IDE 切片 4 —— 策略门控终端 + 诚实 git 状态栏
+修改文件：app/lib/terminal.mjs；apps/desktop/src/ide.jsx；apps/desktop/build-ide.mjs；tests/desktop-terminal-git.test.mjs（新）；tests/desktop-workspace-ui.test.mjs；app/desktop-terminal-git-smoke.mjs（新）；package.json；docs/STATUS.md；docs/HANDOFF.md；docs/CAPABILITY_MAP.md；CHANGELOG.md；docs/plans/2026-09-18-desktop-ide-dual-mode-plan.md
+新增/修复能力：TERMINAL tab 接 /api/editor/terminal；危险命令 confirm；状态栏 /api/editor/git-status（非 git / 真实分支）；不宣称完整 shell
+运行命令：node --test；npm run ide:build；npm run desktop-term-smoke；npm run desktop-compile-smoke；git diff --check
+测试结果：desktop-terminal-git + workspace-ui + work-mode 28/28；全量 Node 319/319；IDE bundle 4.6 MB；term smoke OK（TERM_OK、rm 拒绝、非 git→paper-os-term、reset confirm=1 未执行）；compile smoke 回归 OK
+人工验证：无头 Chrome 截图 desktop-term-ready.png / desktop-term-git.png
+已知失败：无
+未实现/降级：.vsix（切片 5）；无 hunk/staging UI；终端无管道重定向
+风险与后续：ide.jsx 仍是单体；下一步提交 4 后做切片 5
+回滚方式：git checkout -- app/lib/terminal.mjs apps/desktop/src/ide.jsx apps/desktop/build-ide.mjs tests/desktop-workspace-ui.test.mjs package.json；删除本轮新增的 terminal test/smoke 文件
 ```
 
 ### 2.1 历史基线（2026-08-12）
@@ -243,9 +243,8 @@ T1.1 收口时：`web/src/pages/Home.jsx` 使用可核实的 `4 内置 Pack`、`
 
 ### 明确没有交付
 
-- 桌面 IDE 的终端与 git 状态栏——服务端多数已有路由，桌面切片 4 接入。编译生命周期、PDF/SyncTeX/Live 草稿、可见 AI Harness 已分别在切片 2a/2b/3 落地。
-- 真正的通用交互式 Terminal（服务端有 allowlist 终端路由与 Web 面板；不是完整 shell）。
-- 真正的 Git/SCM 集成（只有只读 `git-status` 路由与 Web 状态栏）。
+- 真正的通用交互式 Terminal（桌面与 Web 都只接 allowlist 路由，不是完整 shell）。
+- 真正的 Git/SCM 集成（桌面与 Web 状态栏都只有只读 `git-status`，无 staging/commit/diff UI）。
 - 实时多人协作和冲突合并。
 - 第三方 Pack 安装、权限、签名、回滚和 marketplace 信任链。
 - 已签名的 macOS/Windows 原生安装包和自动更新验证闭环。
@@ -281,9 +280,8 @@ T1.1 收口时：`web/src/pages/Home.jsx` 使用可核实的 `4 内置 Pack`、`
 
 按 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md) §1 逐切片推进，每个切片都必须：写契约/e2e 测试 → 实现 → `npm run ide:build` → `node --test` → 对应 smoke 真实启动 → 更新 `STATUS.md`/本文件。
 
-1. 先审阅并提交切片 3（上方 2.0 的交接表即提交说明素材）。
-2. 切片 4 桌面终端（接 `/api/editor/terminal`）与 git 状态栏（接 `/api/editor/git-status`）。
-3. 切片 5 `.vsix` 兼容层第一层；切片 6 UI/DPI/性能/交接。
+1. 先审阅并提交切片 4（上方 2.0 的交接表即提交说明素材）。
+2. 切片 5 `.vsix` 兼容层第一层；切片 6 UI/DPI/性能/交接。
 
 不要做：在前端另起编译器；绕过 `apply-blocks` 事务写文件；把 Render 做成只读；为公式渲染新增依赖；一次重写 `ide.jsx`。
 
