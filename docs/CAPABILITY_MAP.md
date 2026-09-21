@@ -40,7 +40,7 @@ evidence is tracked separately in `STATUS.md` and `TRACEABILITY.md`.
 | PDF and image preview | Workbench | **Implemented** | Media preview avoids opening binary content as text |
 | Workspace text search | Search service | **Implemented** | Server-side bounded search |
 | Replace, regex, and structured search | Search service | **Planned** | Current search is not a Cursor-equivalent replace engine |
-| Monaco text editing and command surface | Workbench | **Implemented** | Desktop IDE source and generated `app/ide/` bundle |
+| Monaco text editing and command surface | Workbench | **Implemented** | Desktop IDE bundles Monaco. Web Workbench loads local `monaco-editor` (no CDN `monaco: null`). T3.6 product screenshot is still open: headed capture paints source lines, but a compiled PDF canvas was not ready within 120s |
 | Generic `Resource` / versioned `TextDocument` | Kernel | **Contract** | Current code still passes paths and ad hoc models |
 | `EditorProvider` registry | Workbench/Pack Host | **Contract** | Replace hard-coded type branches; keep text fallback |
 | `PreviewProvider` registry | Workbench/Pack Host | **Contract** | Generalize PDF/image and add Markdown/formula providers |

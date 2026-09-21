@@ -57,6 +57,10 @@ test("vscode-style shell: activity bar, breadcrumbs, output panel, Ln/Col, minim
   assert.match(workbenchSource, /Ln \$\{annoSel\.line \?\? annoSel\.startLine\}, Col \$\{annoSel\.column \?\? 1\}/);
   assert.match(editorSource, /column: sel\.positionColumn/);
   assert.match(editorSource, /minimap: \{ enabled: true, renderCharacters: false/);
+  assert.match(editorSource, /import\("monaco-editor"\)/);
+  assert.doesNotMatch(editorSource, /loader\.config\(\{\s*monaco:\s*null\s*\}\)/);
+  const serverSource = readFileSync(resolve("app/server.mjs"), "utf8");
+  assert.match(serverSource, /probeEngine\(localBin, 12000\)/);
   // Styles + narrow-viewport collapse.
   assert.match(css, /\.activity-bar \{/);
   assert.match(css, /\.output-panel \{/);

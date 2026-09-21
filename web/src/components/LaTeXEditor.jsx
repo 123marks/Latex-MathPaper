@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Editor, { loader } from "@monaco-editor/react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
@@ -35,9 +35,28 @@ export function mathAtOffset(text, offset) {
   return null;
 }
 
-// Configure Monaco workers (Vite-friendly via CDN-less @monaco-editor/react loader).
-// We use a single bundled worker; this avoids per-file worker imports in Vite.
-loader.config({ monaco: null });
+// Load Monaco from the local package. The previous `monaco: null` config fell
+// back to the CDN loader, so an offline or headed capture never painted lines.
+let localMonacoPromise = null;
+function loadLocalMonaco() {
+  if (typeof window === "undefined") return Promise.resolve(null);
+  if (!localMonacoPromise) {
+    localMonacoPromise = (async () => {
+      const monaco = await import("monaco-editor");
+      await import("monaco-editor/min/vs/editor/editor.main.css");
+      const workerModule = await import("monaco-editor/esm/vs/editor/editor.worker?worker");
+      const EditorWorker = workerModule.default;
+      window.MonacoEnvironment = {
+        getWorker() {
+          return new EditorWorker();
+        },
+      };
+      loader.config({ monaco });
+      return monaco;
+    })();
+  }
+  return localMonacoPromise;
+}
 
 // Register a LaTeX language with a Monarch tokenizer the first time the editor mounts.
 let LATEX_REGISTERED = false;
@@ -142,8 +161,24 @@ export default function LaTeXEditor({
 }) {
   // latex-stickies lesson: render the formula under the caret live.
   const [mathPreview, setMathPreview] = useState(null); // { html, display, top }
+  const [monacoReady, setMonacoReady] = useState(false);
+  const [monacoError, setMonacoError] = useState("");
   const containerRef = useRef(null);
   citeKeysRef.current = citeKeys;
+
+  useEffect(() => {
+    let alive = true;
+    loadLocalMonaco()
+      .then(() => {
+        if (alive) setMonacoReady(true);
+      })
+      .catch((error) => {
+        if (alive) setMonacoError(String(error?.message || error || "Monaco failed to load"));
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   function handleBeforeMount(monaco) {
     registerLatex(monaco);
@@ -244,6 +279,11 @@ export default function LaTeXEditor({
           )}
         </div>
       )}
+    {monacoError ? (
+      <div className="empty" data-testid="monaco-load-error" style={{ padding: 16 }}>
+        编辑器未能从本机加载：{monacoError}
+      </div>
+    ) : monacoReady ? (
     <Editor
       value={value}
       language={language}
@@ -274,6 +314,9 @@ export default function LaTeXEditor({
         },
       }}
     />
+    ) : (
+      <div className="empty" data-testid="monaco-loading">正在加载编辑器…</div>
+    )}
     </div>
   );
 }

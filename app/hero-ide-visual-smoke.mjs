@@ -7,8 +7,8 @@
 // holding the same debugging port. It boots an isolated server and Workspace, so
 // it never touches real user data.
 
-import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createServer } from "node:net";
@@ -176,6 +176,16 @@ const workspaceRoot = join(stateRoot, "workspace-hero");
 mkdirSync(join(workspaceRoot, "paper"), { recursive: true });
 writeFileSync(join(workspaceRoot, "paper", "main.tex"), MAIN_TEX);
 
+const bundledTectonic = resolve("app/data/engine/tectonic.exe");
+if (existsSync(bundledTectonic)) {
+  const engineDir = join(stateRoot, "data", "engine");
+  mkdirSync(engineDir, { recursive: true });
+  const dest = join(engineDir, process.platform === "win32" ? "tectonic.exe" : "tectonic");
+  copyFileSync(bundledTectonic, dest);
+  // A cold copy can miss the server's 4s --version probe while Defender scans it.
+  spawnSync(dest, ["--version"], { timeout: 20000, windowsHide: true });
+}
+
 const server = spawn("node", ["app/server.mjs"], {
   env: { ...process.env, PAPER_OS_DATA_DIR: join(stateRoot, "data"), PAPER_OS_PORT: String(appPort) },
   stdio: ["ignore", "pipe", "pipe"],
@@ -188,6 +198,10 @@ try {
   await waitForHealth(appPort);
   const baseUrl = `http://127.0.0.1:${appPort}`;
   const token = await bootstrapSession(baseUrl);
+  const engineStatus = await fetchJson(`${baseUrl}/api/engine/status`, {
+    headers: { Cookie: `paper_os_session=${encodeURIComponent(token)}` },
+  }, 20000);
+  console.log(`engine tectonic.present=${engineStatus.payload?.tectonic?.present} detail=${engineStatus.payload?.tectonic?.detail || ""} source=${engineStatus.payload?.tectonic?.source || ""}`);
 
   await fetchJson(`${baseUrl}/api/editor/projects`, {
     method: "POST",
@@ -232,20 +246,52 @@ try {
   if (!cookie.success) throw new Error("CDP rejected the isolated bootstrap session cookie");
 
   await cdp.send("Page.navigate", {
-    url: `${baseUrl}/app/workbench?workspace=${encodeURIComponent(workspaceId)}`,
+    url: `${baseUrl}/app/workbench?workspace=${encodeURIComponent(workspaceId)}&file=${encodeURIComponent("paper/main.tex")}`,
   });
   await waitForExpression(
     cdp,
     `location.pathname === "/app/workbench" && Boolean(document.querySelector(".ide")) && Boolean(document.querySelector("#workbench-ai-input"))`,
     "Workbench AI panel",
   );
+  const pageEngine = await evaluateValue(
+    cdp,
+    `fetch("/api/engine/status", { credentials: "same-origin" }).then((r) => r.json())`,
+  );
+  console.log(`page engine present=${pageEngine?.tectonic?.present} detail=${pageEngine?.tectonic?.detail || ""}`);
+  await evaluateValue(
+    cdp,
+    `(() => {
+      const button = [...document.querySelectorAll("button")].find((el) => el.textContent.trim() === "⟲" && (el.parentElement?.innerText || "").includes("Tectonic"));
+      if (button) button.click();
+    })()`,
+  );
+  await waitForExpression(
+    cdp,
+    `!document.body.innerText.includes("Tectonic not installed")`,
+    "engine banner cleared",
+    15000,
+  );
 
-  // Open the source file so the editor shows real LaTeX + a docked preview pane.
+  // The tree fetch is async. Folders start expanded; wait until main.tex is actually in the DOM.
+  try {
+    await waitForExpression(
+      cdp,
+      `Boolean([...document.querySelectorAll(".file-tree .tree-name")].find((el) => el.textContent.trim() === "main.tex"))`,
+      "main.tex in file tree",
+    );
+  } catch (error) {
+    const treeText = await evaluateValue(
+      cdp,
+      `document.querySelector(".file-tree")?.innerText?.slice(0, 500) || "(no file tree)"`,
+    );
+    throw new Error(`${error.message}; tree=${JSON.stringify(treeText)}`);
+  }
+
   const opened = await evaluateValue(
     cdp,
     `(() => {
       const item = [...document.querySelectorAll(".file-tree .item")]
-        .find((el) => el.textContent.trim().startsWith("main.tex"));
+        .find((el) => el.querySelector(".tree-name")?.textContent.trim() === "main.tex");
       if (!item) return false;
       item.click();
       return true;
@@ -261,7 +307,26 @@ try {
     cdp,
     `document.querySelectorAll(".monaco-editor .view-line").length > 3`,
     "Monaco editor rendered source lines",
+    45000,
   );
+
+  const recompiled = await evaluateValue(
+    cdp,
+    `(() => {
+      const button = [...document.querySelectorAll("button")].find((el) => el.textContent.includes("Recompile"));
+      if (!button || button.disabled) return false;
+      button.click();
+      return true;
+    })()`,
+  );
+  if (recompiled) {
+    await waitForExpression(
+      cdp,
+      `Boolean(document.querySelector(".pdfv canvas")) && !document.body.innerText.includes("Tectonic not installed")`,
+      "compiled PDF preview",
+      120000,
+    );
+  }
 
   // Drive the real AI review lifecycle to the reviewable "ready" preview state.
   await evaluateValue(

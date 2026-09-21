@@ -1,12 +1,16 @@
 ---
 title: T3.6 真实 Workbench Hero 截图 — 尝试与卡点
 status: blocked
-as_of: 2026-08-11
-baseline_commit: a4ab293
+as_of: 2026-09-22
+baseline_commit: 560ff6e
 depends_on: T3.3
 ---
 
 # T3.6：真实 Workbench Hero 截图（尝试记录 / 交接）
+
+## 2026-09-22 再试
+
+有头 Chrome 可以连上调试端口。Workbench 改为本地 Monaco 之后，采集脚本能等到 `.view-line`。把 `app/data/engine/tectonic.exe` 复制到隔离数据目录后，`/api/engine/status` 为 `present:true`（探测超时从 4 秒改为 12 秒，否则冷启动会被写成未安装）。点 Recompile 后 120 秒内没有 `.pdfv canvas`。没有写入 `web/public/hero-ide.png`，`HeroIdeMock` 保持原样。
 
 ## 目标
 

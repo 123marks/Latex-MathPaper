@@ -3157,8 +3157,8 @@ async function api(req, res, path) {
       : join(engineDir, "tectonic");
   }
 
-  async function probeEngine(bin) {
-    const r = await runCommand(bin, ["--version"], { timeoutMs: 4000 });
+  async function probeEngine(bin, timeoutMs = 4000) {
+    const r = await runCommand(bin, ["--version"], { timeoutMs });
     if (r.code === 0 && !r.timedOut) {
       const v = (r.stdout || r.stderr || "").split(/\r?\n/)[0].trim();
       return { present: true, detail: v };
@@ -3289,7 +3289,7 @@ async function api(req, res, path) {
     const localBin = engineBinaryPath();
     const localExists = existsSync(localBin);
     const [tectonic, latexmk, python] = await Promise.all([
-      localExists ? probeEngine(localBin) : probeEngine("tectonic"),
+      localExists ? probeEngine(localBin, 12000) : probeEngine("tectonic"),
       probeEngine(resolveLatexmkCommand()),
       commandStatus(pythonCommand),
     ]);

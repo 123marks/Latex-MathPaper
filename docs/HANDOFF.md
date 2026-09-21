@@ -2,7 +2,7 @@
 title: Paper OS engineering handoff
 status: active
 as_of: 2026-09-21
-baseline_commit: 5b948c3
+baseline_commit: 560ff6e
 worktree: dirty
 owner: next maintainer
 ---
@@ -19,11 +19,11 @@ Paper OS 要成为一个**本地优先、Workspace Kernel 驱动、Pack 可扩�
 
 ## 2. 交接基线
 
-### 2.0 当前基线（2026-09-21，发布页诚实）
+### 2.0 当前基线（2026-09-22，本地 Monaco）
 
-- `HEAD`：`5b948c3`（桌面 IDE 切片 1–6 已提交）。
-- 工作区：**dirty**。本轮：`web/src/lib/release-assets.js`、`web/src/pages/Download.jsx`、`tests/release-assets.test.mjs`。根目录 `findings.md`/`progress.md`/`task_plan.md` 未动。
-- 本轮主线：T3.6 仍 blocked（无头 Monaco 不合成），没有替换 `HeroIdeMock`。先收口下载页：缺产物显示「尚未打包」，不链到 GitHub 冒充下载。
+- `HEAD`：`560ff6e`（发布页诚实已提交）。
+- 工作区：**dirty**。本轮：`web/src/components/LaTeXEditor.jsx` 本地 Monaco、`app/server.mjs` 引擎探测 12s、`app/hero-ide-visual-smoke.mjs`。`findings.md`/`progress.md`/`task_plan.md` 未动。
+- T3.6 仍 blocked：有头采集能画出源码，编译预览 120 秒超时，没有替换 `HeroIdeMock`。
 
 交接表（任务书要求格式）：
 
@@ -280,8 +280,8 @@ T1.1 收口时：`web/src/pages/Home.jsx` 使用可核实的 `4 内置 Pack`、`
 
 按 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md) §1 逐切片推进，每个切片都必须：写契约/e2e 测试 → 实现 → `npm run ide:build` → `node --test` → 对应 smoke 真实启动 → 更新 `STATUS.md`/本文件。
 
-1. 先审阅并提交发布页诚实切片（上方 2.0 的交接表即提交说明素材；不要纳入 `findings.md`/`progress.md`/`task_plan.md`）。
-2. 双模式计划 S1–S6 已提交，不要发明 S7。T3.6 仍 blocked：无头 Monaco 不合成，不得用黑屏编辑器替换 `HeroIdeMock`。
+1. 先审阅并提交本地 Monaco 与引擎探测（不要纳入 `findings.md`/`progress.md`/`task_plan.md`）。
+2. 双模式计划 S1–S6 已提交，不要发明 S7。T3.6 仍 blocked：源码能画出来，但要等 PDF canvas 成功后再替换 `HeroIdeMock`。
 
 不要做：在前端另起编译器；绕过 `apply-blocks` 事务写文件；把 Render 做成只读；为公式渲染新增依赖；一次重写 `ide.jsx`。
 

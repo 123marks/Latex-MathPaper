@@ -3,14 +3,14 @@ title: Paper OS current status
 status: active
 as_of: 2026-09-21
 branch: main
-baseline_commit: 5b948c3
+baseline_commit: 560ff6e
 worktree: dirty
 product_version: 0.7.0
 ---
 
 # Paper OS 当前状态
 
-本页最新一节是 2026-09-21 的发布页诚实切片（缺产物显示「尚未打包」）实测快照；HEAD 为 `5b948c3`（桌面 IDE 切片 1–6 已提交），工作区 **dirty**（本切片尚未提交）。更早的 2026-09-21 / 2026-09-18 / 2026-08 章节是历史快照。它仍不是发布证明：没有 PR、tag 或签名安装包。T3.6 Hero 实拍仍因无头 Monaco 不合成而保持 open，本切片没有替换 `HeroIdeMock`。任何接手者都应先运行本页的基线命令，再相信能力声明。
+本页最新一节是 2026-09-22 的本地 Monaco 与 T3.6 采集尝试。HEAD 为 `560ff6e`（发布页诚实已提交），工作区 **dirty**（本切片尚未提交）。更早章节是历史快照。它仍不是发布证明：没有 PR、tag 或平台代码签名。`HeroIdeMock` 仍在，因为有头采集能画出源码，但 120 秒内没有出现 PDF canvas。
 
 ## 状态口径
 
@@ -26,8 +26,8 @@ product_version: 0.7.0
 | 项目 | 当前事实 |
 | --- | --- |
 | 产品方向 | 本地优先、Workspace Kernel + Packs 的通用文档 IDE |
-| 当前分支/提交 | `main` / `5b948c3`（桌面 IDE 切片 1–6 已提交；其上是 Wave 1–3 与 Windows 自包含打包管线） |
-| 工作区 | dirty：发布页诚实（`web/src/lib/release-assets.js`、`app/lib/release-digest.mjs`、`Download.jsx`、`Home.jsx`），以及上一轮遗留的 `findings.md`/`progress.md`/`task_plan.md`（未删除，由用户决定） |
+| 当前分支/提交 | `main` / `560ff6e`（桌面 IDE 切片 1–6 与发布页诚实已提交） |
+| 工作区 | dirty：Web Workbench 改用本地 `monaco-editor`；捆绑 Tectonic 的 `--version` 探测改为 12s；Hero 采集脚本会等待文件树并尝试编译。`findings.md`/`progress.md`/`task_plan.md` 仍未删除 |
 | 两个前端 | 桌面 IDE（`PaperOS.exe` → `/ide/`，源码 `apps/desktop/src/ide.jsx`）与 Web Workbench（`/app/workbench`，源码 `web/src/pages/app/Workbench.jsx`）共用 `app/server.mjs`；桌面已接编译、pdf.js/SyncTeX/Live 草稿、可见 AI Harness、策略门控终端、git 状态栏、`.vsix` 第一层，以及切片 6 的视口/DPI/键盘证据 |
 | 根版本 | `package.json` 为 `0.7.0` |
 | 桌面版本 | 根、Tauri config、desktop package、Cargo 均为 `0.7.0`（2026-08-31 随 0.7.0 发布统一 bump），Web UI 版本号由 Vite `define` 注入单一来源 |
@@ -433,7 +433,31 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 - 不是 hunk 级编辑器，也没有持久 transaction / undo。
 - 桌面终端/Git 已在切片 4 落地。`.vsix` 第一层见切片 5 节。
 
-## 2026-09-21 发布页诚实证据（当前）
+## 2026-09-22 本地 Monaco 与 T3.6 采集（当前）
+
+基线：`main` / `560ff6e` + dirty worktree。有头 Chrome 已能连上 DevTools。
+
+### 做了什么
+
+- `web/src/components/LaTeXEditor.jsx` 不再 `loader.config({ monaco: null })`。浏览器里动态加载本地 `monaco-editor` 和 editor worker。SSR 测试仍只导入 `mathAtOffset`，不在模块顶层加载 Monaco。
+- `/api/engine/status` 对已复制到数据目录的 Tectonic 把 `--version` 探测从 4s 放到 12s。4s 会把还在启动的二进制报成 `detail:"timeout"` / `present:false`，下载页横幅就写成「未安装」。
+- `app/hero-ide-visual-smoke.mjs` 等文件树里的 `main.tex`，把本机 `app/data/engine/tectonic.exe` 复制到隔离数据目录并先跑一次 `--version`，再点 Recompile，等 `.pdfv canvas`。
+
+### 验证
+
+| 命令 | 结果 | 证明范围 |
+| --- | --- | --- |
+| `node --test tests/web-editor-ux.test.mjs tests/web-editor-lineage.test.mjs` | 16/16 pass | 本地 Monaco import、不再 `monaco: null`、探测 12s、公式/大纲未回归 |
+| `npm run web:build` | exit 0；3534 modules；`editor.main` 约 3.8 MB | 本地 Monaco 打进 `app/public` |
+| `npm run hero-visual-smoke`（有头 Chrome） | 源码行已出现；页面内 `/api/engine/status` 为 `present:true` / `Tectonic 0.16.9`；**编译预览 120s 超时** | 没有把这张图换成 `HeroIdeMock` |
+
+### 未做与边界
+
+- 没有 `web/public/hero-ide.png`，没有替换 `HeroIdeMock`。
+- 第一次编译没有在 120 秒内画出 PDF。不把「未安装」横幅或空白预览说成产品截图。
+- 没有平台签名、tag 或 PR。
+
+## 2026-09-21 发布页诚实证据
 
 基线：`main` / `5b948c3` + dirty worktree；Windows 10.0.26200；Node v24.12.0。T3.6 仍按 [`plans/2026-08-11-t3-6-hero-capture.md`](plans/2026-08-11-t3-6-hero-capture.md) 保持 blocked（无头 Monaco 不合成），本切片没有替换 `HeroIdeMock`。
 
@@ -554,10 +578,10 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 
 ## 已知风险
 
-0. **发布页诚实未提交**：`release-assets.js`、Download 页与文档仍在 dirty worktree。T3.6 仍 blocked。
+0. **本地 Monaco / Hero 采集未提交**。T3.6 仍未替换 `HeroIdeMock`：有头采集能画出源码，编译预览 120 秒超时。
 1. **尚无 PR / tag / 签名发布**：重设计、文档、09-integrations Epic 1–4b、文件夹管理与 0.6.0 版本对齐均已在 `1546dab` 之上分组提交，dirty worktree 风险已消除；仍缺少 PR 审阅、git tag 和签名安装包，结果尚未绑定 tag/release。
-2. **发布版本治理**：根、Tauri config、desktop package、Cargo 已统一 bump 为 `0.6.0`（2026-08-12），Web UI 版本号改由 Vite `define` 从根 `package.json` 注入；打 tag 仍待执行。
-3. **发布声明超前**：Windows ZIP 缺少 Node 生产依赖和 self-contained .NET runtime；macOS/Linux 清单与实际产物不一致；原生代码签名未完成。
+2. **发布版本治理**：根、Tauri、desktop package、Cargo、launcher 已是 `0.7.0`。Web 界面版本由 Vite `define` 注入根版本；`web/package.json` 仍是 `0.5.0`，不作为展示版本。打 tag 仍待执行。
+3. **发布声明**：本机 `dist/release/` 有 0.7.0 Windows 自包含 ZIP 和需 Node 的 portable tar.gz。清单 `channel` 仍是 `stable`，安装包未做平台签名。macOS/Linux 不是原生 App。
 4. **桌面部署依赖**：WinForms/Tauri 都启动外部 Node；WinForms 还依赖系统 .NET 8 Desktop Runtime，尚未证明零依赖 sidecar 交付。
 5. **桌面 WebView CSP**：Tauri config 当前为 `csp: null`。
 6. **单体维护风险**：`app/server.mjs` 和 `apps/desktop/src/ide.jsx` 均超过 3000 行。已开始拆分：纯函数域（用量定价/聚合 `lib/usage.mjs`、BibTeX 解析 `lib/bibtex.mjs`、标注词汇/目标校验 `lib/annotations.mjs`）已抽出并有直接单元测试；路由域拆分待续。
@@ -570,10 +594,10 @@ T1.5 已完成 Login/Register 的共享认证页收口。AuthPanel 统一承载�
 
 | 优先级 | 工作 | 完成判据 |
 | --- | --- | --- |
-| P0 | 提交发布页诚实切片（不含 `findings.md`/`progress.md`/`task_plan.md`） | dirty 变更审阅后提交；`STATUS.md` 绑定新 SHA |
+| P0 | 提交本地 Monaco 与引擎探测（不含 `findings.md`/`progress.md`/`task_plan.md`） | dirty 变更审阅后提交 |
+| P1 | T3.6 真实 Workbench 产品截图 | 编译出 PDF canvas 后再替换 `HeroIdeMock`；超时或「未安装」横幅不得替换 |
 | P0 | 形成可审阅提交和完整验证基线 | dirty 变更分组审阅；全测试/构建结果绑定 SHA |
-| P0 | 修正版本和发布资产一致性 | 单一版本源；清单不声明缺失资产；签名边界明确 |
-| P1 | T3.6 真实 Workbench 产品截图 | 有头 GPU 采到合格 `hero-ide.png` 后再替换 `HeroIdeMock`；黑屏编辑器不得替换 |
+| P0 | 修正版本和发布资产一致性 | 单一版本源；清单不把未签名包写成已签名；`channel: stable` 与开发预览文案仍不一致 |
 | P1 | 桌面信任与部署加固 | CSP、内嵌 runtime、日志、退出/崩溃恢复、签名更新链 |
 | P1 | 完成重设计 P0-P1 | T0.3、T0.4、T0.5、T0.6、T1.1–T1.5、T3.3、T3.4、T3.5 已完成；下一严格顺序为 T3.6；项目整体仍为 Active |
 | P1 | 模块化 server/IDE | 小步搬运、每步测试护栏，不改变安全语义 |
