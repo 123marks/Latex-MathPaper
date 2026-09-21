@@ -1,0 +1,47 @@
+{
+  "name": "theme-language-fixture",
+  "displayName": "Paper OS Theme+Language Fixture",
+  "description": "First-layer vsix fixture: theme colors and a language id. JS must not run.",
+  "version": "0.1.0",
+  "publisher": "paperos",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:paperos-fixture"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "label": "Paper OS Fixture Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/fixture-dark.json"
+      }
+    ],
+    "languages": [
+      {
+        "id": "paperos-fixture",
+        "aliases": [
+          "PaperOS Fixture"
+        ],
+        "extensions": [
+          ".pfx"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "paperos-fixture",
+        "scopeName": "source.pfx",
+        "path": "./syntaxes/pfx.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "paperos.hello",
+        "title": "Hello from fixture (must stay unsupported)"
+      }
+    ]
+  }
+}

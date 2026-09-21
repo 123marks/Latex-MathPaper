@@ -330,6 +330,23 @@ a { color: inherit; text-decoration: none; }
   margin-left: 4px;
 }
 .tree .row:hover .row-actions { display: flex; }
+.ext-panel-note {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 4px 8px 8px;
+  line-height: 1.45;
+}
+.ext-actions { display: flex; gap: 6px; padding: 0 8px 8px; }
+.ext-row { align-items: flex-start; padding-top: 6px; padding-bottom: 6px; }
+.ext-row .ext-meta { font-size: 10.5px; color: var(--muted); }
+.ext-row .ext-flags { font-size: 10px; color: var(--faint); font-family: var(--font-mono); }
+.ext-row-actions { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+.ext-matrix { font-size: 10.5px; padding: 8px 8px 12px; }
+.ext-matrix ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.ext-matrix li { display: flex; gap: 8px; color: var(--muted); }
+.ext-status-supported { color: var(--jade-bright); font-family: var(--font-mono); font-size: 10px; min-width: 7.5em; }
+.ext-status-planned { color: var(--amber); font-family: var(--font-mono); font-size: 10px; min-width: 7.5em; }
+.ext-status-unsupported { color: var(--faint); font-family: var(--font-mono); font-size: 10px; min-width: 7.5em; }
 
 /* ????????????? Main area (tabs + editor + status) ????????????? */
 .main {

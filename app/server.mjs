@@ -38,6 +38,8 @@ import { paymentProviderStatus } from "./lib/payments.mjs";
 import { TERMINAL_OUTPUT_CAP, TERMINAL_TIMEOUT_MS, validateTerminalCommand } from "./lib/terminal.mjs";
 import { forwardLookup, inverseLookup, parseSyncTeX } from "./lib/synctex.mjs";
 import { COMPILE_TIMEOUT_MS, CompileJobError, classifyArtifact, createCompileJobManager, selectEngine, spawnArgsForEngine } from "./lib/compile-jobs.mjs";
+import { COMPATIBILITY_MATRIX, VSIX_HOST } from "./lib/extensions.mjs";
+import { createExtensionRegistry, ExtensionError } from "./lib/extension-registry.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
@@ -59,6 +61,7 @@ const workspaceKernel = createWorkspaceKernel({
 // One live LaTeX compile per Workspace, with timeout, cancel, and honest
 // artifact freshness (see lib/compile-jobs.mjs).
 const compileJobs = createCompileJobManager();
+const extensionRegistry = createExtensionRegistry({ dataDir });
 
 const SESSION_COOKIE = "paper_os_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
@@ -2031,6 +2034,87 @@ async function api(req, res, path) {
     });
     req.on("close", () => { try { child.kill(); } catch { /* noop */ } });
     return undefined;
+  }
+
+  // .vsix 第一层：解包 + 主题色/语言 id。不执行扩展 JS，不是完整 VS Code 兼容。
+  function extensionPayload(extra = {}) {
+    return {
+      ...extensionRegistry.catalog(),
+      matrix: COMPATIBILITY_MATRIX,
+      host: VSIX_HOST,
+      ...extra,
+    };
+  }
+  function sendExtensionError(error) {
+    const status = Number(error.status) || (error instanceof ExtensionError ? error.status : 400);
+    return sendJson(res, status, { error: error.message, code: error.code || "EXTENSION_ERROR" });
+  }
+
+  if (req.method === "GET" && (path === "/api/extensions" || path === "/api/extensions/matrix")) {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    return sendJson(res, 200, extensionPayload());
+  }
+
+  if (req.method === "POST" && path === "/api/extensions/install") {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const body = await readBody(req);
+    const filename = String(body.filename || "extension.vsix");
+    const content = String(body.content || "");
+    if (!content) return sendJson(res, 400, { error: "缺少 VSIX 内容", code: "VSIX_INVALID" });
+    let buffer;
+    try {
+      buffer = Buffer.from(content, "base64");
+    } catch {
+      return sendJson(res, 400, { error: "VSIX 不是合法 Base64", code: "VSIX_INVALID" });
+    }
+    try {
+      const extension = extensionRegistry.install(buffer, { filename });
+      audit(user, "extension.install", extension.id);
+      return sendJson(res, 201, extensionPayload({ extension }));
+    } catch (error) {
+      return sendExtensionError(error);
+    }
+  }
+
+  if (req.method === "POST" && /^\/api\/extensions\/[^/]+\/enable$/.test(path)) {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const id = decodeURIComponent(path.split("/")[3]);
+    try {
+      const extension = extensionRegistry.setEnabled(id, true);
+      audit(user, "extension.enable", id);
+      return sendJson(res, 200, extensionPayload({ extension }));
+    } catch (error) {
+      return sendExtensionError(error);
+    }
+  }
+
+  if (req.method === "POST" && /^\/api\/extensions\/[^/]+\/disable$/.test(path)) {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const id = decodeURIComponent(path.split("/")[3]);
+    try {
+      const extension = extensionRegistry.setEnabled(id, false);
+      audit(user, "extension.disable", id);
+      return sendJson(res, 200, extensionPayload({ extension }));
+    } catch (error) {
+      return sendExtensionError(error);
+    }
+  }
+
+  if (req.method === "DELETE" && /^\/api\/extensions\/[^/]+$/.test(path)) {
+    const user = requireUser(req, res);
+    if (!user) return undefined;
+    const id = decodeURIComponent(path.split("/")[3]);
+    try {
+      extensionRegistry.uninstall(id);
+      audit(user, "extension.uninstall", id);
+      return sendJson(res, 200, extensionPayload({ ok: true, id }));
+    } catch (error) {
+      return sendExtensionError(error);
+    }
   }
 
   // 源码快照：列出 / 手动创建 / 回滚（回滚前先自动存一份当前内容，可再回去）。

@@ -49,6 +49,7 @@ evidence is tracked separately in `STATUS.md` and `TRACEABILITY.md`.
 | Output/problems panel | Workbench | **Implemented** | Shows current command/build output and parsed problems; this is not a terminal session |
 | Interactive terminal | Tool runtime + Workbench | **Partial** | `POST /api/editor/terminal` (allowlist, argv-only, cwd pinned, 120s/512KB caps, SSE) plus Web and desktop (slice 4) panels; dangerous git/npm commands confirm first; not a full shell and Packs do not claim a `terminal` Capability |
 | Desktop Agent/Render work modes | Workbench (desktop) | **Implemented** | Slice 1 (2026-09-18): layout emphasis only, shared state, `localStorage` persistence, honest `RenderStage` empty state, 1440/1280/1024/800 folding without overlap; `tests/desktop-work-mode.test.mjs`, `npm run desktop-mode-visual-smoke` |
+| VS Code `.vsix` first layer | Workbench (desktop) | **Partial** | Slice 5: unpack/install/enable/disable/uninstall under `PAPER_OS_DATA_DIR/extensions`; `themes.colors` subset → Monaco; language ids only. Extension JS is not executed. TextMate, commands, webview, debug are planned or unsupported. Not full VS Code plugin compatibility. `npm run desktop-vsix-smoke` |
 
 ## Build, Diagnostics, and Artifacts
 

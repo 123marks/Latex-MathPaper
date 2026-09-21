@@ -53,6 +53,10 @@ import {
   parseTerminalSse,
   validateTerminalCommand,
 } from "terminal-policy";
+import {
+  buildMonacoTheme,
+  languageIdForFile,
+} from "extensions-compat";
 
 // Bundle monaco locally (WebView2 must not depend on CDN). Theme is defined
 // in setupLatex beforeMount so we never paint dark chrome with light "vs" text.
@@ -189,7 +193,9 @@ function mediaKind(name) {
   return null;
 }
 
-function monacoLanguage(name) {
+function monacoLanguage(name, extraLanguages = []) {
+  const fromExtension = languageIdForFile(name, extraLanguages);
+  if (fromExtension) return fromExtension;
   const lower = String(name || "").toLowerCase();
   if (lower.endsWith(".tex") || lower.endsWith(".sty") || lower.endsWith(".cls") || lower.endsWith(".bib")) return "latex";
   if (lower.endsWith(".py")) return "python";
@@ -588,6 +594,7 @@ function MenuBar({ onAction, capabilities = [] }) {
         { id: "view-outline", label: "大纲" },
         { id: "view-tasks", label: "Paperctl 任务", capability: "paperctl" },
         { id: "view-terminal", label: "终端", hint: "Ctrl+`" },
+        { id: "view-extensions", label: "扩展" },
         { id: "cmd", label: "命令面板", hint: "Ctrl+Shift+P" },
         { id: "magnifier", label: "证据放大镜", hint: "Ctrl+Shift+E", capability: "evidence" },
       ],
@@ -779,31 +786,101 @@ function SourceControlPanel({ dirtyTabs, onSaveAll, onOpen }) {
   );
 }
 
-function SkillsPanel({ skills }) {
+function applyExtensionTheme(monaco, colors) {
+  if (!monaco) return;
+  if (colors && Object.keys(colors).length) {
+    monaco.editor.defineTheme("paperos-extension", buildMonacoTheme(colors));
+    monaco.editor.setTheme("paperos-extension");
+    return;
+  }
+  monaco.editor.setTheme("paperos-dark");
+}
+
+function registerExtensionLanguages(monaco, languages) {
+  if (!monaco) return;
+  for (const lang of languages || []) {
+    try {
+      monaco.languages.register({ id: lang.id, aliases: lang.aliases, extensions: lang.extensions });
+    } catch { /* already registered */ }
+  }
+}
+
+function ExtensionsPanel({ catalog, busy, onInstall, onEnable, onDisable, onUninstall }) {
+  const fileRef = useRef(null);
+  const extensions = catalog.extensions || [];
   return (
-    <div className="sidebar-section">
-      <h6>Extensions <span style={{ color: "var(--faint)" }}>{skills.length}</span></h6>
+    <div className="sidebar-section" data-testid="extensions-panel">
+      <h6>Extensions <span style={{ color: "var(--faint)" }}>{extensions.length}</span></h6>
+      <p className="ext-panel-note" data-testid="extensions-note">
+        第一层：主题色 + 语言 id。不执行扩展 JS，不是完整 VS Code 插件兼容。
+      </p>
+      <div className="ext-actions">
+        <button
+          type="button"
+          className="ghost-btn"
+          data-testid="extension-install"
+          disabled={!!busy}
+          onClick={() => fileRef.current?.click()}
+        >
+          {busy === "install" ? "安装中…" : "安装 .vsix"}
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".vsix,application/zip"
+          hidden
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) onInstall(file);
+          }}
+        />
+      </div>
+      {catalog.error ? <p className="ext-panel-note" data-testid="extensions-error">{catalog.error}</p> : null}
       <div className="tree">
-        {skills.map((s) => (
-          <div key={s.id} className="row skill-row">
+        {extensions.length === 0 ? (
+          <div className="row" data-testid="extensions-empty">未安装扩展</div>
+        ) : extensions.map((ext) => (
+          <div
+            key={ext.id}
+            className="row ext-row"
+            data-testid="extension-row"
+            data-id={ext.id}
+            data-enabled={ext.enabled ? "1" : "0"}
+          >
             <span className="file-ico extensions"><Icon name="extensions" size={14} /></span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5 }}>{s.name}</div>
-              <div style={{ fontSize: 10.5, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.desc}</div>
+              <div style={{ fontSize: 12.5 }}>{ext.displayName || ext.name}</div>
+              <div className="ext-meta">{ext.publisher} · v{ext.version}{ext.enabled ? "" : " · 已禁用"}</div>
+              <div className="ext-flags">
+                {(ext.compatibility?.supported || []).join(" · ") || "无第一层贡献"}
+              </div>
+            </div>
+            <div className="ext-row-actions">
+              {ext.enabled ? (
+                <button type="button" className="ghost-btn" data-testid="extension-disable" disabled={!!busy} onClick={() => onDisable(ext.id)}>禁用</button>
+              ) : (
+                <button type="button" className="ghost-btn" data-testid="extension-enable" disabled={!!busy} onClick={() => onEnable(ext.id)}>启用</button>
+              )}
+              <button type="button" className="ghost-btn" data-testid="extension-uninstall" disabled={!!busy} onClick={() => onUninstall(ext.id)}>卸载</button>
             </div>
           </div>
         ))}
       </div>
+      <div className="ext-matrix" data-testid="extensions-matrix">
+        <h6>Compatibility</h6>
+        <ul>
+          {(catalog.matrix || []).map((row) => (
+            <li key={row.id} data-status={row.status}>
+              <span className={`ext-status-${row.status}`}>{row.status}</span>
+              <span>{row.id}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
-
-const DEFAULT_SKILLS = [
-  { id: "excellence", name: "Paper Excellence", desc: "质量闸门 · 直接答案 · 证据纪律" },
-  { id: "nature-figure", name: "Nature Figure", desc: "出版级科学图" },
-  { id: "nature-polish", name: "Nature Polishing", desc: "学术行文润色" },
-  { id: "math-review", name: "Math Review", desc: "推导与证明审阅" },
-];
 
 // ───────────── Compile target selection ─────────────
 // Deterministic entry choice shared by the compile command and the Render
@@ -1030,6 +1107,15 @@ function IDE() {
   const [termInput, setTermInput] = useState("");
   const [termHistory, setTermHistory] = useState([]);
   const [termBusy, setTermBusy] = useState(false);
+  const [extensionCatalog, setExtensionCatalog] = useState({
+    extensions: [],
+    languages: [],
+    themes: [],
+    matrix: [],
+    host: null,
+    error: "",
+  });
+  const [extensionBusy, setExtensionBusy] = useState("");
   const [provider, setProvider] = useState(null); // real gateway config (GET /api/provider)
   const [aiTool, setAiTool] = useState("files");
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
@@ -1361,6 +1447,55 @@ function IDE() {
     try { setProvider(await api.get("/api/provider")); } catch { setProvider(null); }
   }
   useEffect(() => { if (user) loadProviderInfo(); }, [user]); // eslint-disable-line
+
+  function acceptExtensionCatalog(data) {
+    setExtensionCatalog({
+      extensions: data.extensions || [],
+      languages: data.languages || [],
+      themes: data.themes || [],
+      matrix: data.matrix || [],
+      host: data.host || null,
+      error: "",
+    });
+  }
+  async function loadExtensions() {
+    try {
+      acceptExtensionCatalog(await api.get("/api/extensions"));
+    } catch (error) {
+      setExtensionCatalog((current) => ({ ...current, error: error.message || "扩展目录不可用" }));
+    }
+  }
+  useEffect(() => { if (user) loadExtensions(); }, [user]); // eslint-disable-line
+  useEffect(() => { if (user && view === "skills") loadExtensions(); }, [user, view]); // eslint-disable-line
+  useEffect(() => {
+    const monaco = monacoRef.current;
+    if (!monaco) return;
+    registerExtensionLanguages(monaco, extensionCatalog.languages);
+    applyExtensionTheme(monaco, extensionCatalog.themes?.[0]?.colors);
+  }, [extensionCatalog.languages, extensionCatalog.themes]);
+
+  async function mutateExtension(busyKey, work) {
+    setExtensionBusy(busyKey);
+    try {
+      acceptExtensionCatalog(await work());
+    } catch (error) {
+      setExtensionCatalog((current) => ({ ...current, error: error.message || "扩展操作失败" }));
+    } finally {
+      setExtensionBusy("");
+    }
+  }
+  async function installExtensionFile(file) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = "";
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    }
+    await mutateExtension("install", () => api.post("/api/extensions/install", {
+      filename: file.name,
+      content: btoa(binary),
+    }));
+  }
   useEffect(() => {
     if (!user || !contest) {
       setGitStatus(null);
@@ -1924,6 +2059,10 @@ function IDE() {
       case "view-terminal":
         openTerminal();
         flash("终端：白名单程序，无 shell 语法");
+        break;
+      case "view-extensions":
+        setView("skills");
+        flash("扩展：第一层主题色与语言 id");
         break;
       case "cmd":
         setShowCmd(true);
@@ -2782,7 +2921,12 @@ function IDE() {
         <button className={view === "source" ? "active" : ""} onClick={() => setView("source")} title="源代码管理">
           <Icon name="git" size={18} />
         </button>
-        <button className={view === "skills" ? "active" : ""} onClick={() => setView("skills")} title="扩展 / Skills">
+        <button
+          className={view === "skills" ? "active" : ""}
+          onClick={() => setView("skills")}
+          title="扩展"
+          data-testid="extensions-activity"
+        >
           <Icon name="extensions" size={18} />
         </button>
         {canUseEvidence ? (
@@ -2905,7 +3049,16 @@ function IDE() {
             onOpen={openFile}
           />
         )}
-        {view === "skills" && <SkillsPanel skills={DEFAULT_SKILLS} />}
+        {view === "skills" && (
+          <ExtensionsPanel
+            catalog={extensionCatalog}
+            busy={extensionBusy}
+            onInstall={installExtensionFile}
+            onEnable={(id) => mutateExtension("enable", () => api.post(`/api/extensions/${encodeURIComponent(id)}/enable`))}
+            onDisable={(id) => mutateExtension("disable", () => api.post(`/api/extensions/${encodeURIComponent(id)}/disable`))}
+            onUninstall={(id) => mutateExtension("uninstall", () => api.del(`/api/extensions/${encodeURIComponent(id)}`))}
+          />
+        )}
       </div>
 
       {/* Main */}
@@ -3028,16 +3181,17 @@ function IDE() {
               ) : active ? (
                 <Editor
                   value={editor}
-                  language={monacoLanguage(active.name)}
+                  language={monacoLanguage(active.name, extensionCatalog.languages)}
                   theme="vs-dark"
                   beforeMount={(m) => {
                     setupLatex(m);
                   }}
                   onMount={(ed, m) => {
                     setupLatex(m);
-                    m.editor.setTheme("paperos-dark");
-                    editorRef.current = ed;
                     monacoRef.current = m;
+                    registerExtensionLanguages(m, extensionCatalog.languages);
+                    applyExtensionTheme(m, extensionCatalog.themes?.[0]?.colors);
+                    editorRef.current = ed;
                     ed.updateOptions({
                       fontFamily: "JetBrains Mono, Cascadia Code, Consolas, monospace",
                       fontSize: 14,
@@ -3273,7 +3427,7 @@ function IDE() {
                 {[
                   { id: "files", label: "@ Files" },
                   { id: "citations", label: "Citations" },
-                  { id: "skills", label: "Skills" },
+                  { id: "skills", label: "Extensions" },
                   { id: "mcp", label: "MCP" },
                 ].map((t) => (
                   <button
@@ -3291,12 +3445,11 @@ function IDE() {
                         flash("已插入引用任务提示");
                       } else if (t.id === "skills") {
                         setView("skills");
-                        flash("已打开 Skills 面板");
+                        flash("已打开 Extensions 面板");
                       } else if (t.id === "mcp") {
-                        setView("skills");
                         setBottomTab("output");
-                        setLog((l) => ["[mcp] 本地 MCP 连接器将在后续版本开放；当前可在 Skills 面板使用内置能力", ...l].slice(0, 80));
-                        flash("MCP：见 OUTPUT 说明");
+                        setLog((l) => ["[mcp] 本地 MCP 连接器尚未实现，不是已交付能力", ...l].slice(0, 80));
+                        flash("MCP：尚未实现");
                       }
                     }}
                   >{t.label}</button>
@@ -3663,6 +3816,7 @@ function IDE() {
           { id: "cmd.mode.agent", cat: "View", label: "切换到 Agent 模式",  hint: "", run: () => switchWorkMode("agent") },
           { id: "cmd.mode.render", cat: "View", label: "切换到 Render 模式", hint: "", run: () => switchWorkMode("render") },
           { id: "cmd.terminal", cat: "View", label: "打开终端", hint: "Ctrl+`", run: () => openTerminal() },
+          { id: "cmd.extensions", cat: "View", label: "打开扩展", hint: "", run: () => setView("skills") },
           { id: "cmd.inline",  cat: "AI",      label: "Inline Edit 选区",   hint: "Ctrl+K", run: () => openInlineEdit() },
           { id: "cmd.snippets", cat: "Editor", label: "插入 LaTeX 片段",    hint: "Ctrl+Shift+K", capability: "latex", run: () => setShowSnippets(true) },
           { id: "cmd.search",  cat: "Search",  label: "在文件中搜索",       hint: "Ctrl+Shift+F", run: () => { setView("search"); setSearchOpen(true); } },

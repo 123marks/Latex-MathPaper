@@ -1,7 +1,7 @@
 # 桌面 IDE 增量开发计划：双模式、Render/LaTeX、AI Harness
 
 Date: 2026-09-18
-Status: Active（阶段 0 完成；切片 S1–S3 已提交 `fb8fac2` / `161d052` / `759648b` / `4cbabb6`；切片 S4 完成并实测，证据见 `../STATUS.md` 2026-09-21 节；下一步 S5）
+Status: Active（阶段 0 完成；切片 S1–S4 已提交 `fb8fac2` / `161d052` / `759648b` / `4cbabb6` / `a725121`；切片 S5 完成并实测，证据见 `../STATUS.md` 2026-09-21 节；下一步 S6）
 Baseline: `main` / `8c62e93` + 上一轮遗留的未提交 `apps/desktop/src/ide.jsx`、`ide.css`、`docs/README.md` 修改
 
 本计划是 `PRODUCT_SPEC_CURSOR.md` 与 `CURSOR_DEVELOPMENT_BRIEF.md` 的执行分解。它先回答“现在真实是什么”，再给出每个切片的验收。计划本身不证明任何能力已完成；完成事实只写进 `STATUS.md`。
@@ -150,6 +150,13 @@ ide.jsx (IDE 组件)
 - 真实启动：`npm run desktop-term-smoke` OK。先「非 git」；`node -e` 打出 `TERM_OK` 且 confirm=0；`rm -rf .` 报不在允许列表；`git init` 后芯片为 `paper-os-term`；`git reset --hard` confirm=1 且未执行。
 - 回归：`npm run desktop-compile-smoke` OK；`npm run ide:build` 4.6 MB。
 - 全量 `node --test` 319/319。
+
+### S5 执行记录（2026-09-21）
+
+- 契约：`tests/extensions.test.mjs` + `tests/extensions-api.test.mjs` + `tests/desktop-extensions.test.mjs` 与邻近桌面契约合计 35/35。越界/符号链接拒绝；`main` 存在但不执行；`DEFAULT_SKILLS` 已删除。
+- 真实启动：`npm run desktop-vsix-smoke` OK。夹具 `Paper OS Theme+Language Fixture` 可见；无 Paper Excellence；文案为第一层主题色+语言 id；兼容矩阵含 supported/planned/unsupported；禁用后卸载到空列表。
+- 回归：`npm run desktop-compile-smoke` OK；`npm run ide:build` 4.7 MB。
+- 全量 `node --test` 325/326：`git-status-api` 满载 flake（`isRepo` 超时降级），单独重跑 1/1。
 
 ## 3. 不做与假设
 

@@ -2,7 +2,7 @@
 title: Paper OS engineering handoff
 status: active
 as_of: 2026-09-21
-baseline_commit: 4cbabb6
+baseline_commit: a725121
 worktree: dirty
 owner: next maintainer
 ---
@@ -19,26 +19,26 @@ Paper OS 要成为一个**本地优先、Workspace Kernel 驱动、Pack 可扩�
 
 ## 2. 交接基线
 
-### 2.0 当前基线（2026-09-21，桌面 IDE 切片 4）
+### 2.0 当前基线（2026-09-21，桌面 IDE 切片 5）
 
-- `HEAD`：`4cbabb6`（切片 1–3 已提交）。
-- 工作区：**dirty**。本轮切片 4：`app/lib/terminal.mjs`（危险分类 + SSE 解析）、`apps/desktop/src/ide.jsx`、`build-ide.mjs`（`terminal-policy` alias）、`tests/desktop-terminal-git.test.mjs`、`app/desktop-terminal-git-smoke.mjs`。根目录 `findings.md`/`progress.md`/`task_plan.md` 未动。
-- 本轮主线：切片 4 已完成并实测，下一步是切片 5。计划见 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md)。
+- `HEAD`：`a725121`（切片 1–4 已提交）。
+- 工作区：**dirty**。本轮切片 5：`app/lib/zip-archive.mjs`、`app/lib/extensions.mjs`、`app/lib/extension-registry.mjs`、`app/server.mjs` 扩展 API、`apps/desktop/src/ide.jsx` Extensions 面板、`tests/extensions*.test.mjs`、`app/desktop-vsix-smoke.mjs`。根目录 `findings.md`/`progress.md`/`task_plan.md` 未动。
+- 本轮主线：切片 5 已完成并实测，下一步是切片 6。计划见 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md)。
 
 交接表（任务书要求格式）：
 
 ```text
 日期：2026-09-21
-变更目标：桌面 IDE 切片 4 —— 策略门控终端 + 诚实 git 状态栏
-修改文件：app/lib/terminal.mjs；apps/desktop/src/ide.jsx；apps/desktop/build-ide.mjs；tests/desktop-terminal-git.test.mjs（新）；tests/desktop-workspace-ui.test.mjs；app/desktop-terminal-git-smoke.mjs（新）；package.json；docs/STATUS.md；docs/HANDOFF.md；docs/CAPABILITY_MAP.md；CHANGELOG.md；docs/plans/2026-09-18-desktop-ide-dual-mode-plan.md
-新增/修复能力：TERMINAL tab 接 /api/editor/terminal；危险命令 confirm；状态栏 /api/editor/git-status（非 git / 真实分支）；不宣称完整 shell
-运行命令：node --test；npm run ide:build；npm run desktop-term-smoke；npm run desktop-compile-smoke；git diff --check
-测试结果：desktop-terminal-git + workspace-ui + work-mode 28/28；全量 Node 319/319；IDE bundle 4.6 MB；term smoke OK（TERM_OK、rm 拒绝、非 git→paper-os-term、reset confirm=1 未执行）；compile smoke 回归 OK
-人工验证：无头 Chrome 截图 desktop-term-ready.png / desktop-term-git.png
-已知失败：无
-未实现/降级：.vsix（切片 5）；无 hunk/staging UI；终端无管道重定向
-风险与后续：ide.jsx 仍是单体；下一步提交 4 后做切片 5
-回滚方式：git checkout -- app/lib/terminal.mjs apps/desktop/src/ide.jsx apps/desktop/build-ide.mjs tests/desktop-workspace-ui.test.mjs package.json；删除本轮新增的 terminal test/smoke 文件
+变更目标：桌面 IDE 切片 5 —— .vsix 兼容层第一层（主题色 + 语言 id）
+修改文件：app/lib/zip-archive.mjs（新）；app/lib/extensions.mjs（新）；app/lib/extension-registry.mjs（新）；app/server.mjs；apps/desktop/src/ide.jsx；apps/desktop/src/assets/ide.css；apps/desktop/build-ide.mjs；tests/extensions.test.mjs（新）；tests/extensions-api.test.mjs（新）；tests/desktop-extensions.test.mjs（新）；tests/fixtures/paperos-theme-language/**（新）；app/desktop-vsix-smoke.mjs（新）；package.json；docs/STATUS.md；docs/HANDOFF.md；docs/CAPABILITY_MAP.md；CHANGELOG.md；docs/plans/2026-09-18-desktop-ide-dual-mode-plan.md
+新增/修复能力：解包/安装/启用禁用卸载；Monaco 主题色子集 + 语言 id；兼容矩阵；删除 DEFAULT_SKILLS 假列表；不执行扩展 JS
+运行命令：node --test；npm run ide:build；npm run desktop-vsix-smoke；npm run desktop-compile-smoke；git diff --check
+测试结果：extensions + desktop-extensions + 邻近契约 35/35；全量 Node 325/326（git-status-api 满载 flake，单独 1/1）；IDE bundle 4.7 MB；vsix smoke OK（夹具名、无 Paper Excellence、禁用/卸载）；compile smoke 回归 OK
+人工验证：无头 Chrome 截图 desktop-vsix-ready.png / desktop-vsix-empty.png
+已知失败：git-status-api 满载 flake（既有）
+未实现/降级：不执行扩展 JS；无 TextMate/命令/webview/debug；不是完整 VS Code 插件兼容；切片 6 未做
+风险与后续：ide.jsx 仍是单体；下一步提交 5 后做切片 6
+回滚方式：git checkout -- app/server.mjs apps/desktop/src/ide.jsx apps/desktop/src/assets/ide.css apps/desktop/build-ide.mjs package.json；删除本轮新增的 extensions lib/test/smoke/fixture 文件
 ```
 
 ### 2.1 历史基线（2026-08-12）
@@ -280,8 +280,8 @@ T1.1 收口时：`web/src/pages/Home.jsx` 使用可核实的 `4 内置 Pack`、`
 
 按 [`plans/2026-09-18-desktop-ide-dual-mode-plan.md`](plans/2026-09-18-desktop-ide-dual-mode-plan.md) §1 逐切片推进，每个切片都必须：写契约/e2e 测试 → 实现 → `npm run ide:build` → `node --test` → 对应 smoke 真实启动 → 更新 `STATUS.md`/本文件。
 
-1. 先审阅并提交切片 4（上方 2.0 的交接表即提交说明素材）。
-2. 切片 5 `.vsix` 兼容层第一层；切片 6 UI/DPI/性能/交接。
+1. 先审阅并提交切片 5（上方 2.0 的交接表即提交说明素材）。
+2. 切片 6 UI/DPI/性能/交接。
 
 不要做：在前端另起编译器；绕过 `apply-blocks` 事务写文件；把 Render 做成只读；为公式渲染新增依赖；一次重写 `ide.jsx`。
 
