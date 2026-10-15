@@ -38,13 +38,17 @@ test("context chips name real Workspace, Pack, file, selection, and errors", () 
     selection: "E = mc^2 is the relation",
     errors: "2",
   });
-  assert.equal(buildHarnessContext({}).find((c) => c.id === "file").value, "none");
+  assert.equal(buildHarnessContext({}).find((c) => c.id === "file").value, "未打开文件");
 });
 
 test("runtime labels distinguish mock-local from a configured provider", () => {
   assert.equal(describeChatRuntime({ runtime: "mock-local", reason: "no-key" }).kind, "mock-local");
-  assert.match(describeChatRuntime({ runtime: "mock-local", reason: "no-key" }).label, /no-key/);
+  assert.match(describeChatRuntime({ runtime: "mock-local", reason: "no-key" }).label, /本地模拟.*非模型生成.*未配置 API 密钥/);
   assert.equal(describeChatRuntime({ runtime: "provider", model: "gpt-test" }).kind, "provider");
+  assert.match(describeChatRuntime({ runtime: "provider", model: "gpt-test" }).label, /gpt-test.*模型回复/);
+  assert.equal(describeChatRuntime({ runtime: "future-runtime" }).kind, "future-runtime");
+  assert.match(describeChatRuntime({ runtime: "future-runtime" }).label, /未知响应来源.*future-runtime/);
+  assert.equal(describeChatRuntime({}).kind, "unknown");
   assert.equal(describeChatRuntime(null), null);
 });
 

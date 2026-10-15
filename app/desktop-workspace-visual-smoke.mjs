@@ -139,7 +139,7 @@ async function captureWorkspace(cdp, outPath, width, height, mode) {
   await cdp.send("Runtime.evaluate", {
     expression: `(() => {
       const chooser = document.querySelector('[data-testid="workspace-chooser"]');
-      if (!chooser) document.querySelector('[aria-label="Create or register Workspace"]')?.click();
+      if (!chooser) document.querySelector('[data-testid="workspace-switcher"] .workspace-add')?.click();
       return true;
     })()`,
     returnByValue: true,

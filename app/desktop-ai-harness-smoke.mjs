@@ -71,7 +71,7 @@ async function waitForTab(remotePort, appPort) {
     try {
       const response = await fetch(`http://127.0.0.1:${remotePort}/json`);
       const tabs = await response.json();
-      const tab = tabs.find((candidate) => candidate.url?.startsWith(`http://127.0.0.1:${appPort}/ide/`));
+      const tab = tabs.find((candidate) => candidate.url === "about:blank" || candidate.url?.startsWith(`http://127.0.0.1:${appPort}/ide/`));
       if (tab?.webSocketDebuggerUrl) return tab;
     } catch { /* DevTools still binding */ }
   }
@@ -245,7 +245,7 @@ try {
     "--disable-features=VizDisplayCompositor,UseSkiaRenderer,DawnGraphite,Dawn",
     "--disable-dev-shm-usage", "--disable-extensions", "--no-first-run", "--no-default-browser-check",
     `--remote-debugging-port=${remotePort}`, `--user-data-dir=${profileDir}`, "--window-size=1440,900",
-    `http://127.0.0.1:${appPort}/ide/`,
+    "about:blank",
   ], { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
 
   stage = "DevTools connection";
@@ -253,6 +253,10 @@ try {
   cdp = await connectCdp(tab.webSocketDebuggerUrl);
   await cdp.send("Page.enable");
   await cdp.send("Runtime.enable");
+  await cdp.send("Network.enable");
+  await cdp.send("Network.setBlockedURLs", { urls: ["*://fonts.googleapis.com/*", "*://fonts.gstatic.com/*"] });
+  await cdp.send("Page.navigate", { url: `http://127.0.0.1:${appPort}/ide/` });
+  await waitFor(cdp, "document.readyState === 'complete'", "IDE document");
   await cdp.send("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await waitFor(cdp, "Boolean(document.querySelector('[data-testid=workspace-switcher]'))", "desktop IDE boot");
 
@@ -266,7 +270,7 @@ try {
     select.dispatchEvent(new Event("change", { bubbles: true }));
     return select.value;
   })()`);
-  await waitFor(cdp, `document.querySelector('[data-testid=workspace-switcher] select')?.value === ${JSON.stringify(workspaceId)} && /main\\.tex/.test(document.querySelector('.tabs .tab.active')?.textContent || '')`, "main.tex open");
+  await waitFor(cdp, `document.querySelector('[data-testid=workspace-switcher] select')?.value === ${JSON.stringify(workspaceId)} && /main\\.tex/.test(document.querySelector('.tabs .tab.active')?.textContent || '') && Boolean(document.querySelector('.editor-wrap .monaco-editor .view-lines .view-line'))`, "main.tex open");
   await waitFor(cdp, "Boolean(document.querySelector('[data-testid=ai-harness]')) && Boolean(document.querySelector('[data-chip=file]'))", "harness chips");
 
   stage = "install confirm spy";
@@ -320,7 +324,7 @@ try {
   const applied = await evaluate(cdp, SNAPSHOT);
   if (applied.confirmCount !== 0) throw new Error(`Apply used window.confirm: ${applied.confirmCount}`);
   if (applied.proposalState !== "applied") throw new Error(`apply did not finish: ${JSON.stringify(applied)}`);
-  if (!/applied/i.test(applied.trace)) throw new Error(`trace missing applied: ${applied.trace}`);
+  if (!/(applied|已应用)/i.test(applied.trace)) throw new Error(`trace missing applied state: ${applied.trace}`);
 
   const written = await api(`/api/editor/file?workspace=${encodeURIComponent(workspaceId)}&path=main.tex`);
   if (!/Revised note/.test(written.content || "")) {

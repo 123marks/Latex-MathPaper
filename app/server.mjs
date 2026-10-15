@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { WebSocketServer } from "ws";
-import { existsSync, readFileSync, writeFileSync, renameSync, unlinkSync, chmodSync, rmSync, mkdirSync, readdirSync, lstatSync, statSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, renameSync, unlinkSync, chmodSync, rmSync, mkdirSync, readdirSync, lstatSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, resolve, sep } from "node:path";
 import { cpus, freemem, loadavg, totalmem, uptime as osUptime } from "node:os";
 import { gunzipSync } from "node:zlib";
@@ -4646,6 +4646,14 @@ export function startServer() {
   });
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// `PaperOS.exe` may launch this file through a directory junction (the
+// portable preview and some packaged installs do exactly that). Node resolves
+// import.meta.url to the target path while process.argv[1] keeps the junction
+// path, so comparing the raw strings would silently skip startServer().
+const invokedScript = process.argv[1] && existsSync(process.argv[1])
+  ? realpathSync(process.argv[1])
+  : "";
+const moduleScript = realpathSync(fileURLToPath(import.meta.url));
+if (invokedScript && invokedScript === moduleScript) {
   startServer();
 }

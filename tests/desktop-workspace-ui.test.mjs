@@ -74,9 +74,9 @@ test("Workspace chooser and dirty-buffer view use accurate product language", ()
   const chooserEnd = ideSource.indexOf("function SearchModal(", chooserStart);
   const chooserSource = ideSource.slice(chooserStart, chooserEnd);
 
-  assert.match(chooserSource, /Workspace Pack/);
+  assert.match(chooserSource, /<legend>文档类型<\/legend>/);
   assert.doesNotMatch(chooserSource, /Professional Pack|professional Pack/);
-  assert.match(ideSource, /view === "source" \? "Changes"/);
+  assert.match(ideSource, /view === "source" \? "更改"/);
 });
 
 test("only the mathematical-modeling Pack exposes paperctl tasks", () => {
@@ -98,8 +98,8 @@ test("paperctl TASKS and LaTeX controls are gated by their Pack Capabilities", (
   const bottomSource = ideSource.slice(bottomStart, bottomEnd);
 
   assert.match(ideSource, /const canRunPaperctl = currentCapabilities\.includes\("paperctl"\)/);
-  assert.match(bottomSource, /canRunPaperctl \? \{ id: "tasks", label: "TASKS" \} : null/);
-  assert.match(bottomSource, /id: "terminal", label: "TERMINAL"/);
+  assert.match(bottomSource, /canRunPaperctl \? \{ id: "tasks", label: "任务" \} : null/);
+  assert.match(bottomSource, /id: "terminal", label: "终端"/);
   assert.match(bottomSource, /terminal-tab/);
   assert.match(bottomSource, /\{bottomTab === "tasks" && canRunPaperctl && \(/);
   assert.match(bottomSource, /contestId: contest/);
@@ -132,7 +132,7 @@ test("adapter-bound Packs stay visible but cannot use generic create or register
   assert.match(chooserSource, /const selectedPackRequiresAdapter = Boolean\(selectedPack\?\.adapter\)/);
   assert.match(chooserSource, /const requiresAdapter = Boolean\(pack\.adapter\)/);
   assert.match(chooserSource, /disabled=\{busy \|\| requiresAdapter\}/);
-  assert.match(chooserSource, /Compatibility adapter only/);
+  assert.match(chooserSource, /支持已有建模项目/);
   assert.match(chooserSource, /disabled=\{busy \|\| !packs\.length \|\| selectedPackRequiresAdapter\}/);
 });
 

@@ -70,7 +70,7 @@ async function waitForTab(remotePort, appPort) {
     try {
       const response = await fetch(`http://127.0.0.1:${remotePort}/json`);
       const tabs = await response.json();
-      const tab = tabs.find((candidate) => candidate.url?.startsWith(`http://127.0.0.1:${appPort}/ide/`));
+      const tab = tabs.find((candidate) => candidate.url === "about:blank" || candidate.url?.startsWith(`http://127.0.0.1:${appPort}/ide/`));
       if (tab?.webSocketDebuggerUrl) return tab;
     } catch { /* DevTools still binding */ }
   }
@@ -143,6 +143,10 @@ const SNAPSHOT = `(() => {
     scrollWidth: document.documentElement.scrollWidth,
     overflowX: document.documentElement.scrollWidth > window.innerWidth + 1,
     mode: document.querySelector("[data-testid=workbench-split]")?.dataset.mode || null,
+    workspace: document.querySelector("[data-testid=workspace-switcher] select")?.value,
+    activeTab: document.querySelector(".tabs .tab.active")?.textContent,
+    treeRows: [...document.querySelectorAll(".sidebar .tree .row")].map(el => el.title || el.textContent).slice(0, 12),
+    output: document.querySelector(".terminal-stream")?.textContent?.slice(0, 1600),
     showPdf: document.querySelector("[data-testid=workbench-split]")?.dataset.showPdf || null,
     quickOpen: Boolean(document.querySelector("[data-testid=quick-open]")),
     commandPalette: Boolean(document.querySelector("[data-testid=command-palette]")),
@@ -152,7 +156,9 @@ const SNAPSHOT = `(() => {
       switch: box("[data-testid=work-mode-switch]"),
       workspace: box("[data-testid=workspace-switcher]"),
       editor: box(".split > .editor-wrap"),
-      assistant: box(".split > .ai-panel"),
+      assistant: box(".main > .ai-panel"),
+      tabs: box(".tabs-row"),
+      output: box(".terminal"),
     },
   };
 })()`;
@@ -165,6 +171,10 @@ function intersects(a, b) {
 function assertLayout(snap, label) {
   if (snap.overflowX) throw new Error(`${label}: horizontal overflow (${snap.scrollWidth}>${snap.width})`);
   if (!snap.rects.switch || !snap.rects.workspace) throw new Error(`${label}: chrome missing`);
+  if (!snap.rects.assistant) throw new Error(`${label}: assistant missing`);
+  if (Math.abs(snap.rects.assistant.top - snap.rects.tabs.top) > 1 || Math.abs(snap.rects.assistant.bottom - snap.rects.output.bottom) > 1) {
+    throw new Error(`${label}: assistant does not span the full workbench`);
+  }
   if (snap.rects.switch.width <= 0) throw new Error(`${label}: mode switch collapsed`);
   if (snap.rects.editor && snap.rects.assistant && intersects(snap.rects.editor, snap.rects.assistant)) {
     throw new Error(`${label}: editor overlaps assistant`);
@@ -254,7 +264,7 @@ try {
     "--disable-features=VizDisplayCompositor,UseSkiaRenderer,DawnGraphite,Dawn",
     "--disable-dev-shm-usage", "--disable-extensions", "--no-first-run", "--no-default-browser-check",
     `--remote-debugging-port=${remotePort}`, `--user-data-dir=${profileDir}`, "--window-size=1440,900",
-    `http://127.0.0.1:${appPort}/ide/`,
+    "about:blank",
   ], { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
 
   stage = "DevTools connection";
@@ -262,10 +272,15 @@ try {
   cdp = await connectCdp(tab.webSocketDebuggerUrl);
   await cdp.send("Page.enable");
   await cdp.send("Runtime.enable");
+  await cdp.send("Network.enable");
+  await cdp.send("Network.setBlockedURLs", { urls: ["*://fonts.googleapis.com/*", "*://fonts.gstatic.com/*"] });
+  await cdp.send("Page.navigate", { url: `http://127.0.0.1:${appPort}/ide/` });
+  await waitFor(cdp, "document.readyState === 'complete'", "IDE document");
   await waitFor(cdp, "Boolean(document.querySelector('[data-testid=workspace-switcher]'))", "desktop IDE boot");
   await waitFor(cdp, `[...document.querySelectorAll('[data-testid=workspace-switcher] option')].some((o) => o.value === ${JSON.stringify(workspaceId)})`, "Workspace catalog");
   await evaluate(cdp, `(() => {
     const select = document.querySelector('[data-testid=workspace-switcher] select');
+    if (select.value === ${JSON.stringify(workspaceId)}) return select.value;
     const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value").set;
     setter.call(select, ${JSON.stringify(workspaceId)});
     select.dispatchEvent(new Event("change", { bubbles: true }));
@@ -273,6 +288,33 @@ try {
   })()`);
   await waitFor(cdp, `document.querySelector('[data-testid=workspace-switcher] select')?.value === ${JSON.stringify(workspaceId)}`, "workspace selected");
   await waitFor(cdp, "Boolean(document.querySelector('.monaco-editor'))", "Monaco");
+  await waitFor(cdp, "Boolean(document.querySelector('.monaco-editor .view-line span span'))", "rendered source text");
+  await evaluate(cdp, "document.fonts.ready");
+  await cdp.send("DOM.enable");
+  await cdp.send("CSS.enable");
+  const dom = await cdp.send("DOM.getDocument");
+  const typography = {};
+  for (const [name, selector] of Object.entries({ heading: ".assistant-empty h2", ui: ".sidebar-head > span", code: ".monaco-editor .view-line span span" })) {
+    const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: dom.root.nodeId, selector });
+    typography[name] = (await cdp.send("CSS.getPlatformFontsForNode", { nodeId })).fonts;
+  }
+  const fontResources = await evaluate(cdp, "performance.getEntriesByType('resource').map(e => e.name).filter(n => /woff2|fonts.googleapis|fonts.gstatic/.test(n))");
+  if (fontResources.some(url => !url.startsWith(`http://127.0.0.1:${appPort}/`))) {
+    throw new Error("IDE requested an external font");
+  }
+  console.log("Rendered fonts", JSON.stringify(typography));
+  if (!typography.code.some(font => /JetBrains Mono/.test(font.familyName))) throw new Error("Locally bundled code font did not load");
+  if ([...typography.heading, ...typography.ui].some(font => /SimSun|宋体|Times New Roman/i.test(font.familyName))) {
+    throw new Error("Chinese interface fell back to a serif font");
+  }
+
+  stage = "context disclosure";
+  const contextBefore = await evaluate(cdp, "document.querySelector('[data-testid=ai-context]').open");
+  if (contextBefore) throw new Error("Assistant context must start collapsed");
+  await evaluate(cdp, "document.querySelector('.ai-context-summary').click()");
+  const contextOpen = await evaluate(cdp, "({open: document.querySelector('[data-testid=ai-context]').open, fields: [...document.querySelectorAll('[data-chip]')].filter(e => e.getBoundingClientRect().height > 0).length})");
+  if (!contextOpen.open || contextOpen.fields !== 5) throw new Error("Expanded context lost fields");
+  await evaluate(cdp, "document.querySelector('.ai-context-summary').click()");
 
   const outDir = join("dist", "visual-qa");
   mkdirSync(outDir, { recursive: true });
@@ -351,6 +393,9 @@ try {
     generatedAt: new Date().toISOString(),
     browser,
     workspaceId,
+    typography,
+    fontResources,
+    contextDisclosure: { startsCollapsed: !contextBefore, fields: contextOpen.fields },
     evidence: "cdp-css-pixel",
     nativeWindowMin: { width: 1100, height: 720 },
     fileTooLarge: { status: tooBig.status, code: tooBig.body.code, size: tooBig.body.size },
@@ -369,6 +414,7 @@ try {
   if (cdp) {
     try {
       console.error("page snapshot", JSON.stringify(await evaluate(cdp, SNAPSHOT)));
+      console.error("tree response", JSON.stringify(await evaluate(cdp, `fetch('/api/editor/tree?workspace=' + encodeURIComponent(document.querySelector('[data-testid=workspace-switcher] select').value)).then(async r => ({status:r.status,body:await r.json()}))`)));
     } catch { /* page already gone */ }
   }
   if (serverOutput.trim()) console.error(serverOutput.slice(-4000));

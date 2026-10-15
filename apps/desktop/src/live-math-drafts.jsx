@@ -12,7 +12,7 @@ export default function LiveMathDrafts({ source, onJump }) {
   if (!drafts.length) {
     return (
       <div className="live-math-drafts is-empty" data-testid="live-math-drafts" data-empty="1">
-        <span className="live-badge">Live</span>
+        <span className="live-badge">实时</span>
         <span>当前源码没有可预览的公式。编译成功后这里会换成 PDF。</span>
       </div>
     );
@@ -21,8 +21,8 @@ export default function LiveMathDrafts({ source, onJump }) {
   return (
     <div className="live-math-drafts" data-testid="live-math-drafts" data-empty="0">
       <div className="live-math-head">
-        <span className="live-badge">Live</span>
-        <span>{drafts.length} 条公式草稿 · 逐条渲染，一条出错不影响其余</span>
+        <span className="live-badge">实时</span>
+        <span>{drafts.length} 条公式预览</span>
       </div>
       <ol className="live-math-list">
         {drafts.map((draft, index) => (

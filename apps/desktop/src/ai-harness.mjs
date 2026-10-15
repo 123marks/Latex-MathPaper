@@ -15,15 +15,16 @@ export function buildHarnessContext({
 } = {}) {
   const excerpt = String(selection || "").replace(/\s+/g, " ").trim();
   return [
-    { id: "workspace", label: "Workspace", value: workspaceName || workspaceId || "none" },
-    { id: "pack", label: "Pack", value: pack || "none" },
-    { id: "file", label: "File", value: path || "none" },
+    { id: "workspace", label: "工作区", value: workspaceName || workspaceId || "未选择工作区" },
+    { id: "pack", label: "文档类型", value: pack === "Mathematical modeling" ? "数学建模" : pack || "未指定" },
+    { id: "file", label: "当前文件", value: path || "未打开文件" },
     {
       id: "selection",
-      label: "Selection",
-      value: excerpt ? `${excerpt.slice(0, 40)}${excerpt.length > 40 ? "…" : ""}` : "none",
+      label: "选中文本",
+      value: excerpt || "未选中文本",
+      selected: Boolean(excerpt),
     },
-    { id: "errors", label: "Errors", value: String(Number(errorCount) || 0) },
+    { id: "errors", label: "错误", value: String(Number(errorCount) || 0) },
   ];
 }
 
@@ -32,12 +33,24 @@ export function describeChatRuntime(meta) {
   if (meta.runtime === "provider") {
     return {
       kind: "provider",
-      label: `${meta.model || "Configured model"} · provider`,
+      label: `${meta.model || "模型服务"} · 模型回复`,
+    };
+  }
+  if (meta.runtime === "mock-local") {
+    const reasons = {
+      "provider-not-configured": "尚未配置模型",
+      "provider-unavailable": "模型服务不可用",
+      "provider-error": "模型请求失败",
+      "no-key": "未配置 API 密钥",
+    };
+    return {
+      kind: "mock-local",
+      label: `本地模拟 · 非模型生成${meta.reason ? `（${reasons[meta.reason] || meta.reason}）` : ""}`,
     };
   }
   return {
-    kind: "mock-local",
-    label: `mock-local · deterministic fallback${meta.reason ? ` (${meta.reason})` : ""}`,
+    kind: meta.runtime || "unknown",
+    label: meta.runtime ? `未知响应来源（${meta.runtime}）` : "响应来源未知",
   };
 }
 

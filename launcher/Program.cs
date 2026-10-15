@@ -18,11 +18,14 @@ internal static class Program
         ApplicationConfiguration.Initialize();
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
 
-        string root = AppContext.BaseDirectory;
+        string root = Path.GetFullPath(AppContext.BaseDirectory);
         // Prefer repo root when running from published folder beside app/
         if (!File.Exists(Path.Combine(root, "app", "server.mjs")))
         {
-            string parent = Directory.GetParent(root)?.FullName ?? root;
+            // AppContext.BaseDirectory ends with a separator. Directory.GetParent
+            // treats that as the directory itself, so use DirectoryInfo to get
+            // the actual parent when PaperOS.exe lives in dist/.
+            string parent = new DirectoryInfo(root).Parent?.FullName ?? root;
             if (File.Exists(Path.Combine(parent, "app", "server.mjs"))) root = parent;
         }
 
@@ -87,6 +90,10 @@ internal static class Program
 
     private sealed class IdeForm : Form
     {
+        private const int DwmUseImmersiveDarkMode = 20;
+        private const int DwmCaptionColor = 35;
+        private const int DwmTextColor = 36;
+        private const int DwmColorDefault = -1;
         private readonly string _url;
         private readonly Process? _server;
         private readonly WebView2 _webView = new() { Dock = DockStyle.Fill };
@@ -100,7 +107,7 @@ internal static class Program
             Height = 900;
             MinimumSize = new Size(1100, 720);
             StartPosition = FormStartPosition.CenterScreen;
-            BackColor = Color.FromArgb(12, 12, 15);
+            BackColor = Color.FromArgb(28, 30, 38);
             Controls.Add(_webView);
             Load += async (_, _) => await InitWebView();
             FormClosed += (_, _) =>
@@ -111,6 +118,40 @@ internal static class Program
                 }
             };
         }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            ApplyWindowChrome();
+        }
+
+        protected override void OnSystemColorsChanged(EventArgs e)
+        {
+            base.OnSystemColorsChanged(e);
+            if (IsHandleCreated) ApplyWindowChrome();
+        }
+
+        private void ApplyWindowChrome()
+        {
+            // These public DWM attributes are supported from Windows 11.
+            // Keep the system frame, caption buttons, hit testing and DPI.
+            if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000)) return;
+
+            bool highContrast = SystemInformation.HighContrast;
+            int darkMode = highContrast ? 0 : 1;
+            int captionColor = highContrast ? DwmColorDefault
+                : ColorTranslator.ToWin32(Color.FromArgb(22, 24, 31));
+            int textColor = highContrast ? DwmColorDefault
+                : ColorTranslator.ToWin32(Color.FromArgb(215, 218, 224));
+
+            // DWM can decline an attribute without preventing window startup.
+            _ = DwmSetWindowAttribute(Handle, DwmUseImmersiveDarkMode, ref darkMode, sizeof(int));
+            _ = DwmSetWindowAttribute(Handle, DwmCaptionColor, ref captionColor, sizeof(int));
+            _ = DwmSetWindowAttribute(Handle, DwmTextColor, ref textColor, sizeof(int));
+        }
+
+        [DllImport("dwmapi.dll", ExactSpelling = true)]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
         private async Task InitWebView()
         {

@@ -189,7 +189,7 @@ const SNAPSHOT = `(() => {
       editor: rect(document.querySelector(".split > .editor-wrap")),
       stage: rect(document.querySelector('[data-testid=render-stage]')),
       pdf: rect(document.querySelector(".split > .pdf-pane")),
-      assistant: rect(document.querySelector(".split > .ai-panel")),
+      assistant: rect(document.querySelector(".main > .ai-panel")),
       statusMode: rect(document.querySelector('[data-testid=status-work-mode]')),
     },
   };
@@ -389,15 +389,15 @@ try {
     return area.value;
   })()`);
   await clickSelector(cdp, ".ai-input button[type=submit]");
-  await waitFor(cdp, "document.querySelectorAll('.ai-stream .msg').length >= 3 && ![...document.querySelectorAll('.ai-stream .msg .who')].some((el) => /正在输入/.test(el.textContent))", "chat round trip", 45000);
+  await waitFor(cdp, "document.querySelectorAll('.ai-stream .msg').length >= 2 && ![...document.querySelectorAll('.ai-stream .msg .who')].some((el) => /正在输入/.test(el.textContent))", "chat round trip", 45000);
 
   stage = "agent snapshot";
   const before = await evaluate(cdp, SNAPSHOT);
   if (before.mode !== "agent" || before.agentPressed !== "true") throw new Error(`expected agent mode, got ${JSON.stringify(before)}`);
   if (!before.editorPresent || before.renderStage) throw new Error("agent mode must show the editor and no Render stage");
   if (before.dirtyTabs < 1) throw new Error("buffer is not dirty before the switch");
-  if (before.chatMessages < 3) throw new Error("chat did not record the round trip");
-  if (!/Agent/.test(before.aiModeLabel) || !/Agent/.test(before.statusModeLabel)) throw new Error("mode labels do not say Agent");
+  if (before.chatMessages < 2) throw new Error("chat did not record the round trip");
+  if (before.aiModeLabel !== "编辑" || before.statusModeLabel !== "编辑模式") throw new Error("mode labels do not say 编辑");
 
   stage = "switch to Render";
   await clickSelector(cdp, "[data-testid=work-mode-render]");
@@ -414,7 +414,7 @@ try {
   if (!after.renderStage) throw new Error("Render mode without a PDF must show the Render stage");
   if (!after.editorPresent) throw new Error("Render mode at 1440px must keep the editor mounted");
   if (!/main\.tex/.test(after.renderStageText)) throw new Error(`Render stage does not name the compile target: ${after.renderStageText}`);
-  if (!/Render/.test(after.aiModeLabel) || !/Render/.test(after.statusModeLabel)) throw new Error("mode labels do not say Render");
+  if (after.aiModeLabel !== "预览" || after.statusModeLabel !== "预览模式") throw new Error("mode labels do not say 预览");
   assertLayout(after, "render 1440x900");
 
   stage = "reload persistence";

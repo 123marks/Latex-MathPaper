@@ -43,6 +43,8 @@ await build({
     "react-dom/client": join(root, "web", "node_modules", "react-dom", "client.js"),
     "@monaco-editor/react": join(root, "web", "node_modules", "@monaco-editor", "react"),
     "monaco-editor": join(root, "web", "node_modules", "monaco-editor"),
+    "@fontsource-variable/inter": join(root, "web", "node_modules", "@fontsource-variable", "inter"),
+    "@fontsource/jetbrains-mono": join(root, "web", "node_modules", "@fontsource", "jetbrains-mono"),
     "katex": join(root, "web", "node_modules", "katex"),
     "pdfjs-dist": join(root, "web", "node_modules", "pdfjs-dist"),
     "ai-execution": join(root, "web", "src", "lib", "ai-execution.js"),

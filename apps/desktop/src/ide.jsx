@@ -7,6 +7,9 @@ import { createRoot } from "react-dom/client";
 import Editor, { loader } from "@monaco-editor/react";
 import * as monacoApi from "monaco-editor";
 import "monaco-editor/min/vs/editor/editor.main.css";
+import "@fontsource-variable/inter";
+import "@fontsource/jetbrains-mono/400.css";
+import "@fontsource/jetbrains-mono/500.css";
 import { Icon, BrandLogo, fileIconName, shouldHideNode } from "./icons.jsx";
 import {
   createTextBuffer,
@@ -71,6 +74,22 @@ import {
 // in setupLatex beforeMount so we never paint dark chrome with light "vs" text.
 loader.config({ monaco: monacoApi });
 
+const CODE_FONT = '"JetBrains Mono", "Cascadia Code", Consolas, "Microsoft YaHei UI", "PingFang SC", monospace';
+const PRIMARY_KEY = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
+const PACK_LABELS = { general: "通用文档", latex: "LaTeX 论文", markdown: "Markdown 笔记", "math-modeling": "数学建模" };
+const CATEGORY_LABELS = {
+  Go: "转到", File: "文件", Run: "运行", View: "查看", AI: "助手", Editor: "编辑",
+  Search: "搜索", Review: "审阅", System: "系统", Account: "账户", Engine: "编译引擎",
+  Floats: "图表", Math: "公式", Theorems: "定理", Lists: "列表", Structure: "结构", References: "引用",
+};
+const PACK_DESCRIPTIONS = {
+  general: "编辑文本、代码与数据文件。",
+  latex: "撰写论文、管理参考文献并编译 PDF。",
+  markdown: "记录笔记、整理知识与长篇写作。",
+  "math-modeling": "建模、图表、证据追溯与论文交付。",
+};
+const packLabel = (workspace) => PACK_LABELS[workspace?.pack || workspace?.id] || workspace?.packName || workspace?.name || workspace?.pack || "通用文档";
+
 // ───────────── Monaco LaTeX language + theme (duplicated here so the IDE
 // bundle is self-contained) ─────────────
 let LATEX_READY = false;
@@ -120,40 +139,40 @@ function setupLatex(monaco) {
     base: "vs-dark",
     inherit: false,
     rules: [
-      { token: "", foreground: "EDE8DF", background: "0E0E12" },
-      { token: "comment", foreground: "AAA39B", fontStyle: "italic" },
-      { token: "keyword", foreground: "F0C35A" },
-      { token: "tag", foreground: "E2B564", fontStyle: "bold" },
-      { token: "string", foreground: "C8D4E0" },
-      { token: "number", foreground: "8EB6D8" },
-      { token: "delimiter", foreground: "E2B564" },
-      { token: "delimiter.bracket", foreground: "E2B564" },
-      { token: "identifier", foreground: "EDE8DF" },
+      { token: "", foreground: "D8DCE5", background: "1C1E26" },
+      { token: "comment", foreground: "929BAC" },
+      { token: "keyword", foreground: "A8BEDF" },
+      { token: "tag", foreground: "D9BC88" },
+      { token: "string", foreground: "B7C9A8" },
+      { token: "number", foreground: "C3AED7" },
+      { token: "delimiter", foreground: "C9CCD5" },
+      { token: "delimiter.bracket", foreground: "C9CCD5" },
+      { token: "identifier", foreground: "D8DCE5" },
     ],
     colors: {
-      "editor.background": "#0E0E12",
-      "editor.foreground": "#EDE8DF",
-      "editorCursor.foreground": "#F0C35A",
-      "editorCursor.background": "#0E0E12",
-      "editor.lineHighlightBackground": "#1A1A22",
+      "editor.background": "#1C1E26",
+      "editor.foreground": "#D8DCE5",
+      "editorCursor.foreground": "#D9BC88",
+      "editorCursor.background": "#1C1E26",
+      "editor.lineHighlightBackground": "#232630",
       "editor.lineHighlightBorder": "#00000000",
-      "editorLineNumber.foreground": "#929BA8",
+      "editorLineNumber.foreground": "#737D90",
       "editorLineNumber.activeForeground": "#D0D6DE",
-      "editor.selectionBackground": "#D4A34166",
-      "editor.inactiveSelectionBackground": "#D4A34133",
-      "editor.selectionHighlightBackground": "#D4A34128",
+      "editor.selectionBackground": "#3B4D68",
+      "editor.inactiveSelectionBackground": "#303B4D",
+      "editor.selectionHighlightBackground": "#344155",
       "editorIndentGuide.background": "#2A2A32",
       "editorIndentGuide.activeBackground": "#4A4A55",
-      "editorWidget.background": "#1A1A22",
+      "editorWidget.background": "#232630",
       "editorWidget.foreground": "#EDE8DF",
-      "editorSuggestWidget.background": "#1A1A22",
+      "editorSuggestWidget.background": "#232630",
       "editorSuggestWidget.foreground": "#EDE8DF",
       "editorSuggestWidget.selectedBackground": "#2A2A32",
-      "input.background": "#141418",
+      "input.background": "#232630",
       "input.foreground": "#EDE8DF",
       "focusBorder": "#D4A341",
-      "scrollbarSlider.background": "#D4A34133",
-      "scrollbarSlider.hoverBackground": "#D4A34155",
+      "scrollbarSlider.background": "#8992A333",
+      "scrollbarSlider.hoverBackground": "#8992A355",
     },
   });
   monaco.editor.setTheme("paperos-dark");
@@ -409,10 +428,10 @@ function InlineEditBar({ state, onChangePrompt, onSubmit, onAccept, onReject, on
   if (!state) return null;
   const lines = Math.max(1, state.endLineNumber - state.startLineNumber + 1);
   return (
-    <div className="inline-edit" role="dialog" aria-label="Inline Edit">
+    <div className="inline-edit" role="dialog" aria-label="改写选区">
       <div className="inline-edit-head">
         <Icon name="sparkle" size={14} />
-        <strong>Inline Edit</strong>
+        <strong>改写选区</strong>
         <span className="inline-edit-meta">L{state.startLineNumber}–{state.endLineNumber} · {lines} 行</span>
         <button type="button" className="ghost-btn sm" onClick={onClose} title="Esc">
           <Icon name="close" size={12} />
@@ -517,10 +536,10 @@ function TreeNode({ node, depth, activePath, onOpen, onRename, onDelete, expande
         <span className="name">{node.name}</span>
         {!isDir && (
           <span className="row-actions">
-            <button className="tree-act" onClick={(e) => { e.stopPropagation(); onRename(node.path); }} title="Rename">
+            <button className="tree-act" onClick={(e) => { e.stopPropagation(); onRename(node.path); }} title="重命名">
               <Icon name="pencil" size={12} />
             </button>
-            <button className="tree-act danger" onClick={(e) => { e.stopPropagation(); onDelete(node.path, node.name); }} title="Delete">
+            <button className="tree-act danger" onClick={(e) => { e.stopPropagation(); onDelete(node.path, node.name); }} title="删除">
               <Icon name="close" size={12} />
             </button>
           </span>
@@ -745,7 +764,7 @@ function OutlinePanel({ source, onJump }) {
   const { sections, labels } = useMemo(() => parseOutline(source), [source]);
   return (
     <div className="sidebar-section">
-      <h6>Outline <span style={{ color: "var(--faint)" }}>{sections.length}</span></h6>
+      <h6>大纲 <span className="file-count">{sections.length}</span></h6>
       <div className="tree">
         {sections.length === 0 ? (
           <div className="empty-hint">打开 .tex 后显示章节</div>
@@ -757,7 +776,7 @@ function OutlinePanel({ source, onJump }) {
           </div>
         ))}
       </div>
-      <h6>Labels <span style={{ color: "var(--faint)" }}>{labels.length}</span></h6>
+      <h6>交叉引用 <span className="file-count">{labels.length}</span></h6>
       <div className="tree">
         {labels.length === 0 ? (
           <div className="empty-hint">无 \\label</div>
@@ -777,8 +796,8 @@ function SourceControlPanel({ dirtyTabs, onSaveAll, onOpen }) {
   return (
     <div className="sidebar-section">
       <h6>
-        Changes
-        <button className="link-btn" onClick={onSaveAll} disabled={!dirtyTabs.length}>Save All</button>
+        未保存的更改
+        <button className="link-btn" onClick={onSaveAll} disabled={!dirtyTabs.length}>全部保存</button>
       </h6>
       <div className="tree">
         {dirtyTabs.length === 0 ? (
@@ -819,7 +838,7 @@ function ExtensionsPanel({ catalog, busy, onInstall, onEnable, onDisable, onUnin
   const extensions = catalog.extensions || [];
   return (
     <div className="sidebar-section" data-testid="extensions-panel">
-      <h6>Extensions <span style={{ color: "var(--faint)" }}>{extensions.length}</span></h6>
+      <h6>扩展 <span className="file-count">{extensions.length}</span></h6>
       <p className="ext-panel-note" data-testid="extensions-note">
         第一层：主题色 + 语言 id。不执行扩展 JS，不是完整 VS Code 插件兼容。
       </p>
@@ -877,11 +896,11 @@ function ExtensionsPanel({ catalog, busy, onInstall, onEnable, onDisable, onUnin
         ))}
       </div>
       <div className="ext-matrix" data-testid="extensions-matrix">
-        <h6>Compatibility</h6>
+        <h6>兼容性</h6>
         <ul>
           {(catalog.matrix || []).map((row) => (
             <li key={row.id} data-status={row.status}>
-              <span className={`ext-status-${row.status}`}>{row.status}</span>
+              <span className={`ext-status-${row.status}`}>{{ supported: "已支持", planned: "计划中", unsupported: "暂不支持" }[row.status] || row.status}</span>
               <span>{row.id}</span>
             </li>
           ))}
@@ -939,8 +958,8 @@ function RenderStage({
   if (!workspace) {
     body = (
       <div className="render-empty">
-        <strong>没有打开的 Workspace</strong>
-        <span>在标题栏选择或创建 Workspace 后，编译产物和可预览的 Resource 会显示在这里。</span>
+        <strong>尚未打开工作区</strong>
+        <span>打开工作区后，可在这里查看编译结果、图片和 PDF。</span>
       </div>
     );
   } else if (hiddenPdfVersion) {
@@ -1004,8 +1023,8 @@ function RenderStage({
       <div className="render-empty">
         <strong>尚无编译产物</strong>
         <span>
-          编译成功后 PDF 会显示在这里；源码编辑区在 Render 模式下保持可用。
-          {compileTarget ? <> 将编译 <code>{compileTarget}</code>。</> : " 当前 Workspace 还没有 .tex 文件。"}
+          编译成功后，PDF 会显示在这里。
+          {compileTarget ? <> 将编译 <code>{compileTarget}</code>。</> : " 当前工作区还没有 .tex 文件。"}
         </span>
         <span className={`render-engine ${engineReady ? "ok" : engineKnown ? "missing" : ""}`} data-testid="render-engine">
           {engineLabel}
@@ -1045,9 +1064,9 @@ function RenderStage({
   } else {
     body = (
       <div className="render-empty">
-        <strong>当前 Pack 没有编译预览</strong>
+        <strong>打开文件以预览</strong>
         <span>
-          {workspace.packName || workspace.pack} 没有 LaTeX Capability。Render 模式会直接显示已打开的图片和 PDF Resource；
+          {packLabel(workspace)}支持直接查看图片和 PDF，无需编译。
           {activePath ? <> <code>{activePath}</code> 是文本文件，请在左侧编辑区查看。</> : " 打开文件后可在左侧编辑区查看。"}
         </span>
       </div>
@@ -1055,11 +1074,11 @@ function RenderStage({
   }
 
   return (
-    <div className="render-stage" data-testid="render-stage" role="region" aria-label="Render preview">
+    <div className="render-stage" data-testid="render-stage" role="region" aria-label="文档预览">
       <div className="render-stage-head">
-        <span className="render-eyebrow">Render</span>
+        <Icon name="pdf" size={13} />
         <strong>预览</strong>
-        <span className="render-stage-note">编译产物与可预览 Resource</span>
+        <span className="render-stage-note">PDF、图片与排版结果</span>
       </div>
       <div className="render-stage-body">{body}</div>
     </div>
@@ -1082,9 +1101,7 @@ function IDE() {
   const [compileJob, setCompileJob] = useState(createCompileState);
   const [newFileName, setNewFileName] = useState("");
   const [creating, setCreating] = useState(false);
-  const [chat, setChat] = useState([
-    { who: "Paper OS Assistant", text: "已连接本地 API。描述文档任务，我会给出执行计划；⌘↩ 发送。", streaming: false },
-  ]);
+  const [chat, setChat] = useState([]);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState("explorer");
@@ -1254,7 +1271,7 @@ function IDE() {
       return true;
     }
     const hasDirtyBuffers = openTabs.some((tab) => tab.dirty);
-    if (!skipConfirm && hasDirtyBuffers && !confirm("当前 Workspace 有未保存更改。切换后将丢弃这些缓冲区，是否继续？")) {
+    if (!skipConfirm && hasDirtyBuffers && !confirm("当前工作区有未保存更改。切换后将丢弃这些更改，是否继续？")) {
       return false;
     }
     resetWorkspaceSession();
@@ -1270,7 +1287,7 @@ function IDE() {
     try {
       data = await api.get("/api/editor/projects");
     } catch (error) {
-      setCatalogState({ loading: false, error: error.message || "Failed to load Workspaces." });
+      setCatalogState({ loading: false, error: error.message || "无法加载工作区，请重试。" });
       throw error;
     }
     setCatalogState({ loading: false, error: "" });
@@ -1296,7 +1313,7 @@ function IDE() {
 
   async function createOrRegisterWorkspace(payload) {
     const hasDirtyBuffers = openTabs.some((tab) => tab.dirty);
-    if (hasDirtyBuffers && !confirm("创建或登记 Workspace 后将切换过去，当前未保存缓冲区会被丢弃。是否继续？")) {
+    if (hasDirtyBuffers && !confirm("打开新的工作区会丢弃当前未保存的更改。是否继续？")) {
       return null;
     }
     const created = await api.post("/api/editor/projects", payload);
@@ -1861,7 +1878,7 @@ function IDE() {
   }
   async function compile() {
     if (!canCompile) {
-      flash("当前 Workspace 未启用 LaTeX Capability");
+      flash("当前工作区不支持 LaTeX 编译");
       return;
     }
     if (compileIsRunning(compileJob)) {
@@ -2270,7 +2287,7 @@ function IDE() {
 
   async function lookupEvidence(line, q = "") {
     if (!canUseEvidence) {
-      flash("当前 Workspace 未启用 Evidence Capability");
+      flash("当前工作区不支持证据追溯");
       return;
     }
     if (!active) return;
@@ -2393,7 +2410,7 @@ function IDE() {
           conflicts: error.payload?.conflicts || [],
         }));
         recordHarness("conflict", { clock: "apply" });
-        flash("文件在预览后被修改，Apply 已中止；请重新预览");
+        flash("文件在预览后被修改，已停止写入；请重新预览");
       } else if (error.code === "APPLY_ROLLBACK") {
         setProposal((current) => ({ ...current, state: "rollback", error: error.message }));
         recordHarness("rollback", { clock: "apply" });
@@ -2805,7 +2822,7 @@ function IDE() {
         <div className="titlebar">
           <div className="titlebar-left">
             <div className="titlebar-logo"><BrandLogo size={22} /></div>
-            <div className="titlebar-title">Paper OS<span className="ver">starting…</span></div>
+            <div className="titlebar-title">Paper OS<span className="ver">正在启动…</span></div>
           </div>
         </div>
         <div style={{ display: "grid", placeItems: "center", color: "var(--muted)" }}>
@@ -2842,7 +2859,7 @@ function IDE() {
   const harnessContext = buildHarnessContext({
     workspaceId: contest,
     workspaceName: currentWorkspace?.name || currentWorkspace?.id || "",
-    pack: currentWorkspace?.packName || currentWorkspace?.pack || "",
+    pack: currentWorkspace ? packLabel(currentWorkspace) : "",
     path: active?.path || "",
     selection: selectionText,
     errorCount,
@@ -2864,39 +2881,34 @@ function IDE() {
           <div className="titlebar-logo"><BrandLogo size={22} /></div>
           <div className="titlebar-title">
             Paper OS
-            <span className="ver">v0.5.0</span>
           </div>
           <MenuBar onAction={handleMenuAction} capabilities={currentCapabilities} />
-          <div className="project-chip" data-testid="workspace-switcher" title={currentWorkspace?.path || "Choose a Workspace"}>
-            <span className="chip-label">WORKSPACE</span>
+          <div className="project-chip" data-testid="workspace-switcher" title={currentWorkspace?.path || "选择工作区"}>
+            <Icon name="folder" size={13} />
             <select
-              aria-label="Switch Workspace"
+              aria-label="切换工作区"
               value={contest}
               onChange={(e) => switchWorkspace(e.target.value)}
             >
-              <option value="" disabled>Choose Workspace</option>
+              <option value="" disabled>选择工作区</option>
               {contestList.map((workspace) => (
                 <option key={workspace.id} value={workspace.id}>
                   {workspace.name || workspace.id}
                 </option>
               ))}
             </select>
-            {currentWorkspace ? (
-              <span className="workspace-pack">{currentWorkspace.packName || currentWorkspace.pack}</span>
-            ) : null}
             <button
               className="workspace-add"
               onClick={() => setShowWelcome(true)}
-              title="Create or register Workspace"
-              aria-label="Create or register Workspace"
+              title="打开或新建工作区"
+              aria-label="打开或新建工作区"
             >
               <Icon name="plus" size={12} />
             </button>
           </div>
-          <button className="cmdk-btn" onClick={() => setShowCmd(true)} title="Command palette">
-            <Icon name="command" size={13} />
-            <span>Ctrl+K</span>
-            <em>Search commands…</em>
+          <button className="cmdk-btn" onClick={() => setShowCmd(true)} title="命令面板（Ctrl+Shift+P）" aria-label="命令面板">
+            <Icon name="search" size={13} />
+            <em>搜索命令</em>
           </button>
         </div>
         <div className="titlebar-right">
@@ -2905,34 +2917,31 @@ function IDE() {
               type="button"
               data-testid="work-mode-agent"
               aria-pressed={workMode === "agent"}
-              aria-label="Agent 模式"
+              aria-label="编辑模式"
               className={workMode === "agent" ? "active" : ""}
               onClick={() => switchWorkMode("agent")}
-              title="Agent 模式：以编辑器和 AI 任务流为主"
+              title="编辑模式：撰写文档与使用助手"
             >
               <Icon name="sparkle" size={13} />
-              <span className="mode-label">Agent</span>
+              <span className="mode-label">编辑</span>
             </button>
             <button
               type="button"
               data-testid="work-mode-render"
               aria-pressed={workMode === "render"}
-              aria-label="Render 模式"
+              aria-label="预览模式"
               className={workMode === "render" ? "active" : ""}
               onClick={() => switchWorkMode("render")}
-              title="Render 模式：以 PDF 与预览为主，源码仍可编辑"
+              title="预览模式：查看 PDF 与排版结果"
             >
               <Icon name="pdf" size={13} />
-              <span className="mode-label">Render</span>
+              <span className="mode-label">预览</span>
             </button>
           </div>
-          <span className="status-pill live" data-testid="workspace-status"><span className="dot" />Local</span>
-          <span className="status-pill">{currentWorkspace?.packName || "No Pack"}</span>
-          <span className="user-chip">
+          <span className="status-pill live" data-testid="workspace-status" title="文件保存在本机"><span className="dot" />本地</span>
+          <span className="user-chip" title={user.displayName || user.username}>
             <span className="user-avatar">{initial}</span>
-            <span>{user.displayName || user.username}</span>
           </span>
-          <button className="ghost-btn" onClick={() => setShowWelcome(true)}>工作区</button>
         </div>
       </div>
 
@@ -2975,24 +2984,27 @@ function IDE() {
       {/* Sidebar */}
       <div className="sidebar">
         <div className="sidebar-head">
-          <span>{view === "explorer" ? "Explorer" : view === "search" ? "Search" : view === "outline" ? "Outline" : view === "source" ? "Changes" : "Extensions"}</span>
-          <span className="badge">{currentWorkspace?.name || "No Workspace"}</span>
+          <span>{view === "explorer" ? "资源管理器" : view === "search" ? "搜索" : view === "outline" ? "大纲" : view === "source" ? "更改" : "扩展"}</span>
+          <button className="sidebar-workspace" title="打开或新建工作区" aria-label="打开或新建工作区" onClick={() => setShowWelcome(true)}><Icon name="folder" size={14} /></button>
         </div>
 
         {view === "explorer" && (
           <div className="sidebar-section">
             <h6>
-              Files <span style={{ color: "var(--faint)" }}>{allFiles.length}</span>
+              <span className="tree-root-name" title={currentWorkspace?.name}>{currentWorkspace?.name || "文件"}</span>
+              <span className="file-count">{allFiles.length}</span>
               <button
                 onClick={createFile}
                 disabled={creating || !newFileName.trim()}
-                title="New file"
+                title="新建文件"
+                aria-label="新建文件"
                 className="link-btn"
               >+</button>
             </h6>
             <div className="new-file-row">
               <input
-                placeholder={canCompile ? "sections/new.tex…" : "notes/new.md…"}
+                aria-label="新文件路径"
+                placeholder={canCompile ? "新建文件，如 notes.tex" : "新建文件，如 notes.md"}
                 value={newFileName}
                 onChange={(e) => setNewFileName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") createFile(); }}
@@ -3021,7 +3033,7 @@ function IDE() {
 
         {view === "search" && (
           <div className="sidebar-section">
-            <h6>Find in files</h6>
+            <h6>在文件中搜索</h6>
             <div className="new-file-row">
               <input
                 placeholder="搜索内容…"
@@ -3222,7 +3234,7 @@ function IDE() {
                 <Editor
                   value={editor}
                   language={monacoLanguage(active.name, extensionCatalog.languages)}
-                  theme="vs-dark"
+                  theme="paperos-dark"
                   beforeMount={(m) => {
                     setupLatex(m);
                   }}
@@ -3232,8 +3244,10 @@ function IDE() {
                     registerExtensionLanguages(m, extensionCatalog.languages);
                     applyExtensionTheme(m, extensionCatalog.themes?.[0]?.colors);
                     editorRef.current = ed;
+                    document.fonts.ready.then(() => m.editor.remeasureFonts());
                     ed.updateOptions({
-                      fontFamily: "JetBrains Mono, Cascadia Code, Consolas, monospace",
+                      fontFamily: CODE_FONT,
+                      fontWeight: "400",
                       fontSize: 14,
                       lineHeight: 22,
                       letterSpacing: 0,
@@ -3259,7 +3273,7 @@ function IDE() {
                     ed.onDidChangeCursorSelection(syncSelection);
                     ed.addAction({
                       id: "paperos.evidence",
-                      label: "Paper OS: Evidence Lookup",
+                      label: "Paper OS：证据反查",
                       keybindings: [m.KeyMod.CtrlCmd | m.KeyMod.Shift | m.KeyCode.KeyE],
                       run: (editor) => {
                         const pos = editor.getPosition();
@@ -3268,26 +3282,30 @@ function IDE() {
                     });
                     ed.addAction({
                       id: "paperos.inlineEdit",
-                      label: "Paper OS: Inline Edit",
+                      label: "Paper OS：改写选区",
                       keybindings: [m.KeyMod.CtrlCmd | m.KeyCode.KeyK],
                       run: () => openInlineEdit(),
                     });
                     ed.addAction({
                       id: "paperos.compile",
-                      label: "Paper OS: Compile",
+                      label: "Paper OS：编译文档",
                       keybindings: [m.KeyMod.CtrlCmd | m.KeyMod.Shift | m.KeyCode.KeyB],
                       run: () => compile(),
                     });
                   }}
                   onChange={(v) => updateActiveBufferContent(v ?? "")}
                   options={{
-                    fontFamily: "JetBrains Mono, Cascadia Code, Consolas, monospace",
+                    fontFamily: CODE_FONT,
+                    fontWeight: "400",
+                    fontLigatures: false,
+                    lineNumbersMinChars: 3,
+                    glyphMargin: false,
                     fontSize: 14,
                     lineHeight: 22,
                     letterSpacing: 0,
                     minimap: { enabled: false },
                     wordWrap: "on",
-                    padding: { top: 14, bottom: 48 },
+                    padding: { top: 12, bottom: 48 },
                     cursorBlinking: "smooth",
                     cursorWidth: 2,
                     automaticLayout: true,
@@ -3400,21 +3418,22 @@ function IDE() {
             </div>
           )}
 
-          <div className="ai-panel">
+        </div>
+
+          <div className="ai-panel" role="complementary" aria-label="文档助手">
             <div className="ai-head">
               <div className="name">
-                <span className="qmark"><BrandLogo size={20} /></span>
-                Paper OS Assistant
+                <Icon name="sparkle" size={14} />
+                文档助手
               </div>
               <div className="ai-head-meta">
                 <span
                   className={`ai-mode ai-mode--${workMode}`}
                   data-testid="ai-mode-label"
-                  title={workMode === "agent" ? "Agent 模式：编辑器与 AI 任务流为主" : "Render 模式：PDF 与预览为主"}
+                  title={workMode === "agent" ? "编辑文档与使用助手" : "查看排版与 PDF"}
                 >
-                  {workMode === "agent" ? "Agent 模式" : "Render 模式"}
+                  {workMode === "agent" ? "编辑" : "预览"}
                 </span>
-                <span className="ctx" title={active ? active.path : ""}>{active ? active.path : "no file"}</span>
               </div>
             </div>
             <AiHarnessPanel
@@ -3432,9 +3451,26 @@ function IDE() {
               onCancel={cancelChat}
             />
             <div className="ai-stream">
+              {chat.length === 0 ? (
+                <div className="assistant-empty">
+                  <span className="assistant-empty-icon"><Icon name="sparkle" size={24} /></span>
+                  <h2>一起完成这份文档</h2>
+                  <p>梳理思路、修改段落或检查排版。<br />所有文件修改都会先交给你审阅。</p>
+                  <div className="assistant-suggestions">
+                    {["梳理当前文档的结构", "润色选中的段落", "检查 LaTeX 编译问题"].filter((_, i) => i !== 2 || canCompile).map((prompt) => (
+                      <button type="button" key={prompt} onClick={() => { setMsg(prompt); document.querySelector('[data-testid="ai-input"]')?.focus(); }}>
+                        <Icon name="chevron" size={12} />{prompt}
+                      </button>
+                    ))}
+                  </div>
+                  {!provider?.active?.keyPresent ? (
+                    <button type="button" className="assistant-setup" onClick={() => setShowSettings(true)}>配置模型以开始使用 <Icon name="chevron" size={12} /></button>
+                  ) : null}
+                </div>
+              ) : null}
               {chat.map((m, i) => (
                 <div key={i} className={`msg ${m.who === "你" ? "user" : "assistant"}`}>
-                  <div className="who">{m.who}{m.streaming ? " · 正在输入…" : ""}</div>
+                  <div className="who">{m.who === "Paper OS Assistant" ? "助手" : m.who}{m.streaming ? " · 正在输入…" : ""}</div>
                   <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
                 </div>
               ))}
@@ -3442,11 +3478,12 @@ function IDE() {
             <form className="ai-input" onSubmit={(e) => { e.preventDefault(); sendChat(); }}>
               <textarea
                 data-testid="ai-input"
+                aria-label="发送给文档助手的消息"
                 placeholder="描述你想完成的文档任务…"
                 value={msg}
                 onChange={(e) => setMsg(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  if (!e.nativeEvent.isComposing && e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                     e.preventDefault(); sendChat();
                   }
                 }}
@@ -3457,7 +3494,7 @@ function IDE() {
                   className="chip model-chip"
                   title={provider?.active?.keyPresent
                     ? `模型网关: ${provider.active.base_url}`
-                    : "模型网关未就绪 — 点击配置 provider"}
+                    : "尚未配置模型，点击打开设置"}
                   onClick={() => setShowSettings(true)}
                 >
                   {provider?.active?.model
@@ -3465,15 +3502,14 @@ function IDE() {
                     : "配置模型…"}
                 </button>
                 {[
-                  { id: "files", label: "@ Files" },
-                  { id: "citations", label: "Citations" },
-                  { id: "skills", label: "Extensions" },
-                  { id: "mcp", label: "MCP" },
+                  { id: "files", label: "@ 文件" },
+                  { id: "citations", label: "引用" },
+                  { id: "skills", label: "扩展" },
                 ].map((t) => (
                   <button
                     key={t.id}
                     type="button"
-                    className={aiTool === t.id ? "chip on" : "chip"}
+                    className={aiTool === t.id ? "chip on tool-chip" : "chip tool-chip"}
                     onClick={() => {
                       setAiTool(t.id);
                       if (t.id === "files") {
@@ -3485,11 +3521,7 @@ function IDE() {
                         flash("已插入引用任务提示");
                       } else if (t.id === "skills") {
                         setView("skills");
-                        flash("已打开 Extensions 面板");
-                      } else if (t.id === "mcp") {
-                        setBottomTab("output");
-                        setLog((l) => ["[mcp] 本地 MCP 连接器尚未实现，不是已交付能力", ...l].slice(0, 80));
-                        flash("MCP：尚未实现");
+                        flash("已打开扩展面板");
                       }
                     }}
                   >{t.label}</button>
@@ -3498,17 +3530,17 @@ function IDE() {
                   {busy ? "…" : <><Icon name="send" size={13} /> 发送</>}
                 </button>
               </div>
+              <div className="composer-hint"><span>修改前先审阅</span><span>{PRIMARY_KEY}+Enter 发送</span></div>
             </form>
           </div>
-        </div>
 
         <div className="terminal">
           <div className="terminal-head">
             {[
-              { id: "problems", label: `PROBLEMS${problems.length ? ` (${problems.length})` : ""}` },
-              { id: "output", label: "OUTPUT" },
-              { id: "terminal", label: "TERMINAL" },
-              canRunPaperctl ? { id: "tasks", label: "TASKS" } : null,
+              { id: "problems", label: `问题${problems.length ? ` (${problems.length})` : ""}` },
+              { id: "output", label: "输出" },
+              { id: "terminal", label: "终端" },
+              canRunPaperctl ? { id: "tasks", label: "任务" } : null,
               canCompile ? { id: "latex", label: "LaTeX" } : null,
             ].filter(Boolean).map((t) => (
               <button
@@ -3521,7 +3553,7 @@ function IDE() {
             ))}
             <span className="term-path">
               {bottomTab === "terminal"
-                ? "白名单程序 · 无 shell · cwd = 工作区根"
+                ? "工作区终端"
                 : (active ? active.path : "—")}
             </span>
             <span style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center" }}>
@@ -3546,7 +3578,7 @@ function IDE() {
                   </button>
                 )
               ) : null}
-              <button onClick={save} disabled={!active || !dirty} className="ghost-btn sm amber">
+              <button onClick={save} disabled={!active || !dirty} className="ghost-btn sm">
                 <Icon name="save" size={12} /> 保存
               </button>
             </span>
@@ -3567,7 +3599,7 @@ function IDE() {
               </div>
             ) : bottomTab === "problems" ? (
               problems.length === 0 ? (
-                <span style={{ color: "var(--faint)" }}>No problems</span>
+                <span style={{ color: "var(--faint)" }}>未发现问题</span>
               ) : problems.map((p, i) => (
                 <div
                   key={i}
@@ -3646,9 +3678,9 @@ function IDE() {
 
       {/* Status bar — git chip is live /api/editor/git-status, never a fake branch */}
       <div className="statusbar">
-        <span className="seg" title={currentWorkspace?.path || "No Workspace"}>
+        <span className="seg" title={currentWorkspace ? currentWorkspace.path + " · " + packLabel(currentWorkspace) : "未打开工作区"}>
           <Icon name="folder" size={12} />
-          {currentWorkspace ? `${currentWorkspace.name || currentWorkspace.id} · ${currentWorkspace.packName || currentWorkspace.pack}` : "No Workspace"}
+          {currentWorkspace?.name || currentWorkspace?.id || "未打开工作区"}
         </span>
         <button
           type="button"
@@ -3676,24 +3708,23 @@ function IDE() {
         ) : null}
         <span
           className="seg"
-          title="Problems"
+          title="问题"
           style={{ cursor: "pointer" }}
           onClick={() => setBottomTab("problems")}
         >
           <Icon name="error" size={12} /> {errorCount}
           <Icon name="warn" size={12} /> {warnCount}
         </span>
-        <span className="seg live"><span className="dot" />本地模式</span>
         <button
           type="button"
           className={`seg status-btn mode-seg ${workMode}`}
           data-testid="status-work-mode"
           onClick={() => switchWorkMode(workMode === "agent" ? "render" : "agent")}
-          title={`当前 ${workMode === "agent" ? "Agent" : "Render"} 模式 — 点击切换`}
-          aria-label={`当前 ${workMode === "agent" ? "Agent" : "Render"} 模式，点击切换`}
+          title={`当前${workMode === "agent" ? "编辑" : "预览"}模式，点击切换`}
+          aria-label={`当前${workMode === "agent" ? "编辑" : "预览"}模式，点击切换`}
         >
           <Icon name={workMode === "agent" ? "sparkle" : "pdf"} size={12} />
-          {workMode === "agent" ? "Agent 模式" : "Render 模式"}
+          {workMode === "agent" ? "编辑模式" : "预览模式"}
         </button>
         {canCompile ? (
           <button
@@ -3714,12 +3745,12 @@ function IDE() {
             <span className="seg amber"><span className="dot" />Tectonic {installPct}%</span>
           ) : (
             <button onClick={installTectonic} className="seg amber status-btn" title="下载 Tectonic">
-              <Icon name="download" size={12} /> Install Tectonic
+              <Icon name="download" size={12} /> 安装 Tectonic
             </button>
           )
         ) : null}
         <div className="right">
-          <span className="seg">Ln {cursorPos.line}, Col {cursorPos.col}</span>
+          <span className="seg">行 {cursorPos.line}，列 {cursorPos.col}</span>
           <span className="seg">UTF-8</span>
           <span className="seg">
             {!active ? "—" : mediaKind(active.name) === "pdf" ? "PDF" : mediaKind(active.name) === "image" ? "Image" : (monacoLanguage(active.name) === "latex" ? "LaTeX" : monacoLanguage(active.name))}
@@ -3727,7 +3758,6 @@ function IDE() {
           <button onClick={() => setShowSettings(true)} className="seg status-btn" title="设置">
             <Icon name="settings" size={12} />
           </button>
-          <span className="seg">{user.role}</span>
         </div>
       </div>
 
@@ -3853,12 +3883,12 @@ function IDE() {
           { id: "cmd.compile", cat: "Run",     label: "编译 LaTeX",         hint: "Ctrl+Shift+B", capability: "latex", run: () => compile() },
           { id: "cmd.synctex.forward", cat: "Go", label: "源码 → PDF（SyncTeX）", hint: "Ctrl+Alt+J", capability: "latex", run: () => forwardSyncFromCursor() },
           { id: "cmd.compile.cancel", cat: "Run", label: "取消编译", hint: "", capability: "latex", run: () => cancelCompile() },
-          { id: "cmd.mode.agent", cat: "View", label: "切换到 Agent 模式",  hint: "Ctrl+Alt+M", run: () => switchWorkMode("agent") },
-          { id: "cmd.mode.render", cat: "View", label: "切换到 Render 模式", hint: "Ctrl+Alt+M", run: () => switchWorkMode("render") },
+          { id: "cmd.mode.agent", cat: "查看", label: "切换到编辑模式",  hint: "Ctrl+Alt+M", run: () => switchWorkMode("agent") },
+          { id: "cmd.mode.render", cat: "查看", label: "切换到预览模式", hint: "Ctrl+Alt+M", run: () => switchWorkMode("render") },
           { id: "cmd.preview.toggle", cat: "View", label: "显示/隐藏 PDF 预览", hint: "Ctrl+Alt+P", run: () => setShowPdf((v) => !v) },
           { id: "cmd.terminal", cat: "View", label: "打开终端", hint: "Ctrl+`", run: () => openTerminal() },
           { id: "cmd.extensions", cat: "View", label: "打开扩展", hint: "", run: () => setView("skills") },
-          { id: "cmd.inline",  cat: "AI",      label: "Inline Edit 选区",   hint: "Ctrl+K", run: () => openInlineEdit() },
+          { id: "cmd.inline",  cat: "助手",    label: "改写选中的文本",     hint: "Ctrl+K", run: () => openInlineEdit() },
           { id: "cmd.snippets", cat: "Editor", label: "插入 LaTeX 片段",    hint: "Ctrl+Shift+K", capability: "latex", run: () => setShowSnippets(true) },
           { id: "cmd.search",  cat: "Search",  label: "在文件中搜索",       hint: "Ctrl+Shift+F", run: () => { setView("search"); setSearchOpen(true); } },
           { id: "cmd.evidence", cat: "Review", label: "放大镜证据反查", hint: "Ctrl+Shift+E", capability: "evidence", run: () => lookupEvidence(cursorPos.line) },
@@ -3934,7 +3964,7 @@ function SettingsModal({ open, onClose, onSaved }) {
           }}
         >
           <div className="field">
-            <span>Base URL</span>
+            <span>服务地址</span>
             <input
               value={form.base_url}
               onChange={(e) => setForm({ ...form, base_url: e.target.value })}
@@ -3951,7 +3981,7 @@ function SettingsModal({ open, onClose, onSaved }) {
               />
             </div>
             <div className="field">
-              <span>Model</span>
+              <span>模型名称</span>
               <input
                 value={form.model}
                 onChange={(e) => setForm({ ...form, model: e.target.value })}
@@ -3960,7 +3990,7 @@ function SettingsModal({ open, onClose, onSaved }) {
             </div>
           </div>
           <div className="field">
-            <span>Temperature</span>
+            <span>生成随机度（Temperature）</span>
             <input
               type="number"
               step="0.1"
@@ -3972,7 +4002,7 @@ function SettingsModal({ open, onClose, onSaved }) {
           </div>
           <div className="row" style={{ justifyContent: "space-between", marginTop: 8 }}>
             <span style={{ fontSize: 11, color: "var(--muted)" }}>
-              {savedAt ? `✓ 已保存 ${new Date(savedAt).toLocaleTimeString()}` : "配置会写入 product/runtime/providers.local.json"}
+              {savedAt ? `已保存 · ${new Date(savedAt).toLocaleTimeString()}` : "设置保存在本机"}
             </span>
             <button
               type="submit"
@@ -4035,7 +4065,7 @@ function SnippetsPanel({ open, onClose, onInsert }) {
               onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-3)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
-              <span style={{ fontSize: 11, color: "var(--amber-bright)", fontFamily: "var(--font-mono)", width: 64, flexShrink: 0 }}>{s.category}</span>
+              <span style={{ fontSize: 12, color: "var(--muted)", width: 64, flexShrink: 0 }}>{CATEGORY_LABELS[s.category] || s.category}</span>
               <code style={{ fontSize: 12, color: "var(--text)", fontFamily: "var(--font-mono)" }}>{s.label}</code>
             </div>
           ))}
@@ -4087,7 +4117,7 @@ function CommandPalette({ open, onClose, onRun, commands }) {
               onMouseEnter={() => setIdx(i)}
               style={{ padding: "10px 14px", borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center", background: i === idx ? "var(--bg-3)" : "transparent" }}
             >
-              <span style={{ fontSize: 11, color: "var(--amber)", fontFamily: "var(--font-mono)", width: 80, flexShrink: 0 }}>{c.cat}</span>
+              <span style={{ fontSize: 12, color: "var(--muted)", width: 64, flexShrink: 0 }}>{CATEGORY_LABELS[c.cat] || c.cat}</span>
               <span style={{ flex: 1, color: "var(--text)", fontSize: 13 }}>{c.label}</span>
               {c.hint && <span style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>{c.hint}</span>}
             </div>
@@ -4293,11 +4323,11 @@ function WorkspaceChooser({
     const name = form.name.trim();
     const folderPath = form.path.trim();
     if (mode === "create" && !id) {
-      setError("Workspace ID is required.");
+      setError("请输入工作区标识。");
       return;
     }
     if (mode === "register" && !folderPath) {
-      setError("Folder path is required.");
+      setError("请输入文件夹路径。");
       return;
     }
     try {
@@ -4312,7 +4342,7 @@ function WorkspaceChooser({
         setForm({ id: "", name: "", path: "", pack: initialPack });
       }
     } catch (submitError) {
-      setError(submitError.message || "Workspace request failed.");
+      setError(submitError.message || "无法打开工作区，请检查路径后重试。");
     } finally {
       setBusy(false);
     }
@@ -4340,15 +4370,15 @@ function WorkspaceChooser({
             <div className="workspace-brand-mark"><BrandLogo size={30} badge /></div>
             <div>
               <strong>Paper OS</strong>
-              <span>Workspace Kernel</span>
+              <span>本地文档工作区</span>
             </div>
           </div>
           <div className="workspace-chooser-title">
-            <h1 id="workspace-chooser-title">Open a Workspace</h1>
-            <p>Choose a recent folder or start from a Workspace Pack.</p>
+            <h1 id="workspace-chooser-title">打开工作区</h1>
+            <p>继续最近的项目，或从文档模板开始。</p>
           </div>
           {onDismiss ? (
-            <button className="workspace-close" onClick={onDismiss} title="Close" aria-label="Close Workspace chooser">
+            <button className="workspace-close" onClick={onDismiss} title="关闭" aria-label="关闭工作区选择器">
               <Icon name="close" size={15} />
             </button>
           ) : null}
@@ -4356,7 +4386,7 @@ function WorkspaceChooser({
 
         <div className="workspace-chooser-body">
           <div className="workspace-create-pane">
-            <div className="workspace-mode" role="tablist" aria-label="Workspace source">
+            <div className="workspace-mode" role="tablist" aria-label="工作区来源">
               <button
                 type="button"
                 role="tab"
@@ -4366,7 +4396,7 @@ function WorkspaceChooser({
                 onClick={() => selectMode("create")}
               >
                 <Icon name="plus" size={14} />
-                New from Pack
+                新建工作区
               </button>
               <button
                 type="button"
@@ -4377,23 +4407,23 @@ function WorkspaceChooser({
                 onClick={() => selectMode("register")}
               >
                 <Icon name="folder" size={14} />
-                Existing folder
+                打开已有文件夹
               </button>
             </div>
 
             <form className="workspace-form" onSubmit={submit}>
               <div className="workspace-fields">
                 <label>
-                  <span>Workspace name</span>
+                  <span>工作区名称</span>
                   <input
                     value={form.name}
                     onChange={(event) => setForm({ ...form, name: event.target.value })}
-                    placeholder="Research notes"
+                    placeholder="例如：研究笔记"
                     autoComplete="off"
                   />
                 </label>
                 <label>
-                  <span>Workspace ID {mode === "register" ? "(optional)" : ""}</span>
+                  <span>工作区标识 {mode === "register" ? "（可选）" : ""}</span>
                   <input
                     value={form.id}
                     onChange={(event) => setForm({ ...form, id: event.target.value })}
@@ -4406,7 +4436,7 @@ function WorkspaceChooser({
 
               {mode === "register" ? (
                 <label className="workspace-folder-field">
-                  <span>Folder path</span>
+                  <span>文件夹路径</span>
                   <input
                     value={form.path}
                     onChange={(event) => setForm({ ...form, path: event.target.value })}
@@ -4418,7 +4448,7 @@ function WorkspaceChooser({
               ) : null}
 
               <fieldset className="pack-picker">
-                <legend>Workspace Pack</legend>
+                <legend>文档类型</legend>
                 <div className="pack-options">
                   {packs.map((pack) => {
                     const requiresAdapter = Boolean(pack.adapter);
@@ -4437,12 +4467,12 @@ function WorkspaceChooser({
                         onClick={() => setForm({ ...form, pack: pack.id })}
                         aria-pressed={form.pack === pack.id}
                         disabled={busy || requiresAdapter}
-                        title={requiresAdapter ? "Compatibility adapter only; open an existing legacy Workspace." : pack.description}
+                        title={requiresAdapter ? "用于已有建模项目，请从右侧打开。" : (PACK_DESCRIPTIONS[pack.id] || pack.description)}
                       >
                         <span className="pack-icon"><Icon name={icon} size={15} /></span>
                         <span className="pack-copy">
-                          <strong>{pack.name}</strong>
-                          <small>{requiresAdapter ? "Compatibility adapter only" : pack.description}</small>
+                          <strong>{packLabel(pack)}</strong>
+                          <small>{requiresAdapter ? "支持已有建模项目" : (PACK_DESCRIPTIONS[pack.id] || pack.description)}</small>
                         </span>
                         <span className="pack-radio" aria-hidden="true" />
                       </button>
@@ -4453,11 +4483,11 @@ function WorkspaceChooser({
 
               <div className="workspace-submit-row">
                 <div className="workspace-pack-summary">
-                  <span>{selectedPack?.name || form.pack}</span>
-                  <small>{mode === "register" ? "Folder stays in place" : "Managed by Paper OS"}</small>
+                  <span>{selectedPack ? packLabel(selectedPack) : form.pack}</span>
+                  <small>{mode === "register" ? "文件保留在原位置" : "保存在本机工作区目录"}</small>
                 </div>
                 <button className="workspace-submit" type="submit" disabled={busy || !packs.length || selectedPackRequiresAdapter}>
-                  {busy ? "Working..." : mode === "register" ? "Register folder" : "Create Workspace"}
+                  {busy ? "处理中…" : mode === "register" ? "打开文件夹" : "创建工作区"}
                   <Icon name="chevron" size={14} />
                 </button>
               </div>
@@ -4468,41 +4498,41 @@ function WorkspaceChooser({
           <aside className="workspace-list-pane">
             <div className="workspace-list-head">
               <div>
-                <span>Workspaces</span>
+                <span>最近的工作区</span>
                 <strong>{ordered.length}</strong>
               </div>
-              <small>{current ? current.name : "No active Workspace"}</small>
+              <small>{current ? current.name : "未打开工作区"}</small>
             </div>
             <div className="workspace-list" data-testid="workspace-list" aria-busy={loading}>
               {loadError ? (
                 <div className="workspace-load-error" role="alert">
-                  <strong>Workspaces failed to load</strong>
+                  <strong>无法加载工作区</strong>
                   <small>{loadError}</small>
                   {onRetry ? (
                     <button type="button" className="workspace-retry" onClick={onRetry} disabled={loading}>
-                      {loading ? "Retrying…" : "Retry"}
+                      {loading ? "重试中…" : "重试"}
                     </button>
                   ) : null}
                 </div>
               ) : loading && !ordered.length ? (
-                <div className="workspace-loading">Loading Workspaces…</div>
+                <div className="workspace-loading">正在加载工作区…</div>
               ) : ordered.length ? ordered.map((workspace) => {
                 const isCurrent = workspace.id === current?.id;
                 const isMissing = workspace.status === "missing";
                 const source = workspace.source === "legacy-contest"
-                  ? "Legacy adapter"
+                  ? "已有建模项目"
                   : workspace.source === "external"
-                    ? "External"
-                    : "Managed";
+                    ? "本地文件夹"
+                    : "应用管理";
                 const status = isMissing
-                  ? "Missing"
+                  ? "路径不存在"
                   : workspace.status === "verified"
-                    ? "Verified"
+                    ? "已验证"
                     : workspace.status === "built"
-                      ? "Built"
+                      ? "已编译"
                       : workspace.status === "failing"
-                        ? "Build failed"
-                        : "Ready";
+                        ? "编译失败"
+                        : "可打开";
                 return (
                   <button
                     key={workspace.id}
@@ -4514,12 +4544,12 @@ function WorkspaceChooser({
                     <span className="workspace-row-main">
                       <span className="workspace-row-name">
                         <strong>{workspace.name || workspace.id}</strong>
-                        {isCurrent ? <em>Current</em> : null}
+                        {isCurrent ? <em>当前</em> : null}
                       </span>
                       <span className="workspace-row-path">{workspace.path}</span>
                     </span>
                     <span className="workspace-row-meta">
-                      <span>{workspace.packName || workspace.pack}</span>
+                      <span>{packLabel(workspace)}</span>
                       <span>{source}</span>
                       <span className={isMissing ? "state missing" : "state"}>{status}</span>
                     </span>
@@ -4528,8 +4558,8 @@ function WorkspaceChooser({
               }) : (
                 <div className="workspace-empty">
                   <span className="workspace-empty-mark"><BrandLogo size={34} /></span>
-                  <strong>No Workspaces registered</strong>
-                  <small>Create one from a Pack or register an existing folder.</small>
+                  <strong>还没有工作区</strong>
+                  <small>新建文档项目，或打开已有文件夹。</small>
                 </div>
               )}
             </div>
